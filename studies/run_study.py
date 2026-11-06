@@ -40,6 +40,7 @@ import engine.flow as flow
 from engine.flow import Body, Particle
 from engine.logger import Log
 from engine.constants import *
+from engine.vectors import length
 
 PROGRESS_EVERY = 0.5     #seconds between progress lines
 ESTIMATE_STEPS = 2000    #steps timed for the duration estimate
@@ -95,7 +96,7 @@ def build(cfg):
 
 
 def nearest(calc, pos):
-  return min(np.linalg.norm(pos - b.pos) for b in calc.bodies)
+  return min(length(pos - b.pos) for b in calc.bodies)
 
 
 class Ending:
@@ -183,8 +184,8 @@ def estimate(cfg):
     steps, how = None, ''
     if end['kind'] == 'orbits' and not adaptive:
       gm = G * sum(b['mass'] for b in cfg['bodies'])
-      r = np.linalg.norm(cfg['position'])
-      v = np.linalg.norm(cfg['velocity'])
+      r = length(cfg['position'])
+      v = length(cfg['velocity'])
       inv = 2/r - v*v/gm
       if inv > 0:
         a = 1/inv
@@ -220,7 +221,7 @@ def run(cfg, configPath=None, statusPath=None):
   log.print('initial v', p.v)
   log.starttime = time.time()
   log.startpos = p.pos
-  log.csvWriter.writerow([0.0, p.pt, np.linalg.norm(p.pos), p.pos[0], p.pos[1], p.v[0], p.v[1]])   #the starting row
+  log.csvWriter.writerow([0.0, p.pt, length(p.pos), p.pos[0], p.pos[1], p.v[0], p.v[1]])   #the starting row
   with open(log.file.name[:-4] + '.json', 'w') as f:
     json.dump(cfg, f, indent=2)
 
@@ -244,7 +245,7 @@ def run(cfg, configPath=None, statusPath=None):
       writeStatus(statusPath, progress=f)
       last = now
   if not wrote:   #the last row, unless updatePosition has just written it
-    log.csvWriter.writerow([log.t, p.pt, np.linalg.norm(p.pos), p.pos[0], p.pos[1], p.v[0], p.v[1]])
+    log.csvWriter.writerow([log.t, p.pt, length(p.pos), p.pos[0], p.pos[1], p.v[0], p.v[1]])
   log.print()
   log.print('stopped:', reason, 'after', n, 'steps')
   if cfg['type'] == 'orbit':

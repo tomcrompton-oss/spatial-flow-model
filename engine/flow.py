@@ -14,6 +14,7 @@ import math
 import time
 import numpy as np
 from engine.constants import *
+from engine.vectors import length
 
 
 class Config:
@@ -43,17 +44,17 @@ class ProperDuration(Condition):
 
 class MinDistance(Condition):
   def check(self, p):
-    return np.linalg.norm(p.pos) >= self.limit
+    return length(p.pos) >= self.limit
 
 
 class MaxDistance(Condition):
   def check(self, p):
-    return np.linalg.norm(p.pos) <= self.limit
+    return length(p.pos) <= self.limit
 
 
 class MaxDistanceAndBelow(Condition):
   def check(self, p):
-    return not (np.linalg.norm(p.pos) > self.limit and p.pos[1] < 0)
+    return not (length(p.pos) > self.limit and p.pos[1] < 0)
 
 
 class Particle:
@@ -120,36 +121,30 @@ class Calculator:
       magnitude: square root of the sum of the squares of the flow to each body, sqrt(2GM/d)
       direction: towards black bodies and away from white ones, weighted by each body's GM/d^2
     """
-    #magnitude of flow
-    U = 0.0
-    for b in self.bodies:
-      d = np.linalg.norm(pos - b.pos)
-      U = U + 2*b.GM/d   #square of the flow to this body
-    U = math.sqrt(U)
-
-    #direction of flow
-    g = np.array([0.0, 0.0])
+    U2 = 0.0                    #the square of the flow's magnitude
+    g = np.array([0.0, 0.0])    #its direction
     for b in self.bodies:
       r = pos - b.pos
-      d = np.linalg.norm(r)
-      g_mag = b.GM/d**2
+      d = length(r)
+      U2 += 2*b.GM/d            #the square of the flow to this body
+      pull = b.GM/d**2 * r/d
       if b.black:
-        g -= g_mag * r/d   #towards the body
+        g -= pull               #towards the body
       else:
-        g += g_mag * r/d   #away from the body
+        g += pull               #away from the body
 
-    gsize = np.linalg.norm(g)
+    gsize = length(g)
     if gsize == 0:
       self.warn('g=0 at %s, the flow has no direction - using u=0' % pos)
       return np.array([0.0, 0.0])
-    return U * g/gsize
+    return math.sqrt(U2) * g/gsize
 
   def gravity(self, pos):
     """newtonian acceleration at pos: the sum of each body's pull"""
     g = np.array([0.0, 0.0])
     for b in self.bodies:
       r = pos - b.pos
-      d = np.linalg.norm(r)
+      d = length(r)
       g = g + -(b.GM/d**2) * (r/d)
     return g
 
@@ -169,13 +164,13 @@ class Calculator:
     uper = u - upar
 
     wpar = (upar + v) / (1 + np.dot(v, upar))
-    x = 1 - np.linalg.norm(v)**2
+    x = 1 - np.dot(v, v)
     #using fp numbers it is possible to get a negative number here
     if x < 0:
-      v = v / np.linalg.norm(v)
+      v = v / length(v)
       L = 0
     else:
-      L = math.sqrt(1 - np.linalg.norm(v)**2)
+      L = math.sqrt(x)
 
     wper = (L * uper) / (1 + np.dot(v, upar))
     return wpar + wper
@@ -196,7 +191,7 @@ class Calculator:
 
   def nearest(self, pos):
     """the distance from pos to the nearest body"""
-    return min(np.linalg.norm(pos - b.pos) for b in self.bodies)
+    return min(length(pos - b.pos) for b in self.bodies)
 
   def stepSize(self, p, fraction, dtMax=None):
     """
@@ -205,7 +200,7 @@ class Calculator:
     no longer than dtMax. close in, and moving fast, the steps are short; far out and slow, they are long - so the
     error in each step is about the same everywhere
     """
-    speed = max(np.linalg.norm(p.v), np.linalg.norm(p.u), np.linalg.norm(p.w))
+    speed = max(length(p.v), length(p.u), length(p.w))
     dt = fraction*self.nearest(p.pos)/speed if speed > 0 else float('inf')
     return min(dt, dtMax) if dtMax else dt
 
@@ -341,7 +336,7 @@ class SpecialFlowCalculator(Calculator):
     #the flow where space moves to, and where the particle moves to
     u2 = self.flow(p.pos + p.u*dt)
     p.pos = p.pos + p.v*dt
-    p.d += np.linalg.norm(p.v*dt)
+    p.d += length(p.v*dt)
     u3 = self.flow(p.pos)
 
     #the difference changes w (this gives the rotation)
@@ -350,12 +345,12 @@ class SpecialFlowCalculator(Calculator):
     p.v = p.w + p.u
 
     p.t += dt
-    s = 1 - (np.linalg.norm(p.w)**2)/C**2
+    s = 1 - (length(p.w)**2)/C**2
     if s > 0.0:
       p.pt += dt*math.sqrt(s)
 
   def moveSecondOrder(self, p, dt):
-    light = abs(np.linalg.norm(p.w) - C) < 1e-9*C
+    light = abs(length(p.w) - C) < 1e-9*C
 
     #half a step the first-order way, to the middle of the step
     xm = p.pos + p.v*dt/2
@@ -368,14 +363,14 @@ class SpecialFlowCalculator(Calculator):
     dw = self.flow(xm - wm*dt/2) - self.flow(xm + wm*dt/2)
     p.w = p.w + (self.addSI(wm, dw) - wm)
     if light:
-      p.w = p.w*C/np.linalg.norm(p.w)
+      p.w = p.w*C/length(p.w)
     p.pos = p.pos + vm*dt
-    p.d += np.linalg.norm(vm*dt)
+    p.d += length(vm*dt)
     p.u = self.flow(p.pos)
     p.v = p.w + p.u
 
     p.t += dt
-    s = 1 - (np.linalg.norm(wm)**2)/C**2
+    s = 1 - (length(wm)**2)/C**2
     if s > 0.0:
       p.pt += dt*math.sqrt(s)
 

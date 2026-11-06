@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 import numpy as np
 from engine.constants import *
+from engine.vectors import length
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   #the project folder
 LOG_DIR = os.path.join(ROOT, 'logs')                #study logs
@@ -49,7 +50,7 @@ class OrbitStats:
   def track(self, p, dt):
     """after each step: the time into this orbit and the extremes of the distance"""
     self.period += dt
-    d = np.linalg.norm(p.pos)
+    d = length(p.pos)
     if d > self.max:
       self.max, self.maxpos = d, p.pos.copy()
     if d < self.min:
@@ -197,7 +198,7 @@ class Log:
     return True
 
   def writeRow(self, p, d=None):
-    self.csvWriter.writerow([self.t, p.pt, np.linalg.norm(p.pos) if d is None else d, p.pos[0], p.pos[1], p.v[0], p.v[1]])
+    self.csvWriter.writerow([self.t, p.pt, length(p.pos) if d is None else d, p.pos[0], p.pos[1], p.v[0], p.v[1]])
 
   def logOrbit(self):
     s = self.stats
