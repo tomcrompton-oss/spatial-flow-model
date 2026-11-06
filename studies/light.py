@@ -12,6 +12,7 @@ import numpy as np
 from engine.flow import *
 from engine.logger import Log
 from engine.constants import *
+from engine.exact import grDeflectionExact, impactParameter
 from studies.cli import main
 
 LOG_TO_FILE = True #write each study's output to logs/<folder>/<study>_<datetime>.log
@@ -32,6 +33,7 @@ def studyDeflectionOfLight(calc, dis, b, dt, name='studyDeflectionOfLight', freq
   particle = Particle()
   particle.pos = np.array([-dis, b])
   calc.initPW(particle, np.array([C, 0.0]))
+  log.impactParameter = impactParameter(particle.pos, particle.w, particle.u)   #GR's b, a little under the b set here
   #particle.v = np.array([C, 0.0])
 
   log.freq = freq
@@ -48,8 +50,10 @@ def lightPastSun(dis, fractions, dt, freq, order=1, stepFraction=None):
   """
   light passing a black solar mass, from dis out on one side to dis out on the other,
   passing at b = each fraction of the sun's radius (the sun is a point mass, so b < RSUN is allowed)
-  compares the measured bend with the general relativity prediction 4GM/(c^2 b). the calculator is of the given
-  order, with steps of dt or adaptive steps (stepFraction, at most dt)
+  compares the measured bend with the general relativity prediction 4GM/(c^2 b), and with GR's exact bending at the
+  light's own impact parameter cL/E (engine/exact.py: starting where the flow is u, it is b/(1 + u/c), so the bend is
+  u/c more than 4GM/c^2 b). the calculator is of the given order, with steps of dt or adaptive steps (stepFraction, at
+  most dt)
   """
   runs = []
   for fraction in fractions:
@@ -63,12 +67,13 @@ def lightPastSun(dis, fractions, dt, freq, order=1, stepFraction=None):
   log.print()
   log.print('light past the sun: from', dis/AU, 'AU to', dis/AU, 'AU, dt =', dt, 's', ', step fraction %g' % stepFraction if stepFraction else '', ', order', order)
   #bend from w (light relative to space); v also carries the flow at the end point, which leans towards the sun
-  log.print('%-10s %-16s %-18s %-16s %-16s %-20s %-9s %-9s' % ('b/RSUN', 'b (m)', 'closest (m)', 'bend w (rad)', 'bend v (rad)', 'predicted 4GM/c2b', 'w ratio', 'v ratio'))
+  log.print('%-10s %-16s %-18s %-16s %-16s %-20s %-9s %-9s %-16s' % ('b/RSUN', 'b (m)', 'closest (m)', 'bend w (rad)', 'bend v (rad)', 'predicted 4GM/c2b', 'w ratio', 'v ratio', 'w / exact GR - 1'))
   for fraction, b, l, p in runs:
     bendW = math.atan2(-p.w[1], p.w[0])   #towards the sun is -y
     bendV = math.atan2(-p.v[1], p.v[0])
     predicted = 4*G*MS/(C**2*b)
-    log.print('%-10s %-16.6e %-18.6e %-16.6e %-16.6e %-20.6e %-9.5f %-9.5f' % ('%g%%' % (fraction*100), b, l.min, bendW, bendV, predicted, bendW/predicted, bendV/predicted))
+    exact = grDeflectionExact(l.impactParameter)   #at GR's impact parameter of the light as it starts
+    log.print('%-10s %-16.6e %-18.6e %-16.6e %-16.6e %-20.6e %-9.5f %-9.5f %-16.3e' % ('%g%%' % (fraction*100), b, l.min, bendW, bendV, predicted, bendW/predicted, bendV/predicted, bendW/exact - 1))
   log.print('(%g rad = %.4f arcsec at the edge)' % (4*G*MS/(C**2*RSUN), 4*G*MS/(C**2*RSUN)*180/math.pi*3600))
 
 def lightAscend(m, a, b, dt, freq):

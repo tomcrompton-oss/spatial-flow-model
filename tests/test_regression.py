@@ -17,7 +17,7 @@ import numpy as np
 from engine.constants import *
 from engine.flow import Body, Particle, Config, MinDistance, NewtonianCalculator, SpecialFlowCalculator, makeCalculator, calculatorName
 from engine.logger import Log, TEST_LOG_DIR
-from engine.exact import fallTime, rayTime, grPrecession, orbitPeriod, schwarzschildRadius
+from engine.exact import fallTime, rayTime, grPrecession, orbitPeriod, schwarzschildRadius, grDeflectionExact, grPrecessionExact, impactParameter
 
 
 def read(path):
@@ -135,12 +135,14 @@ class Engine(unittest.TestCase):
     self.assertAlmostEqual(float(rows[1][0]), 3600.0)
 
   def testAdaptiveLightPastTheSun(self):
-    """adaptive steps: light from 10 AU to 10 AU grazing the Sun at 0.2 RSUN bends as in the 12-hour fixed-step runs"""
+    """light from 10 AU to 10 AU past the Sun at 0.2 RSUN bends as GR does exactly, at its impact parameter cL/E"""
     dis, b = 10*AU, 0.2*RSUN
     calc = SpecialFlowCalculator([Body(MS)], order=2)
     p = Particle()
     p.pos = np.array([-dis, b])
     calc.initPW(p, np.array([C, 0.0]))
+    bGR = impactParameter(p.pos, p.w, p.u)
+    self.assertAlmostEqual(bGR/b, 1/(1 + math.sqrt(2*G*MS/dis)/C), delta=1e-9)   #b/(1 + u/c)
     config = Config()
     config.dt, config.stepFraction = 10.0, 0.001
     n = 0
@@ -149,8 +151,30 @@ class Engine(unittest.TestCase):
       n += 1
     self.assertLess(n, 30000)   #about 20,000 steps, where fixed steps of 0.1 s take 100,000 and are less accurate
     bend = math.atan2(-p.w[1], p.w[0])
-    self.assertAlmostEqual(bend/(4*G*MS/(C**2*b)), 1.0000755, delta=5e-6)
+    self.assertAlmostEqual(bend/(4*G*MS/(C**2*b)), 1.0000755, delta=5e-6)   #as the 12-hour fixed-step runs
+    self.assertAlmostEqual(bend/grDeflectionExact(bGR), 1, delta=1e-6)
     self.assertAlmostEqual(p.t, 2*dis/C, delta=1e-6)   #the steps stop exactly at the duration
+
+  def testExactGR(self):
+    """the exact GR integrals agree with their series where the series are good"""
+    m = G*MS/C**2
+    b = RSUN
+    self.assertAlmostEqual(grDeflectionExact(b)/(4*m/b + 15*math.pi/4*(m/b)**2), 1, delta=1e-6)
+    rp, ra = 46.0e9, 69.82e9
+    p, e = 2*rp*ra/(rp + ra), (ra - rp)/(ra + rp)
+    self.assertAlmostEqual(grPrecessionExact(rp, ra)/(6*math.pi*m/p + 1.5*math.pi*(18 + e*e)*(m/p)**2), 1, delta=1e-7)
+
+  def testCloseOrbitPrecessesAsGR(self):
+    """Mercury at 1/100,000 scale (196 Schwarzschild radii): precession as GR's exact value for its own apsides"""
+    from studies.compare_step_size import orbit
+    from studies.compare_second_order import precession, PERIHELION
+    scale = 1e5
+    period = orbitPeriod((MERCURY_MAX + PERIHELION)/2/scale)
+    config = Config()
+    config.dt, config.stepFraction = period/20, 0.001
+    peris, apos, n, wall = orbit(MERCURY_MAX/scale, MERCURY_SPEED_AT_MAX*math.sqrt(scale), 4.5*period, config)
+    exact = grPrecessionExact(np.mean([d for d, _ in peris]), np.mean([d for d, _ in apos]))
+    self.assertAlmostEqual(precession(peris)/exact, 1, delta=2e-3)   #5e-4 at this step fraction, smaller with smaller steps
 
   def testCsvRowsWithAdaptiveSteps(self):
     """with uneven steps the csv rows come at the steps nearest each interval"""
