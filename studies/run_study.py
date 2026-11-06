@@ -8,8 +8,10 @@ config (SI units):
   bodies        [{"mass": kg, "x": m, "y": m, "black": true}, ...]
   position      [x, y] m      the particle's start
   velocity      [vx, vy] m/s  its starting velocity
-  dt            seconds per step
-  every         seconds between csv rows (rounded to whole steps)
+  dt            seconds per step; with stepFraction, the longest step
+  stepFraction  optional: adaptive steps, each moving at most this fraction of the distance to the nearest body
+                (flow.Calculator.stepSize); without it every step is dt
+  every         seconds between csv rows (with fixed steps, rounded to whole steps)
   logDir        optional: a folder for the files instead of logs/<folder>/ (the regression tests use it)
   end           {"kind": "time", "value": s}          elapsed time
                 {"kind": "min", "value": m}           closer than this to any body
@@ -144,18 +146,29 @@ def timePerStep(cfg):
   return (time.time() - t0) / ESTIMATE_STEPS * LOG_OVERHEAD
 
 
+def stepConfig(cfg, factor=1):
+  """the steps' Config: fixed dt, or adaptive with stepFraction - both made factor times bigger for a quick run"""
+  config = flow.Config()
+  config.dt = cfg['dt'] * factor
+  if cfg.get('stepFraction'):
+    config.stepFraction = cfg['stepFraction'] * factor
+  return config
+
+
 def coarseSteps(cfg, factor):
-  """steps to the end condition at dt x factor, or None if not reached in COARSE_STEPS"""
+  """steps to the end condition with steps factor times bigger, or None if not reached in COARSE_STEPS"""
   calc, p = build(cfg)
   ending = Ending(cfg, calc, p)
-  dt = cfg['dt'] * factor
-  for n in range(1, COARSE_STEPS + 1):
+  t = 0.0
+  for n, dt in enumerate(calc.steps(p, stepConfig(cfg, factor)), 1):
     old = p.pos.copy()
     calc.move(p, dt)
+    t += dt
     ending.step(old, p.pos)
-    if ending.done(n * dt, calc, p.pos):
+    if ending.done(t, calc, p.pos):
       return n
-  return None
+    if n >= COARSE_STEPS:
+      return None
 
 
 def estimate(cfg):
@@ -163,11 +176,12 @@ def estimate(cfg):
   per = timePerStep(cfg)
   dt = cfg['dt']
   end = cfg['end']
-  if end['kind'] == 'time':
+  adaptive = bool(cfg.get('stepFraction'))
+  if end['kind'] == 'time' and not adaptive:
     steps, how = end['value'] / dt, 'exact'
   else:
     steps, how = None, ''
-    if end['kind'] == 'orbits':
+    if end['kind'] == 'orbits' and not adaptive:
       gm = G * sum(b['mass'] for b in cfg['bodies'])
       r = np.linalg.norm(cfg['position'])
       v = np.linalg.norm(cfg['velocity'])
@@ -176,14 +190,14 @@ def estimate(cfg):
         a = 1/inv
         steps, how = (end['value'] + 1) * 2*math.pi*math.sqrt(a**3/gm) / dt, "from the orbit's period"
     if steps is None:
-      #a quick run with a much larger step, then scaled back: finer if the end came too soon to count well
-      for factor in (1000, 100, 10, 1):
+      #a quick run with much larger steps, then scaled back: finer if the end came too soon to count well
+      for factor in ((100, 10, 1) if adaptive else (1000, 100, 10, 1)):
         n = coarseSteps(cfg, factor)
         if n is None:
-          if factor == 1000:
-            return None, None, 'the end condition was not reached in a quick run of %g s' % (COARSE_STEPS * dt * factor)
+          if steps is None:
+            return None, None, 'the end condition was not reached in a quick run of %d steps' % COARSE_STEPS
           break
-        steps, how = n * factor, 'from a quick run with dt x %d' % factor
+        steps, how = n * factor, 'from a quick run with %s x %d' % ('the step fraction' if adaptive else 'dt', factor)
         if n >= 500:
           break
   return steps, steps * per, how
@@ -192,14 +206,15 @@ def estimate(cfg):
 def run(cfg, configPath=None, statusPath=None):
   calc, p = build(cfg)
   dt = cfg['dt']
+  adaptive = bool(cfg.get('stepFraction'))
   log = Log(cfg['name'], True, True, cfg.get('logDir'))   #logDir: tests send theirs to tests/logs
   calc.log = log
-  every = dt * max(1, round(cfg['every'] / dt))   #a whole number of steps between csv rows
+  every = cfg['every'] if adaptive else dt * max(1, round(cfg['every'] / dt))   #fixed steps: a whole number between rows
   log.freq = every
   log.print('study type: %s' % cfg['type'])   #the viewer splits orbit runs into their orbits
   log.print('sim from the viewer:', json.dumps(cfg))
   log.print('calc: ', calc)
-  log.print('dt: ', dt)
+  log.logSteps(stepConfig(cfg))
   log.logBodies(calc)
   log.print('initial pos', p.pos)
   log.print('initial v', p.v)
@@ -210,24 +225,25 @@ def run(cfg, configPath=None, statusPath=None):
     json.dump(cfg, f, indent=2)
 
   ending = Ending(cfg, calc, p)
-  n, last = 0, 0.0
-  while True:
+  n, t, last = 0, 0.0, 0.0
+  for dt in calc.steps(p, stepConfig(cfg)):
     n += 1
     old = p.pos.copy()
     calc.move(p, dt)
-    log.updatePosition(p, dt)
+    t += dt
+    wrote = log.updatePosition(p, dt)
     if ending.step(old, p.pos) and cfg['type'] == 'orbit':
       log.logOrbit()
-    reason = ending.done(n * dt, calc, p.pos)
+    reason = ending.done(t, calc, p.pos)
     if reason:
       break
     now = time.time()
     if now - last > PROGRESS_EVERY:
-      f = ending.progress(n * dt, calc, p.pos)
+      f = ending.progress(t, calc, p.pos)
       say('progress %.4f' % f)
       writeStatus(statusPath, progress=f)
       last = now
-  if round(log.t / dt) % round(every / dt) != 0:   #the last row, unless updatePosition has just written it
+  if not wrote:   #the last row, unless updatePosition has just written it
     log.csvWriter.writerow([log.t, p.pt, np.linalg.norm(p.pos), p.pos[0], p.pos[1], p.v[0], p.v[1]])
   log.print()
   log.print('stopped:', reason, 'after', n, 'steps')

@@ -9,7 +9,7 @@ class SimTab:
     """the sim settings, shared by the Sim tab and its setup window"""
     self.simType = tk.StringVar(value='Orbital')
     self.simVars = {k: tk.StringVar() for k in ('name', 'calculator', 'distUnit', 'velUnit', 'dt', 'every',
-                                                  'endKind', 'endValue', 'px', 'py', 'vx', 'vy')}
+                                                  'endKind', 'endValue', 'px', 'py', 'vx', 'vy', 'stepMode', 'stepFraction')}
     self.simBodies = []    #per body: dict of mass (MS), colour, x, y (StringVars, in the distance unit)
     self.simReady = False  #filled in from a run (or the defaults) yet
     self.simWindow = None
@@ -69,6 +69,8 @@ class SimTab:
     v['velUnit'].set(vel)
     self.simUnits = {'distUnit': dist, 'velUnit': vel}
     v['dt'].set(self.simNumber(cfg['dt']))
+    v['stepMode'].set(STEP_MODES[1] if cfg.get('stepFraction') else STEP_MODES[0])
+    v['stepFraction'].set(self.simNumber(cfg['stepFraction']) if cfg.get('stepFraction') else '0.001')
     v['every'].set(self.simNumber(cfg['every']))
     v['px'].set(self.simNumber(cfg['position'][0] / du))
     v['py'].set(self.simNumber(cfg['position'][1] / du))
@@ -133,6 +135,9 @@ class SimTab:
       cfg['dt'] = float(m.group(1)) if m else float(np.median(np.diff(t)) / 10)
     except (ValueError, TypeError):
       pass
+    m = re.search(r'^step fraction:\s*(\S+)', log, re.M)
+    if m:
+      cfg['stepFraction'] = float(m.group(1))
     if t.size >= 2:
       cfg['every'] = float(np.median(np.diff(t)))
     full = [o for o in r.orbits if o.full]
@@ -232,20 +237,26 @@ class SimTab:
     text(w, 'y', 9, 2); entry(w, v['vy'], 9, 3)
 
     section('Steps and end', 10)
-    text(w, 'dt (s)', 11, 0); entry(w, v['dt'], 11, 1)
-    text(w, 'csv row every (s)', 11, 2); entry(w, v['every'], 11, 3)
-    text(w, 'End when', 12, 0)
+    text(w, 'Steps', 11, 0)
+    modeBox = ttk.Combobox(w, state='readonly', width=11, values=STEP_MODES, textvariable=v['stepMode'])
+    modeBox.grid(row=11, column=1, sticky='w', **pad)
+    tip(modeBox, 'Fixed: every step is dt. Adaptive: each step moves at most the step fraction of the distance to the '
+                 'nearest body, so close passes get short steps and the far-out parts long ones (dt is then the longest)')
+    text(w, 'step fraction', 11, 2); tip(entry(w, v['stepFraction'], 11, 3), 'Adaptive steps: the fraction of the distance to the nearest body each step moves (0.001 is a good start)')
+    text(w, 'dt (s)', 12, 0); tip(entry(w, v['dt'], 12, 1), 'Fixed steps: every step. Adaptive steps: the longest step')
+    text(w, 'csv row every (s)', 12, 2); entry(w, v['every'], 12, 3)
+    text(w, 'End when', 13, 0)
     self.simEndBox = ttk.Combobox(w, state='readonly', width=26, textvariable=v['endKind'])
     self.simEndBox.bind('<<ComboboxSelected>>', lambda e: self.simEndChanged())
-    self.simEndBox.grid(row=12, column=1, columnspan=2, sticky='w', **pad)
-    entry(w, v['endValue'], 12, 3)
+    self.simEndBox.grid(row=13, column=1, columnspan=2, sticky='w', **pad)
+    entry(w, v['endValue'], 13, 3)
     self.simEndUnit = tk.Label(w, text='', bg=PAGE, fg=INK2)
-    self.simEndUnit.grid(row=12, column=4, sticky='w')
+    self.simEndUnit.grid(row=13, column=4, sticky='w')
     tk.Label(w, text='min / max distance: from the nearest body (any body). Orbits are counted round the origin.',
-             bg=PAGE, fg=MUTED, font=('Helvetica', 10)).grid(row=13, column=0, columnspan=6, sticky='w', padx=8)
+             bg=PAGE, fg=MUTED, font=('Helvetica', 10)).grid(row=14, column=0, columnspan=6, sticky='w', padx=8)
 
     buttons = tk.Frame(w, bg=PAGE)
-    buttons.grid(row=14, column=0, columnspan=6, sticky='e', padx=8, pady=10)
+    buttons.grid(row=15, column=0, columnspan=6, sticky='e', padx=8, pady=10)
     tip(ttk.Button(buttons, text='From selected run', command=self.simFromSelected), TIPS['From selected run']).pack(side='left', padx=4)
     tip(ttk.Button(buttons, text='▶ Start', command=self.simStart), TIPS['\u25b6 Start']).pack(side='left', padx=4)
     tip(ttk.Button(buttons, text='Close', command=w.destroy), 'Close this window; the settings are kept').pack(side='left', padx=4)
@@ -309,6 +320,7 @@ class SimTab:
             'position': [number(v['px'], 'start x') * du, number(v['py'], 'start y') * du],
             'velocity': [number(v['vx'], 'velocity x') * vu, number(v['vy'], 'velocity y') * vu],
             'dt': number(v['dt'], 'dt', True), 'every': number(v['every'], 'the csv row interval', True),
+            'stepFraction': number(v['stepFraction'], 'the step fraction', True) if v['stepMode'].get() == STEP_MODES[1] else None,
             'end': {'kind': kind, 'value': value}}
 
   @staticmethod
@@ -345,7 +357,8 @@ class SimTab:
     if steps is None:
       text = 'Estimated duration: unknown (%s).' % how
     else:
-      text = 'Estimated duration: about %s\n(%.3g steps of %g s; %s).' % (self.duration(seconds), steps, cfg['dt'], how)
+      stepText = 'adaptive steps, fraction %g' % cfg['stepFraction'] if cfg.get('stepFraction') else 'steps of %g s' % cfg['dt']
+      text = 'Estimated duration: about %s\n(%.3g %s; %s).' % (self.duration(seconds), steps, stepText, how)
     end = cfg['end']
     text += '\n\n%s run, %d bod%s, ends: %s %s.\n\nProceed?' % (self.simType.get(), len(cfg['bodies']), 'y' if len(cfg['bodies']) == 1 else 'ies',
                                                               self.simVars['endKind'].get().lower(), self.simVars['endValue'].get())

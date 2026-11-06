@@ -18,15 +18,16 @@ LOG_TO_FILE = True #write each study's output to logs/<folder>/<study>_<datetime
 LOG_TO_CSV = True #write each study's positions to logs/<folder>/<study>_<datetime>.csv
 
 
-def studyDeflectionOfLight(calc, dis, b, dt, name='studyDeflectionOfLight', freq=100):
+def studyDeflectionOfLight(calc, dis, b, dt, name='studyDeflectionOfLight', freq=100, stepFraction=None):
   """
-  light from x = -dis to x = +dis at height b above the body at the origin
-  returns the log and the particle so runs can be compared
+  light from x = -dis to x = +dis at height b above the body at the origin, with steps of dt or adaptive steps
+  (stepFraction, at most dt); returns the log and the particle so runs can be compared
   """
   log = Log(name, LOG_TO_FILE, LOG_TO_CSV)
   config = Config()
   config.condition = Duration(2*dis/C)
-  config.dt=dt
+  config.dt = dt
+  config.stepFraction = stepFraction
 
   particle = Particle()
   particle.pos = np.array([-dis, b])
@@ -43,23 +44,24 @@ def studyDeflectionOfLight(calc, dis, b, dt, name='studyDeflectionOfLight', freq
   calc.hyperbolicSim(particle, config, log)
   return log, particle
 
-def lightPastSun(dis, fractions, dt, freq):
+def lightPastSun(dis, fractions, dt, freq, order=1, stepFraction=None):
   """
   light passing a black solar mass, from dis out on one side to dis out on the other,
   passing at b = each fraction of the sun's radius (the sun is a point mass, so b < RSUN is allowed)
-  compares the measured bend with the general relativity prediction 4GM/(c^2 b)
+  compares the measured bend with the general relativity prediction 4GM/(c^2 b). the calculator is of the given
+  order, with steps of dt or adaptive steps (stepFraction, at most dt)
   """
   runs = []
   for fraction in fractions:
     b = RSUN*fraction
     name = 'lightPastSun_%gpct' % (fraction*100)
-    calc = SpecialFlowCalculator([Body(MS, 0.0, 0.0, black=True)], order=1)
-    log, p = studyDeflectionOfLight(calc, dis, b, dt, name, freq)
+    calc = SpecialFlowCalculator([Body(MS, 0.0, 0.0, black=True)], order=order)
+    log, p = studyDeflectionOfLight(calc, dis, b, dt, name, freq, stepFraction)
     runs.append((fraction, b, log, p))
 
   log = Log('lightPastSun', LOG_TO_FILE)
   log.print()
-  log.print('light past the sun: from', dis/AU, 'AU to', dis/AU, 'AU, dt =', dt, 's')
+  log.print('light past the sun: from', dis/AU, 'AU to', dis/AU, 'AU, dt =', dt, 's', ', step fraction %g' % stepFraction if stepFraction else '', ', order', order)
   #bend from w (light relative to space); v also carries the flow at the end point, which leans towards the sun
   log.print('%-10s %-16s %-18s %-16s %-16s %-20s %-9s %-9s' % ('b/RSUN', 'b (m)', 'closest (m)', 'bend w (rad)', 'bend v (rad)', 'predicted 4GM/c2b', 'w ratio', 'v ratio'))
   for fraction, b, l, p in runs:
@@ -384,8 +386,8 @@ def speedOfLightLowOutput(a, b, d0):
 
 
 STUDIES = {
-  'studyDeflectionOfLight': (studyDeflectionOfLight, {'calc': 'SpecialFlowCalculator([Body(MS)], order=1)', 'dis': 'AU', 'b': '7.0E8', 'dt': '0.001', 'name': 'studyDeflectionOfLight', 'freq': '100'}),
-  'lightPastSun': (lightPastSun, {'dis': '10*AU', 'fractions': '[0.2, 0.1, 0.05, 0.025]', 'dt': '0.0001', 'freq': '1'}),
+  'studyDeflectionOfLight': (studyDeflectionOfLight, {'calc': 'SpecialFlowCalculator([Body(MS)], order=1)', 'dis': 'AU', 'b': '7.0E8', 'dt': '0.001', 'name': 'studyDeflectionOfLight', 'freq': '100', 'stepFraction': 'None'}),
+  'lightPastSun': (lightPastSun, {'dis': '10*AU', 'fractions': '[0.2, 0.1, 0.05, 0.025]', 'dt': '0.0001', 'freq': '1', 'order': '1', 'stepFraction': 'None'}),
   'lightAscend': (lightAscend, {'m': '4000000*MS', 'a': '0.1*AU', 'b': 'AU', 'dt': '0.001', 'freq': '1000'}),
   'lightDescend': (lightDescend, {'m': '4000000*MS', 'a': 'AU', 'b': '0.1*AU', 'dt': '0.001', 'freq': '1000'}),
   'speedOfLight': (speedOfLight, {'a': 'AU', 'b': '0.72*AU', 'd0': '7000000000'}),

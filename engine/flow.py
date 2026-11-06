@@ -17,7 +17,12 @@ from engine.constants import *
 
 
 class Config:
+  """
+  a sim's steps: a fixed dt, or (stepFraction set) adaptive steps - each moves at most stepFraction of the distance
+  to the nearest body (see Calculator.stepSize), and none is longer than dt
+  """
   dt = 0.0
+  stepFraction = None
 
 
 class Condition:
@@ -189,18 +194,52 @@ class Calculator:
   def move(self, p, dt):
     raise NotImplementedError('Calculator only gives the flow and gravity; use a calculator that moves particles')
 
+  def nearest(self, pos):
+    """the distance from pos to the nearest body"""
+    return min(np.linalg.norm(pos - b.pos) for b in self.bodies)
+
+  def stepSize(self, p, fraction, dtMax=None):
+    """
+    an adaptive step: long enough to move fraction of the distance to the nearest body, at the fastest of the
+    particle's speed v, the flow u and its speed relative to the flow w (a step looks at the flow that far away), and
+    no longer than dtMax. close in, and moving fast, the steps are short; far out and slow, they are long - so the
+    error in each step is about the same everywhere
+    """
+    speed = max(np.linalg.norm(p.v), np.linalg.norm(p.u), np.linalg.norm(p.w))
+    dt = fraction*self.nearest(p.pos)/speed if speed > 0 else float('inf')
+    return min(dt, dtMax) if dtMax else dt
+
+  def steps(self, p, config, duration=None):
+    """
+    the length of each step in turn: config.dt every time, or adaptive steps if config.stepFraction is set (dt is
+    then the longest step); with a duration, the steps stop when it is reached
+    """
+    if config.stepFraction is None:
+      if duration is None:
+        while True:
+          yield config.dt
+      for n in range(int(duration/config.dt)):
+        yield config.dt
+      return
+    t = 0.0
+    while duration is None or t < duration:
+      dt = self.stepSize(p, config.stepFraction, config.dt or None)
+      if duration is not None:
+        dt = min(dt, duration - t)
+      t += dt
+      yield dt
+
   def orbitalSim(self, p, config, log):
     """
     run an orbital simulation
     """
-    dt = config.dt
-    maxn = int((config.durationDays*DAY)/dt)
+    duration = config.durationDays*DAY
     self.log = log
 
     log.print('study type: orbit')   #the viewer splits orbit runs into their orbits
-    log.start(maxn, p, self, dt)
+    log.start(int(duration/config.dt) if config.stepFraction is None else 0, p, self, config)
 
-    for n in range(maxn):
+    for dt in self.steps(p, config, duration):
       oldpos = p.pos.copy()
       self.move(p, dt)
       log.updatePosition(p, dt)
@@ -212,13 +251,14 @@ class Calculator:
     """
     run a hyperbolic simulation
     """
-    dt = config.dt
     self.log = log
 
     log.print('study type: hyperbolic')
-    log.start(config.condition.limit, p, self, dt)
+    log.start(config.condition.limit, p, self, config)
 
-    while config.condition.check(p):
+    for dt in self.steps(p, config):
+      if not config.condition.check(p):
+        break
       self.move(p, dt)
       log.updatePosition(p, dt)
 

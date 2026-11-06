@@ -134,6 +134,35 @@ class Engine(unittest.TestCase):
     self.assertEqual(rows[0], ['t', 'pt', 'd', 'pos_x', 'pos_y', 'v_x', 'v_y'])
     self.assertAlmostEqual(float(rows[1][0]), 3600.0)
 
+  def testAdaptiveLightPastTheSun(self):
+    """adaptive steps: light from 10 AU to 10 AU grazing the Sun at 0.2 RSUN bends as in the 12-hour fixed-step runs"""
+    dis, b = 10*AU, 0.2*RSUN
+    calc = SpecialFlowCalculator([Body(MS)], order=2)
+    p = Particle()
+    p.pos = np.array([-dis, b])
+    calc.initPW(p, np.array([C, 0.0]))
+    config = Config()
+    config.dt, config.stepFraction = 10.0, 0.001
+    n = 0
+    for dt in calc.steps(p, config, 2*dis/C):
+      calc.move(p, dt)
+      n += 1
+    self.assertLess(n, 30000)   #about 20,000 steps, where fixed steps of 0.1 s take 100,000 and are less accurate
+    bend = math.atan2(-p.w[1], p.w[0])
+    self.assertAlmostEqual(bend/(4*G*MS/(C**2*b)), 1.0000755, delta=5e-6)
+    self.assertAlmostEqual(p.t, 2*dis/C, delta=1e-6)   #the steps stop exactly at the duration
+
+  def testCsvRowsWithAdaptiveSteps(self):
+    """with uneven steps the csv rows come at the steps nearest each interval"""
+    log = Log('regressionRows', False, True, scratch(self))
+    log.freq = 100.0
+    p = Particle()
+    for dt in [7.0, 13.0, 29.0, 41.0, 3.0, 50.0, 11.0, 60.0]:
+      log.updatePosition(p, dt)
+    log.close()
+    rows = [float(r[0]) for r in list(csv.reader(read(log.csvFile.name).splitlines()))[1:]]
+    self.assertEqual(rows, [90.0, 214.0])   #steps end at 7, 20, 49, 90, 93, 143, 154, 214: nearest 100 and 200 s
+
   def testCalculatorNames(self):
     """names old and new, as in logs and sim configs, make the right calculator"""
     for name, order in (('NewSpecialFlowCalculator', 1), ('SecondOrderSpecialFlowCalculator', 2),

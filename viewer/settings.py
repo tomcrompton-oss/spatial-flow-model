@@ -99,6 +99,7 @@ PREF_VARS = ['mode', 'unit', 'logX', 'logY', 'equalAspect', 'ctTime', 'reverseX'
              'showSchwarzschild', 'showCones', 'showPathLegend', 'showFieldKey', 'showMarkNote', 'showMarkLabels',
              'showBodyLabels', 'showSidebar', 'replaySpeed']
 SIM_DIR = os.path.join(ROOT, 'logs', '.sims')   #status files of sims run from the viewer
+STEP_MODES = ['Fixed dt', 'Adaptive']   #the Sim tab's step choice
 SIM_TYPES = [('Orbital', 'orbit'), ('Hyperbolic', 'hyperbolic')]
 END_KINDS = [('time', 'Elapsed time'), ('min', 'Min distance to a body'), ('max', 'Max distance from every body'),
              ('orbits', 'Number of orbits')]

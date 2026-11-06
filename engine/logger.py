@@ -110,6 +110,7 @@ class Log:
     self.csvWriter = None
     self.t = 0.0          #time since the start of the run
     self.freq = 0         #seconds between csv rows; 0 for every step
+    self.nextRow = None   #when the next csv row is due
     self.starttime = time.time()
     self.startpos = None
     self.stats = OrbitStats()
@@ -144,14 +145,24 @@ class Log:
       print(*args, file=self.file, **kwargs)
       self.file.flush()
 
-  def start(self, maxn, p, calc, dt):
+  def start(self, maxn, p, calc, config):
+    """the start of a sim: its estimated duration (maxn steps; 0 if not known), calculator, steps and bodies"""
     self.starttime = time.time()
     self.startpos = p.pos
-    self.print('Starting estimated duration:', "{:.2f}".format(maxn/calc.runspeed), 'seconds (',
-               "{:.2}".format(maxn/(calc.runspeed*3600)), ') hours')
+    if maxn:
+      self.print('Starting estimated duration:', "{:.2f}".format(maxn/calc.runspeed), 'seconds (',
+                 "{:.2}".format(maxn/(calc.runspeed*3600)), ') hours')
     self.print('calc: ', calc)
-    self.print('dt: ', dt)
+    self.logSteps(config)
     self.logBodies(calc)
+
+  def logSteps(self, config):
+    """the step size: dt, and the step fraction if the steps are adaptive (then dt is the longest step)"""
+    dt = getattr(config, 'dt', config)   #a Config, or older callers' dt
+    self.print('dt: ', dt)
+    fraction = getattr(config, 'stepFraction', None)
+    if fraction:
+      self.print('step fraction: %g  (adaptive steps, at most dt)' % fraction)
 
   def logBodies(self, calc):
     """one line per body - the csv viewer reads these back to draw the bodies and their flow"""
@@ -164,11 +175,26 @@ class Log:
                  % (i+1, b.mass, b.mass/MS, b.x, b.y, 'black' if b.black else 'white'))
 
   def updatePosition(self, p, dt):
-    """after each step: track the orbit statistics, and write a csv row when one is due"""
+    """
+    after each step: track the orbit statistics, and write a csv row when one is due - every freq seconds, at the
+    step nearest the time (with fixed steps, freq a whole number of them, that is exactly every freq seconds);
+    returns whether it wrote a row
+    """
     self.t += dt
     d = self.stats.track(p, dt)
-    if self.csvFile and (self.freq == 0 or round(self.t/dt) % round(self.freq/dt) == 0):
+    if not self.csvFile:
+      return False
+    if self.freq == 0:
       self.writeRow(p, d)
+      return True
+    if self.nextRow is None:
+      self.nextRow = self.freq
+    if self.t < self.nextRow - dt/2:
+      return False
+    self.writeRow(p, d)
+    while self.nextRow <= self.t + dt/2:
+      self.nextRow += self.freq
+    return True
 
   def writeRow(self, p, d=None):
     self.csvWriter.writerow([self.t, p.pt, np.linalg.norm(p.pos) if d is None else d, p.pos[0], p.pos[1], p.v[0], p.v[1]])
