@@ -224,42 +224,22 @@ class Calculator:
       t += dt
       yield dt
 
+  def run(self, p, config, log, ends, progress=None):
+    """
+    run p until the first of ends - [('time', s)], [('orbits', 20), ('min', rs)] ... (see engine/run.py) - with the
+    steps config sets (fixed dt or adaptive), logging it as it goes; orbits are counted and logged whenever they
+    happen. returns why it stopped and the number of steps
+    """
+    from engine.run import simulate
+    return simulate(self, p, config, log, ends, progress)
+
   def orbitalSim(self, p, config, log):
-    """
-    run an orbital simulation
-    """
-    duration = config.durationDays*DAY
-    self.log = log
-
-    log.print('study type: orbit')   #the viewer splits orbit runs into their orbits
-    log.start(int(duration/config.dt) if config.stepFraction is None else 0, p, self, config)
-
-    for dt in self.steps(p, config, duration):
-      oldpos = p.pos.copy()
-      self.move(p, dt)
-      log.updatePosition(p, dt)
-      if oldpos[1] < 0 and p.pos[1] >= 0:
-        log.logOrbit()   #orbit completed
-    log.finishOrbit()
+    """a run for config.durationDays (as the orbit studies have always run)"""
+    return self.run(p, config, log, [('time', config.durationDays*DAY)])
 
   def hyperbolicSim(self, p, config, log):
-    """
-    run a hyperbolic simulation
-    """
-    self.log = log
-
-    log.print('study type: hyperbolic')
-    log.start(config.condition.limit, p, self, config)
-
-    for dt in self.steps(p, config):
-      if not config.condition.check(p):
-        break
-      self.move(p, dt)
-      log.updatePosition(p, dt)
-
-    log.finishHyperbolic(p)
-    log.print(p.pos)
-    log.print(p.v)
+    """a run until config.condition stops it (as the descent and light studies have always run)"""
+    return self.run(p, config, log, [('condition', config.condition)])
 
 
 class NewtonianCalculator(Calculator):

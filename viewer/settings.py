@@ -100,8 +100,8 @@ PREF_VARS = ['mode', 'unit', 'logX', 'logY', 'equalAspect', 'ctTime', 'reverseX'
              'showBodyLabels', 'showSidebar', 'replaySpeed']
 SIM_DIR = os.path.join(ROOT, 'logs', '.sims')   #status files of sims run from the viewer
 STEP_MODES = ['Fixed dt', 'Adaptive']   #the Sim tab's step choice
-SIM_TYPES = [('Orbital', 'orbit'), ('Hyperbolic', 'hyperbolic')]
-END_KINDS = [('time', 'Elapsed time'), ('min', 'Min distance to a body'), ('max', 'Max distance from every body'),
+NO_END = '(nothing else)'   #the Sim tab's second end condition, left out
+END_KINDS = [('time', 'Elapsed time'), ('properTime', 'Proper time'), ('min', 'Min distance to a body'), ('max', 'Max distance from every body'),
              ('orbits', 'Number of orbits')]
 DIST_UNITS = [('m', 1.0), ('km', 1e3), ('AU', AU), ('RSUN', RSUN)]
 VEL_UNITS = [('m/s', 1.0), ('km/s', 1e3), ('c', C)]

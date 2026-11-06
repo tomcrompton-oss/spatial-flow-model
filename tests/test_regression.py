@@ -128,11 +128,12 @@ class Engine(unittest.TestCase):
     self.assertAlmostEqual(log.calcApoapsis/(MERCURY_MAX/10), 1, delta=1e-3)
     log.close()
     text = read(log.file.name)
-    self.assertIn('study type: orbit', text)
     self.assertIn('orbit 2: t ', text)
+    self.assertIn('GR exact precession for these apsides', text)
     rows = list(csv.reader(read(log.csvFile.name).splitlines()))
     self.assertEqual(rows[0], ['t', 'pt', 'd', 'pos_x', 'pos_y', 'v_x', 'v_y'])
-    self.assertAlmostEqual(float(rows[1][0]), 3600.0)
+    self.assertAlmostEqual(float(rows[1][0]), 0.0)      #the start
+    self.assertAlmostEqual(float(rows[2][0]), 3600.0)
 
   def testAdaptiveLightPastTheSun(self):
     """light from 10 AU to 10 AU past the Sun at 0.2 RSUN bends as GR does exactly, at its impact parameter cL/E"""
@@ -204,7 +205,7 @@ class Studies(unittest.TestCase):
     """a study from a config (as the viewer's Sim tab runs them): estimate, run, files, and the end condition"""
     import studies.run_study as run_study
     folder = scratch(self)
-    cfg = {'name': 'regressionStudy', 'type': 'hyperbolic', 'calculator': 'SpecialFlowCalculator, second order',
+    cfg = {'name': 'regressionStudy', 'calculator': 'SpecialFlowCalculator, second order',
            'bodies': [{'mass': HOLE, 'x': 0.0, 'y': 0.0, 'black': True}], 'position': [0.0, START],
            'velocity': [0.0, -math.sqrt(2*G*HOLE/START)], 'dt': 1.0, 'every': 100.0,
            'end': {'kind': 'min', 'value': STOP}, 'logDir': folder}
@@ -220,7 +221,35 @@ class Studies(unittest.TestCase):
     rows = list(csv.reader(read(path).splitlines()))[1:]
     self.assertAlmostEqual(float(rows[0][3 + 1]), START)            #the starting row
     self.assertLess(float(rows[-1][2]), STOP)                       #ended at the horizon
-    self.assertIn('study type: hyperbolic', read(path[:-4] + '.log'))
+    text = read(path[:-4] + '.log')
+    self.assertIn('stopped: reached', text)
+    self.assertIn('No orbits completed', text)
+
+  def testOneKindOfRun(self):
+    """every run counts orbits as they happen and stops at the first of its ends: an orbit given a distance end
+    that it never reaches runs its orbits; a fall given an orbit end that it never reaches falls"""
+    from engine.run import OrbitCounter
+    import studies.run_study as run_study
+    scale = 1e5
+    r, v = MERCURY_MAX/scale, MERCURY_SPEED_AT_MAX*math.sqrt(scale)
+    common = {'calculator': 'SpecialFlowCalculator, second order', 'bodies': [{'mass': MS, 'x': 0.0, 'y': 0.0, 'black': True}],
+              'dt': 1e-4, 'stepFraction': 0.001, 'every': 1e-3, 'logDir': scratch(self)}
+    with open(os.devnull, 'w') as quiet:
+      stdout, sys.stdout = sys.stdout, quiet
+      try:
+        orbit = run_study.run(dict(common, name='regressionOrbitEnds', position=[0.0, r], velocity=[v, 0.0],
+                                   end=[{'kind': 'orbits', 'value': 3}, {'kind': 'min', 'value': 1e3}]))
+        fall = run_study.run(dict(common, name='regressionFallEnds', position=[0.0, r], velocity=[0.0, 0.0],
+                                  end=[{'kind': 'orbits', 'value': 3}, {'kind': 'min', 'value': 2*RS/HOLE*MS}]))
+      finally:
+        sys.stdout = stdout
+    text = read(orbit[:-4] + '.log')
+    self.assertIn('stopped: 3 orbits', text)
+    self.assertIn('orbit 4: t ', text)          #the part orbit, then 3 whole ones
+    self.assertIn('orbits: 3', text)
+    text = read(fall[:-4] + '.log')
+    self.assertIn('stopped: reached', text)
+    self.assertNotIn('orbit 1: t ', text)      #a straight fall turns no angle round the body
 
 
 class Viewer(unittest.TestCase):

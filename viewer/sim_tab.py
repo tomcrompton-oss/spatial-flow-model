@@ -7,9 +7,9 @@ class SimTab:
 
   def simInit(self):
     """the sim settings, shared by the Sim tab and its setup window"""
-    self.simType = tk.StringVar(value='Orbital')
-    self.simVars = {k: tk.StringVar() for k in ('name', 'calculator', 'distUnit', 'velUnit', 'dt', 'every',
-                                                  'endKind', 'endValue', 'px', 'py', 'vx', 'vy', 'stepMode', 'stepFraction')}
+    #two end conditions: the run stops at whichever comes first; the second can be left as NO_END
+    self.simVars = {k: tk.StringVar() for k in ('name', 'calculator', 'distUnit', 'velUnit', 'dt', 'every', 'endKind', 'endValue',
+                                                  'endKind2', 'endValue2', 'px', 'py', 'vx', 'vy', 'stepMode', 'stepFraction')}
     self.simBodies = []    #per body: dict of mass (MS), colour, x, y (StringVars, in the distance unit)
     self.simReady = False  #filled in from a run (or the defaults) yet
     self.simWindow = None
@@ -17,11 +17,6 @@ class SimTab:
     self.simUnits = {'distUnit': 'AU', 'velUnit': 'km/s'}   #the units the entries are in now
 
   def simTab(self, tab, button, label, gap):
-    tk.Label(tab, text='Type', bg=PAGE, fg=INK2).pack(side='left', padx=(4, 2))
-    box = ttk.Combobox(tab, state='readonly', width=11, values=[t for t, _ in SIM_TYPES], textvariable=self.simType)
-    box.bind('<<ComboboxSelected>>', lambda e: self.simTypeChanged())
-    box.pack(side='left')
-    tip(box, 'Orbital runs count orbits and can end after a number of them; hyperbolic runs end on time or distance')
     button(tab, 'Set up...', self.simSetup)
     button(tab, 'From selected run', self.simFromSelected)
     gap(tab)
@@ -37,32 +32,20 @@ class SimTab:
     self.simProgress.pack(side='left', padx=4, pady=3)
     tip(ttk.Button(self.simBar, text='Cancel', command=self.simCancel), TIPS['Cancel']).pack(side='left', padx=6)
 
-  def simTypeChanged(self):
-    """number of orbits is only an end condition for orbit runs"""
-    orbit = self.simTypeKey() == 'orbit'
-    if not orbit and self.simVars['endKind'].get() == dict(END_KINDS)['orbits']:
-      self.simVars['endKind'].set(dict(END_KINDS)['time'])
-    if self.simWindow is not None and self.simWindow.winfo_exists():
-      self.simEndBox.config(values=[label for kind, label in END_KINDS if orbit or kind != 'orbits'])
-      self.simEndChanged()
-
-  def simTypeKey(self):
-    return dict(SIM_TYPES)[self.simType.get()]
-
   @staticmethod
   def simNumber(v):
     return '%.10g' % v
 
   def simFill(self, cfg):
     """put a config (SI units) into the entries, choosing units that suit its sizes"""
+    ends = cfg['end'] if isinstance(cfg['end'], list) else [cfg['end']]
     scale = max([abs(v) for v in cfg['position']] + [abs(b[k]) for b in cfg['bodies'] for k in ('x', 'y')] +
-                ([cfg['end']['value']] if cfg['end']['kind'] in ('min', 'max') else []) + [1.0])
+                [e['value'] for e in ends if e['kind'] in ('min', 'max')] + [1.0])
     dist = 'AU' if scale >= 0.01 * AU else ('km' if scale >= 1e6 else 'm')
     speed = max(abs(v) for v in cfg['velocity'])
     vel = 'c' if speed >= 0.1 * C else ('km/s' if speed >= 100 else 'm/s')
     du, vu = dict(DIST_UNITS)[dist], dict(VEL_UNITS)[vel]
     v = self.simVars
-    self.simType.set(next(t for t, k in SIM_TYPES if k == cfg['type']))
     v['name'].set(cfg['name'])
     v['calculator'].set((flow.calculatorName(cfg['calculator']) if flow else None) or cfg['calculator'])
     v['distUnit'].set(dist)
@@ -76,16 +59,21 @@ class SimTab:
     v['py'].set(self.simNumber(cfg['position'][1] / du))
     v['vx'].set(self.simNumber(cfg['velocity'][0] / vu))
     v['vy'].set(self.simNumber(cfg['velocity'][1] / vu))
-    kind, value = cfg['end']['kind'], cfg['end']['value']
-    v['endKind'].set(dict(END_KINDS)[kind])
-    v['endValue'].set(self.simNumber(value / du if kind in ('min', 'max') else value))
+    for slot, end in zip(('', '2'), ends + [None]):
+      if end is None:
+        v['endKind' + slot].set(NO_END)
+        v['endValue' + slot].set('')
+      else:
+        kind, value = end['kind'], end['value']
+        v['endKind' + slot].set(dict(END_KINDS)[kind])
+        v['endValue' + slot].set(self.simNumber(value / du if kind in ('min', 'max') else value))
     ms = MS
     self.simBodies = [{'mass': tk.StringVar(value=self.simNumber(b['mass'] / ms)), 'colour': tk.StringVar(value='black' if b['black'] else 'white'),
                        'x': tk.StringVar(value=self.simNumber(b['x'] / du)), 'y': tk.StringVar(value=self.simNumber(b['y'] / du))}
                       for b in cfg['bodies']]
     self.simReady = True
     self.simBuildBodies()
-    self.simTypeChanged()
+    self.simEndChanged()
 
   def simDefaults(self, r=None):
     """a config to start from: the selected run's setup, or Mercury round the Sun"""
@@ -141,10 +129,11 @@ class SimTab:
     if t.size >= 2:
       cfg['every'] = float(np.median(np.diff(t)))
     full = [o for o in r.orbits if o.full]
-    if cfg['type'] == 'orbit':
-      cfg['end'] = {'kind': 'orbits', 'value': max(1, len(full))}
+    if full:
+      cfg['end'] = {'kind': 'orbits', 'value': len(full)}
     elif t.size:
       cfg['end'] = {'kind': 'time', 'value': float(t[-1])}
+    cfg.pop('type', None)   #older configs: every run now counts orbits as they happen
     return cfg
 
   def simFromSelected(self):
@@ -157,8 +146,9 @@ class SimTab:
     old, new = dict(units)[self.simUnits[which]], dict(units)[self.simVars[which].get()]
     if which == 'distUnit':
       targets = [self.simVars['px'], self.simVars['py']] + [b[k] for b in self.simBodies for k in ('x', 'y')]
-      if self.simEndKey() in ('min', 'max'):
-        targets.append(self.simVars['endValue'])
+      for slot in ('', '2'):
+        if self.simEndKey(slot) in ('min', 'max'):
+          targets.append(self.simVars['endValue' + slot])
     else:
       targets = [self.simVars['vx'], self.simVars['vy']]
     for var in targets:
@@ -168,14 +158,16 @@ class SimTab:
         pass
     self.simUnits[which] = self.simVars[which].get()
 
-  def simEndKey(self):
-    return next(k for k, label in END_KINDS if label == self.simVars['endKind'].get())
+  def simEndKey(self, slot=''):
+    """the kind of end condition in a slot ('' or '2'), or None for NO_END"""
+    return next((k for k, label in END_KINDS if label == self.simVars['endKind' + slot].get()), None)
 
   def simEndChanged(self):
+    """each end condition's unit beside its value"""
     if self.simWindow is not None and self.simWindow.winfo_exists():
-      kind = self.simEndKey()
-      unit = {'time': 's', 'orbits': 'orbits'}.get(kind, self.simVars['distUnit'].get())
-      self.simEndUnit.config(text=unit)
+      for slot, label in (('', self.simEndUnit), ('2', self.simEndUnit2)):
+        kind = self.simEndKey(slot)
+        label.config(text={'time': 's', 'properTime': 's', 'orbits': 'orbits', None: ''}.get(kind, self.simVars['distUnit'].get()))
 
   def simSetup(self):
     """the setup window: bodies, particle, steps and end condition"""
@@ -202,12 +194,8 @@ class SimTab:
       tk.Label(parent, text=s, bg=PAGE, fg=INK2).grid(row=row, column=col, sticky='w', **pad, **kw)
 
     section('Run', 0)
-    text(w, 'Type', 1, 0)
-    typeBox = ttk.Combobox(w, state='readonly', width=11, values=[t for t, _ in SIM_TYPES], textvariable=self.simType)
-    typeBox.bind('<<ComboboxSelected>>', lambda e: self.simTypeChanged())
-    typeBox.grid(row=1, column=1, sticky='w', **pad)
-    text(w, 'Name', 1, 2)
-    entry(w, v['name'], 1, 3, 18)
+    text(w, 'Name', 1, 0)
+    entry(w, v['name'], 1, 1, 18)
     text(w, 'Calculator', 2, 0)
     ttk.Combobox(w, state='readonly', width=28, values=simrun.calculators() if simrun else [],
                  textvariable=v['calculator']).grid(row=2, column=1, columnspan=3, sticky='w', **pad)
@@ -245,22 +233,29 @@ class SimTab:
     text(w, 'step fraction', 11, 2); tip(entry(w, v['stepFraction'], 11, 3), 'Adaptive steps: the fraction of the distance to the nearest body each step moves (0.001 is a good start)')
     text(w, 'dt (s)', 12, 0); tip(entry(w, v['dt'], 12, 1), 'Fixed steps: every step. Adaptive steps: the longest step')
     text(w, 'csv row every (s)', 12, 2); entry(w, v['every'], 12, 3)
-    text(w, 'End when', 13, 0)
-    self.simEndBox = ttk.Combobox(w, state='readonly', width=26, textvariable=v['endKind'])
-    self.simEndBox.bind('<<ComboboxSelected>>', lambda e: self.simEndChanged())
-    self.simEndBox.grid(row=13, column=1, columnspan=2, sticky='w', **pad)
-    entry(w, v['endValue'], 13, 3)
-    self.simEndUnit = tk.Label(w, text='', bg=PAGE, fg=INK2)
-    self.simEndUnit.grid(row=13, column=4, sticky='w')
-    tk.Label(w, text='min / max distance: from the nearest body (any body). Orbits are counted round the origin.',
-             bg=PAGE, fg=MUTED, font=('Helvetica', 10)).grid(row=14, column=0, columnspan=6, sticky='w', padx=8)
+    for row, slot, title, choices in ((13, '', 'End when', [label for _, label in END_KINDS]),
+                                      (14, '2', 'or when', [NO_END] + [label for _, label in END_KINDS])):
+      text(w, title, row, 0)
+      box = ttk.Combobox(w, state='readonly', width=26, textvariable=v['endKind' + slot], values=choices)
+      box.bind('<<ComboboxSelected>>', lambda e: self.simEndChanged())
+      box.grid(row=row, column=1, columnspan=2, sticky='w', **pad)
+      tip(box, 'The run stops at whichever end comes first' + ('' if slot == '' else '; leave as "%s" for just one' % NO_END))
+      entry(w, v['endValue' + slot], row, 3)
+      unit = tk.Label(w, text='', bg=PAGE, fg=INK2)
+      unit.grid(row=row, column=4, sticky='w')
+      if slot == '':
+        self.simEndUnit = unit
+      else:
+        self.simEndUnit2 = unit
+    tk.Label(w, text='Every run counts orbits as they happen, round the bodies\' centre of mass. Min / max distance: from the nearest body.',
+             bg=PAGE, fg=MUTED, font=('Helvetica', 10)).grid(row=15, column=0, columnspan=6, sticky='w', padx=8)
 
     buttons = tk.Frame(w, bg=PAGE)
-    buttons.grid(row=15, column=0, columnspan=6, sticky='e', padx=8, pady=10)
+    buttons.grid(row=16, column=0, columnspan=6, sticky='e', padx=8, pady=10)
     tip(ttk.Button(buttons, text='From selected run', command=self.simFromSelected), TIPS['From selected run']).pack(side='left', padx=4)
     tip(ttk.Button(buttons, text='▶ Start', command=self.simStart), TIPS['\u25b6 Start']).pack(side='left', padx=4)
     tip(ttk.Button(buttons, text='Close', command=w.destroy), 'Close this window; the settings are kept').pack(side='left', padx=4)
-    self.simTypeChanged()
+    self.simEndChanged()
 
   def simCountChanged(self):
     try:
@@ -309,19 +304,26 @@ class SimTab:
     bodies = [{'mass': number(b['mass'], 'body %d mass' % i, True) * ms, 'black': b['colour'].get() == 'black',
                'x': number(b['x'], 'body %d x' % i) * du, 'y': number(b['y'], 'body %d y' % i) * du}
               for i, b in enumerate(self.simBodies, 1)]
-    kind = self.simEndKey()
-    value = number(v['endValue'], 'the end value', True)
-    if kind in ('min', 'max'):
-      value *= du
-    if kind == 'orbits':
-      value = int(round(value))
+    ends = []
+    for slot in ('', '2'):
+      kind = self.simEndKey(slot)
+      if kind is None:
+        continue
+      value = number(v['endValue' + slot], 'the end value', True)
+      if kind in ('min', 'max'):
+        value *= du
+      if kind == 'orbits':
+        value = int(round(value))
+      ends.append({'kind': kind, 'value': value})
+    if not ends:
+      raise ValueError('choose an end condition')
     name = re.sub(r'[^\w.-]+', '_', v['name'].get().strip()) or 'sim'
-    return {'name': name, 'type': self.simTypeKey(), 'calculator': v['calculator'].get(), 'bodies': bodies,
+    return {'name': name, 'calculator': v['calculator'].get(), 'bodies': bodies,
             'position': [number(v['px'], 'start x') * du, number(v['py'], 'start y') * du],
             'velocity': [number(v['vx'], 'velocity x') * vu, number(v['vy'], 'velocity y') * vu],
             'dt': number(v['dt'], 'dt', True), 'every': number(v['every'], 'the csv row interval', True),
             'stepFraction': number(v['stepFraction'], 'the step fraction', True) if v['stepMode'].get() == STEP_MODES[1] else None,
-            'end': {'kind': kind, 'value': value}}
+            'end': ends if len(ends) > 1 else ends[0]}
 
   @staticmethod
   def duration(seconds):
@@ -359,9 +361,9 @@ class SimTab:
     else:
       stepText = 'adaptive steps, fraction %g' % cfg['stepFraction'] if cfg.get('stepFraction') else 'steps of %g s' % cfg['dt']
       text = 'Estimated duration: about %s\n(%.3g %s; %s).' % (self.duration(seconds), steps, stepText, how)
-    end = cfg['end']
-    text += '\n\n%s run, %d bod%s, ends: %s %s.\n\nProceed?' % (self.simType.get(), len(cfg['bodies']), 'y' if len(cfg['bodies']) == 1 else 'ies',
-                                                              self.simVars['endKind'].get().lower(), self.simVars['endValue'].get())
+    endText = ' or '.join('%s %s' % (self.simVars['endKind' + slot].get().lower(), self.simVars['endValue' + slot].get())
+                          for slot in ('', '2') if self.simEndKey(slot))
+    text += '\n\n%d bod%s, ends: %s.\n\nProceed?' % (len(cfg['bodies']), 'y' if len(cfg['bodies']) == 1 else 'ies', endText)
     parent = self.simWindow if self.simWindow and self.simWindow.winfo_exists() else self.root
     if not messagebox.askokcancel('Run sim', text, parent=parent):
       return

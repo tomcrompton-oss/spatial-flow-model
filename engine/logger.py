@@ -13,6 +13,7 @@ from datetime import datetime
 import numpy as np
 from engine.constants import *
 from engine.vectors import length
+from engine.exact import grPrecessionExact
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   #the project folder
 LOG_DIR = os.path.join(ROOT, 'logs')                #study logs
@@ -26,12 +27,14 @@ def studyFolder(studyName):
 
 class OrbitStats:
   """
-  the closest and farthest points (from the origin) since the last orbit ended, and a record of each orbit;
-  an orbit ends when Calculator.orbitalSim sees the particle cross +y
+  the closest and farthest points (from the bodies' centre of mass) since the last orbit ended, the closest over the
+  whole run, and a record of each orbit; an orbit ends when engine/run.py's OrbitCounter says so
   """
 
   def __init__(self, gm=G*MS):
     self.GM = gm     #for the predicted period and precession; Log.start / logBodies set it from the calculator
+    self.centre = np.array([0.0, 0.0])   #the bodies' centre of mass, which distances are from (logBodies sets it)
+    self.closest, self.closestPos = float('inf'), None
     self.orbit = 0   #orbits ended so far (the first is a warmup part orbit)
     self.period = 0.0
     self.resetExtremes()
@@ -50,7 +53,9 @@ class OrbitStats:
   def track(self, p, dt):
     """after each step: the time into this orbit and the extremes of the distance"""
     self.period += dt
-    d = length(p.pos)
+    d = length(p.pos - self.centre)
+    if d < self.closest:
+      self.closest, self.closestPos = d, p.pos.copy()
     if d > self.max:
       self.max, self.maxpos = d, p.pos.copy()
     if d < self.min:
@@ -62,8 +67,8 @@ class OrbitStats:
     self.orbit += 1
     sma = (self.min + self.max)/2
     e = 1 - 2/(self.max/self.min + 1)
-    minP = math.pi - math.acos(self.minpos[1]/self.min)   #total precession
-    maxP = math.acos(self.maxpos[1]/self.max)
+    minP = math.pi - math.acos((self.minpos - self.centre)[1]/self.min)   #total precession
+    maxP = math.acos((self.maxpos - self.centre)[1]/self.max)
     self.periods.append(self.period)
     self.periapsis.append(self.min)
     self.apoapsis.append(self.max)
@@ -170,6 +175,7 @@ class Log:
     bodies = getattr(calc, 'bodies', [])
     if bodies:
       self.stats.GM = calc.GM   #the predictions use the calculator's bodies, not one solar mass
+      self.stats.centre = sum(b.mass*b.pos for b in bodies)/sum(b.mass for b in bodies)
     self.print('bodies:', len(bodies))
     for i, b in enumerate(bodies):
       self.print('body %d: mass %.6e kg (%.6g MS)  x %.6e m  y %.6e m  %s'
@@ -211,19 +217,26 @@ class Log:
     self.print(minP, maxP)
     s.resetExtremes()
 
-  def finishOrbit(self):
+  def finish(self, p):
+    """
+    the end of a run: how long it took, the closest approach, and - if there were whole orbits - their period,
+    apsides and precession (against GR's leading term and its exact value for these apsides); if not, the angles
+    the particle (and its velocity relative to the flow) ended up going at, as for a flyby
+    """
     if self.csvFile:
       self.csvFile.flush()
+    s = self.stats
     self.print()
     self.print('Simulation complete: ', time.time() - self.starttime, 'seconds (', (time.time() - self.starttime)/3600, ' hours)')
     self.print('sim time:', self.t)
+    self.print('closest distance:', s.closest, ' ', s.closest/AU, 'AU')
     self.print()
-    s = self.stats
     if s.orbit == 0:
       self.print('No orbits completed')
-      return
-    if not s.summary():
+    elif s.orbit == 1:
       self.print('Only warmup orbit completed')
+    if s.orbit < 2 or not s.summary():
+      self.finishFlyby(p)
       return
     self.print('orbits:', s.orbit, ' average period', s.calcPeriod/DAY, ' days          predicted period:', s.predictedPeriod/DAY, ' days')
     self.print()
@@ -236,24 +249,23 @@ class Log:
     self.print('predicted precession: ', s.predictedPrecession)
     if s.orbit == 1:
       self.print('Need >1 orbits to calculte precession')
-    else:
-      accuracy = lambda calc: 100 - 100*abs((s.predictedPrecession - calc)/s.predictedPrecession)
-      self.print('calc periapsis precession:', s.calcPPrecession, '   accuracy=', accuracy(s.calcPPrecession), '%')
-      self.print('calc apoapsis precession:', s.calcAPrecession, '   accuracy=', accuracy(s.calcAPrecession), '%')
+      return
+    accuracy = lambda calc, predicted: 100 - 100*abs((predicted - calc)/predicted)
+    self.print('calc periapsis precession:', s.calcPPrecession, '   accuracy=', accuracy(s.calcPPrecession, s.predictedPrecession), '%')
+    self.print('calc apoapsis precession:', s.calcAPrecession, '   accuracy=', accuracy(s.calcAPrecession, s.predictedPrecession), '%')
+    exact = grPrecessionExact(s.calcPeriapsis, s.calcApoapsis, s.GM/G)
+    self.print('GR exact precession for these apsides:', exact, '   periapsis accuracy=', accuracy(s.calcPPrecession, exact),
+               '%   apoapsis accuracy=', accuracy(s.calcAPrecession, exact), '%')
 
-  def finishHyperbolic(self, p):
-    if self.csvFile:
-      self.csvFile.flush()
+  def finishFlyby(self, p):
+    """the end of a run with no whole orbits: the predicted bend for the closest approach, and the final angles"""
     s = self.stats
-    self.print('finish hyperbolic:', time.time() - self.starttime, 'seconds (', (time.time() - self.starttime)/3600, ' hours)')
-    self.print('sim time:', self.t)
-    self.print('closest distance:', s.min, ' ', s.min/AU, 'AU')
-    self.print('Angle:', 4*s.GM/(C**2*s.min))
+    self.print('Angle:', 4*s.GM/(C**2*s.closest))
     self.print(p.v)
     self.print(p.v[0])
     speed = math.sqrt(p.v[0]**2 + p.v[1]**2)
     self.print(speed)
-    self.print('Calc angle:', math.acos(p.v[0]/speed))
+    self.print('Calc angle:', math.acos(p.v[0]/speed) if speed > 0 else 'none (v = 0)')
     w = math.sqrt(p.w[0]**2 + p.w[1]**2)
     self.print('Calc angle:', math.acos(p.w[0]/w) if w > 0 else 'none (w = 0)')
     self.print('')

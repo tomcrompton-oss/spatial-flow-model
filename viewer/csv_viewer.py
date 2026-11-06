@@ -39,9 +39,10 @@ accuracy lines from the log), then its .log file (same name), a Show checkbox, a
 checkbox that adds a dashed comparison for each path: where it would be with no gravity,
 p0 + v0 (t - t0), from its initial velocity. File > Open adds more results.
 
-Sim tab: run a new simulation (studies/run_study.py, in its own process). Pick Orbital or Hyperbolic, then Set up...
+Sim tab: run a new simulation (studies/run_study.py, in its own process). Set up...
 for the bodies (mass, black / white, position), the particle's start and velocity, the calculator, dt, how often
-to write a csv row, and the end: elapsed time, min / max distance (to the nearest body), or a number of orbits.
+to write a csv row, fixed or adaptive steps, and up to two ends, whichever comes first: elapsed or proper time, min /
+max distance (to the nearest body), or a number of orbits. Every run counts orbits as they happen.
 The setup starts from the selected run (From selected run refills it). Start estimates the duration and asks
 before running; a progress bar (with Cancel) shows under the plot, and the run's files open here when it finishes.
 The run is its own process: closing the viewer doesn't stop it, and the next viewer opened follows it, or opens

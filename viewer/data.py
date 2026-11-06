@@ -234,7 +234,7 @@ class Path:
 
 class Orbit:
   """
-  one orbit of an orbit run: the rows from one crossing of the +y axis to the next (as Calculator.orbitalSim
+  one orbit of a run: the rows from one orbit boundary to the next (where engine/run.py's OrbitCounter
   counts them), with its periapsis and apoapsis; the part before the first crossing and after the last are kept
   as partial orbits
   """

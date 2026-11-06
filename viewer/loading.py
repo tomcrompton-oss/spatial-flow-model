@@ -22,17 +22,18 @@ class Loading:
 
   def findOrbits(self, result):
     """
-    split an orbit run into its orbits, at the times its log says each orbit ended
+    split a run into its orbits, at the times its log says each orbit ended - any run that went round at least once
+    (two orbit lines: the part orbit at the start and a whole one); a fall or flyby has none
     the full 'orbit N: t ... s  periapsis ...  apoapsis ...' lines give the apsides too; older logs only have
     'orbit <days> days', and the apsides are then the closest and farthest rows of each orbit
     """
     log, data = re.sub(r'np\.float64\(([^()]*)\)', r'\1', result.logText), result.data   #numbers printed by numpy's repr
     old = result.orbits
     result.orbits, result.orbitMask = [], None
-    m = re.search(r'^(?:study|test) type:\s*(\w+)', log, re.M)   #'test type' in older logs
-    result.studyType = m.group(1) if m else ('orbit' if re.search(r'^orbit\s+\S+ days', log, re.M) else None)
+    m = re.search(r'^(?:study|test) type:\s*(\w+)', log, re.M)   #older logs say what they were meant to be
+    result.studyType = m.group(1) if m else None
     tcol = self.columnForTime(TIME_COLUMNS[0][0], data)
-    if result.studyType != 'orbit' or not tcol or not result.selection:
+    if not tcol or not result.selection:
       return
     full = re.findall(r'^orbit \d+: t (\S+) s\s+periapsis \S+ m at \((\S+), (\S+)\)\s+apoapsis \S+ m at \((\S+), (\S+)\)', log, re.M)
     if full:
@@ -41,8 +42,8 @@ class Loading:
     else:
       ends = [float(d) * DAY for d in re.findall(r'^orbit\s+(\S+) days', log, re.M)]
       apsides = [None] * len(ends)
-    if not ends:
-      return
+    if len(ends) < 2:
+      return   #not round once: no whole orbit
     t = data.values[tcol]
     xcol, ycol = result.selection[0]
     x, y = data.values[xcol], data.values[ycol]

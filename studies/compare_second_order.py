@@ -44,7 +44,7 @@ def apsis(ts, rs, ps):
 def orbit(calc, r, v, dt, duration):
   """
   run an orbit from (0, r) moving +x at v; returns each whole orbit's periapsis and apoapsis (distance, angle),
-  the wall time and the final position. orbits are counted at crossings of +y, as Calculator.orbitalSim does
+  the wall time and the final position. orbits are counted at crossings of +y (as the sims did before engine/run.py)
   """
   p = Particle()
   p.pos = np.array([0.0, r])
