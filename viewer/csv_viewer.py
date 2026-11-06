@@ -254,6 +254,11 @@ class Dataset:
     return chosen, group
 
 
+def velocityColumns(data):
+  """the x and y columns of a dataset's velocity (v_x / v_y, vel_x ...), or None"""
+  return next(((vx, vy) for label, vx, vy in data.pairs() if re.match(r'^(v|vel|velocity)\d*$', label.lower())), None)
+
+
 def isNumber(s):
   try:
     float(s)
@@ -1246,7 +1251,7 @@ class Viewer:
       ok = np.nonzero(np.isfinite(x) & np.isfinite(y))[0]
       if ok.size:
         cfg['position'] = [float(x[ok[0]]), float(y[ok[0]])]
-        velocity = next(((vx, vy) for label, vx, vy in data.pairs() if re.match(r'^(v|vel|velocity)\d*$', label.lower())), None)
+        velocity = velocityColumns(data)
         if velocity:
           cfg['velocity'] = [float(data.values[velocity[0]][ok[0]]), float(data.values[velocity[1]][ok[0]])]
     #the log's starting values, where it has them, are exact; the csv's first row may be a step or more in
@@ -2169,7 +2174,7 @@ class Viewer:
         fmt = lambda v: '%s m (%s AU)' % (formatValue(float(v)), formatShort(float('%.4g' % (v / AU))))
         rows.append(('Distance', '%s → %s' % (fmt(d[0]), fmt(d[-1]))))
         rows.append(('Closest', fmt(d.min())))
-      velocity = next(((vx, vy) for label, vx, vy in data.pairs() if re.match(r'^(v|vel|velocity)\d*$', label.lower())), None)
+      velocity = velocityColumns(data)
       if velocity:
         speed = np.hypot(data.values[velocity[0]][p.rows], data.values[velocity[1]][p.rows])
         speed = speed[np.isfinite(speed)]
@@ -2512,8 +2517,7 @@ class Viewer:
     tcol = self.columnForTime(TIME_COLUMNS[0][0], data)
     t = data.values[tcol][p.rows] if tcol else None
 
-    velocity = next(((vx, vy) for label, vx, vy in data.pairs()
-                     if re.match(r'^(v|vel|velocity)\d*$', label.lower())), None)
+    velocity = velocityColumns(data)
     if t is not None and velocity:
       vx0, vy0 = data.values[velocity[0]][p.rows][i0], data.values[velocity[1]][p.rows][i0]
     elif t is not None and t[i1] != t[i0]:

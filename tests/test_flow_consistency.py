@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 from engine.flow import Body, Calculator
 from engine.logger import Log, TEST_LOG_DIR
 from engine.constants import *
+from engine.integrate import rk4Gravity
 
 MAX_SPEED_ERROR = 1.0   #% difference allowed between |v| at B and |u(B)|
 MAX_ANGLE_ERROR = 1.0   #degrees allowed between v at B and u(B)
@@ -57,12 +58,7 @@ def travel(calc, a):
   dt = TRAVEL*nearest/np.linalg.norm(v)/STEPS
   samples = [(0.0, pos, v)]
   for i in range(STEPS):
-    k1x, k1v = v, calc.gravity(pos)
-    k2x, k2v = v + k1v*dt/2, calc.gravity(pos + k1x*dt/2)
-    k3x, k3v = v + k2v*dt/2, calc.gravity(pos + k2x*dt/2)
-    k4x, k4v = v + k3v*dt, calc.gravity(pos + k3x*dt)
-    pos = pos + (k1x + 2*k2x + 2*k3x + k4x)*dt/6
-    v = v + (k1v + 2*k2v + 2*k3v + k4v)*dt/6
+    pos, v = rk4Gravity(calc, pos, v, dt)
     if (i + 1) % (STEPS//CSV_ROWS) == 0:
       samples.append(((i + 1)*dt, pos, v))
   return pos, v, samples
