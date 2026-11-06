@@ -2,7 +2,7 @@
 """
 CSV path viewer - plots the xy paths of objects recorded in a csv file.
 
-usage: python3 viewer/csv_viewer.py [file.csv ...]
+usage: python3 viewer/csv_viewer.py [file.csv ...] [saved.prefs.json / .config.json / .full.json ...]
   with no file, opens the newest csv in logs/ (or its study folders)
   several files open together, one tab each in the right panel
 
@@ -78,9 +78,22 @@ def newestCsv():
 
 
 def main():
-  paths = sys.argv[1:] or [p for p in [newestCsv()] if p]
+  """csv files to open, and / or saved .prefs.json, .config.json or .full.json files (Config tab) to load"""
+  args = sys.argv[1:]
+  saved = [a for a in args if a.endswith('.json')]
+  paths = [a for a in args if not a.endswith('.json')] or ([] if saved else [p for p in [newestCsv()] if p])
   root = tk.Tk()
-  Viewer(root, paths)
+  viewer = Viewer(root, paths)
+  def loadSaved():
+    for path in saved:
+      if path.endswith(PREFS_EXT):
+        viewer.loadPreferences(path)
+      elif path.endswith(FULL_EXT):
+        viewer.loadFull(path, 'add')
+      else:
+        viewer.loadConfig(path, 'add')
+  if saved:
+    root.after(400, loadSaved)
   root.mainloop()
 
 
