@@ -1,0 +1,10 @@
+# run output: csv/log files from tests and sims, and the viewer's sim status files (logs/.sims)
+logs/
+
+# dated safety copies of the whole project, from before git
+archive/
+
+# python and macOS
+__pycache__/
+*.pyc
+.DS_Store

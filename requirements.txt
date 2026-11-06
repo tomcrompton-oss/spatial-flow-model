@@ -1,0 +1,2 @@
+# python 3.9 or later; tkinter (for csv_viewer.py) comes with python
+numpy
