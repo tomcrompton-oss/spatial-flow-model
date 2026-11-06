@@ -2,9 +2,9 @@
 light sent back from an object that falls towards a black hole and comes back out
 
 the object falls from rest at infinity (moving with the flow, v = u, w = 0) from START towards a single black hole,
-as astroDescendBlack in coded_studies.py. it can't come back from the Schwarzschild radius, so at TURN Schwarzschild radii it
+as astroDescendBlack in descents.py. it can't come back from the Schwarzschild radius, so at TURN Schwarzschild radii it
 turns round and climbs back to START at the escape speed, w = u relativistically added to itself away from the body
-(as astroAscend in coded_studies.py). every interval, on the way down and back up, it sends a light ray straight out
+(as astroAscend in descents.py). every interval, on the way down and back up, it sends a light ray straight out
 (w = c away from the body), which is followed until it gets back to the object's starting distance
 
 the interval is a round number giving RAYS rays before a fall all the way to the horizon (200 s for the 4e6 MS case)
