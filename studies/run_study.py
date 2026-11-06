@@ -5,7 +5,7 @@ config (SI units):
   name          the log name; files are logs/<study>/<name>_<datetime>.log / .csv (and .json, the config), <study> being the name up to its first _
   type          (older configs: 'orbit' or 'hyperbolic' - no longer used: every run counts orbits as they happen)
   calculator    a name in flow.CALCULATORS, e.g. 'SpecialFlowCalculator, second order' (older names work too)
-  bodies        [{"mass": kg, "x": m, "y": m, "black": true}, ...]
+  bodies        [{"mass": kg, "x": m, "y": m, "black": true, "spin": 0.9}, ...]   (spin, a/M: KerrFlowCalculator only)
   position      [x, y] m      the particle's start
   velocity      [vx, vy] m/s  its starting velocity
   dt            seconds per step; with stepFraction, the longest step
@@ -86,7 +86,7 @@ def calculators():
 
 def build(cfg):
   """the calculator and the particle at its start"""
-  bodies = [Body(b['mass'], b['x'], b['y'], black=b['black']) for b in cfg['bodies']]
+  bodies = [Body(b['mass'], b['x'], b['y'], black=b['black'], spin=b.get('spin', 0.0)) for b in cfg['bodies']]
   calc = flow.makeCalculator(cfg['calculator'], bodies)
   p = Particle()
   p.pos = np.array(cfg['position'], dtype=float)

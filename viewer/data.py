@@ -261,29 +261,49 @@ class Environment:
   backgrounds (flow, gravity, cones, flow lines, Schwarzschild radius)
   """
 
-  def __init__(self, bodies):
+  def __init__(self, bodies, spins=None):
     self.bodies = bodies   #(mass kg, x m, y m, black)
+    self.spins = list(spins or []) + [0.0]*(len(bodies) - len(spins or []))   #a/M of each body
     self.flowCalc = None
     self.flowLines = None  #worked out when first drawn
     if bodies and flow is not None:
-      self.flowCalc = flow.Calculator([flow.Body(mass, x, y, black) for mass, x, y, black in bodies])
+      made = [flow.Body(mass, x, y, black, spin) for (mass, x, y, black), spin in zip(bodies, self.spins)]
+      if len(made) == 1 and made[0].black and self.spins[0]:
+        self.flowCalc = flow.KerrFlowCalculator(made)   #a rotating hole: its river (no swirl; r from the flat distance)
+      else:
+        self.flowCalc = flow.Calculator(made)
       self.flowCalc.warn = lambda message: None   #g=0 on a grid point just means no arrow
-    self.name = self.describe(bodies)
+    self.name = self.describe(bodies, self.spins)
+
+  def horizon(self, i):
+    """
+    body i's horizon, as a distance in the plot's flat coordinates (m): the Schwarzschild radius 2GM/c^2, or for a
+    rotating hole the outer horizon r+ = M + sqrt(M^2 - a^2), at flat distance sqrt(r+^2 + a^2)
+    """
+    mass, spin = self.bodies[i][0], self.spins[i]
+    M = G*mass/C**2
+    a = spin*M
+    rPlus = M + math.sqrt(max(M*M - a*a, 0.0))
+    return math.sqrt(rPlus*rPlus + a*a)
 
   @staticmethod
-  def key(bodies):
-    return tuple((float('%.6g' % m), float('%.6g' % x), float('%.6g' % y), black) for m, x, y, black in bodies)
+  def key(bodies, spins=()):
+    spins = list(spins) + [0.0]*(len(bodies) - len(spins))
+    return tuple((float('%.6g' % m), float('%.6g' % x), float('%.6g' % y), black, float('%.6g' % s))
+                 for (m, x, y, black), s in zip(bodies, spins))
 
   @staticmethod
-  def describe(bodies):
+  def describe(bodies, spins=()):
     """e.g. '4e6 MS black at origin', or '2 bodies: 1 MS white at (-0.5, 0) AU, 1 MS black at (0.5, 0) AU'"""
     if not bodies:
       return 'No bodies'
     ms = MS
     parts = []
-    for mass, x, y, black in bodies:
+    spins = list(spins) + [0.0]*(len(bodies) - len(spins))
+    for (mass, x, y, black), spin in zip(bodies, spins):
       where = 'origin' if x == 0 and y == 0 else '(%s, %s) AU' % (formatShort(float('%.4g' % (x / AU))), formatShort(float('%.4g' % (y / AU))))
-      parts.append('%s MS %s at %s' % (formatShort(float('%.4g' % (mass / ms))), 'black' if black else 'white', where))
+      parts.append('%s MS %s%s at %s' % (formatShort(float('%.4g' % (mass / ms))), 'black' if black else 'white',
+                                        ', spin %g' % spin if spin else '', where))
     return parts[0] if len(parts) == 1 else '%d bodies: %s' % (len(parts), ', '.join(parts))
 
 

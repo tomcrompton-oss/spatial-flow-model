@@ -17,6 +17,7 @@ import numpy as np
 from engine.constants import *
 from engine.flow import Body, Particle, Config, MinDistance, NewtonianCalculator, SpecialFlowCalculator, makeCalculator, calculatorName
 from engine.logger import Log, TEST_LOG_DIR
+from engine.vectors import length
 from engine.exact import fallTime, rayTime, grPrecession, orbitPeriod, schwarzschildRadius, grDeflectionExact, grPrecessionExact, impactParameter
 
 
@@ -176,6 +177,40 @@ class Engine(unittest.TestCase):
     peris, apos, n, wall = orbit(MERCURY_MAX/scale, MERCURY_SPEED_AT_MAX*math.sqrt(scale), 4.5*period, config)
     exact = grPrecessionExact(np.mean([d for d, _ in peris]), np.mean([d for d, _ in apos]))
     self.assertAlmostEqual(precession(peris)/exact, 1, delta=2e-3)   #5e-4 at this step fraction, smaller with smaller steps
+
+  def testKerrExact(self):
+    """exact Kerr: the photon orbits and ISCOs at spin 0 and 1, and spin 0 is Schwarzschild"""
+    from engine.exact import kerrPhotonOrbit, kerrISCO, kerrDeflectionExact, kerrPrecessionExact
+    M = G*MS/C**2
+    for spin, photon, isco in ((0, (3, 3), (6, 6)), (1, (1, 4), (1, 9))):
+      self.assertAlmostEqual(kerrPhotonOrbit(MS, spin, True)/M, photon[0], places=6)
+      self.assertAlmostEqual(kerrPhotonOrbit(MS, spin, False)/M, photon[1], places=6)
+      self.assertAlmostEqual(kerrISCO(MS, spin, True)/M, isco[0], places=6)
+      self.assertAlmostEqual(kerrISCO(MS, spin, False)/M, isco[1], places=6)
+    self.assertAlmostEqual(kerrDeflectionExact(0.2*RSUN, MS, 0)/grDeflectionExact(0.2*RSUN), 1, delta=1e-12)
+    rp, ra = 465229.09, 712558.12
+    self.assertAlmostEqual(kerrPrecessionExact(rp, ra, MS, 0)/grPrecessionExact(rp, ra), 1, delta=1e-9)
+
+  def testKerrRiver(self):
+    """the rotating-hole river: at spin 0 it is SpecialFlowCalculator; at spin 0.9 light passing with and against the
+    spin bends, and an orbit with the spin precesses, as exact Kerr says"""
+    from engine.kerr import KerrFlowCalculator
+    from engine.exact import kerrDeflectionExact, kerrPrecessionExact
+    from studies.kerr_comparison import lightBend, orbitPrecession, MASS
+    runs = []
+    for calc in (SpecialFlowCalculator([Body(MS)]), KerrFlowCalculator([Body(MS)])):
+      p = Particle()
+      p.pos = np.array([0.0, MERCURY_MAX/1e5])
+      calc.initPV(p, np.array([MERCURY_SPEED_AT_MAX*math.sqrt(1e5), 0.0]))
+      for _ in range(2000):
+        calc.move(p, 1e-5)
+      runs.append(p.pos)
+    self.assertLess(length(runs[0] - runs[1])/length(runs[0]), 1e-11)
+    for b0 in (30, -30):
+      bend, b = lightBend(0.9, b0, fraction=1e-3, start=3e3)
+      self.assertAlmostEqual(bend/kerrDeflectionExact(b, MASS, 0.9), 1, delta=2e-4)   #6e-5; without the twist 1.6e-2
+    peri, apo, rp, ra = orbitPrecession(0.9, True, orbits=2, fraction=1e-3)
+    self.assertAlmostEqual(peri/kerrPrecessionExact(rp, ra, MASS, 0.9, True), 1, delta=2e-3)   #5e-4; without the twist 0.3
 
   def testCsvRowsWithAdaptiveSteps(self):
     """with uneven steps the csv rows come at the steps nearest each interval"""

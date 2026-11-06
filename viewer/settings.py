@@ -73,7 +73,7 @@ REPLAY_SECONDS = 20   #at 1x a replay runs the whole time span in this many seco
 REPLAY_SPEEDS = ['0.1×', '0.25×', '0.5×', '1×', '2×', '5×', '10×', '20×']
 REPLAY_FRAME = 40     #milliseconds between replay frames
 LINE_STYLES = [('solid', ()), ('dashed', (8, 5)), ('dotted', (2, 4))]   #path line styles: name, tk dash pattern
-BODY_LINE = re.compile(r'^body \d+: mass (\S+) kg .*?x (\S+) m\s+y (\S+) m\s+(black|white)', re.M)
+BODY_LINE = re.compile(r'^body \d+: mass (\S+) kg .*?x (\S+) m\s+y (\S+) m\s+(black|white)(?:\s+spin (\S+))?', re.M)
 
 try:
   import engine.flow as flow   #the simulation's own flow calculation

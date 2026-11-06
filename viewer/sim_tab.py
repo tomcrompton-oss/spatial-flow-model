@@ -69,7 +69,8 @@ class SimTab:
         v['endValue' + slot].set(self.simNumber(value / du if kind in ('min', 'max') else value))
     ms = MS
     self.simBodies = [{'mass': tk.StringVar(value=self.simNumber(b['mass'] / ms)), 'colour': tk.StringVar(value='black' if b['black'] else 'white'),
-                       'x': tk.StringVar(value=self.simNumber(b['x'] / du)), 'y': tk.StringVar(value=self.simNumber(b['y'] / du))}
+                       'x': tk.StringVar(value=self.simNumber(b['x'] / du)), 'y': tk.StringVar(value=self.simNumber(b['y'] / du)),
+                       'spin': tk.StringVar(value=self.simNumber(b.get('spin', 0.0)))}
                       for b in cfg['bodies']]
     self.simReady = True
     self.simBuildBodies()
@@ -93,7 +94,7 @@ class SimTab:
         pass
     cfg['name'] = 'sim_' + r.name
     if r.env and r.env.bodies:
-      cfg['bodies'] = [{'mass': m, 'x': x, 'y': y, 'black': black} for m, x, y, black in r.env.bodies]
+      cfg['bodies'] = [{'mass': m, 'x': x, 'y': y, 'black': black, 'spin': spin} for (m, x, y, black), spin in zip(r.env.bodies, r.env.spins)]
     m = re.search(r'^calc:\s*(.*)$', log, re.M)
     name = flow.calculatorName(m.group(1)) if m and flow else None
     if name:
@@ -265,7 +266,7 @@ class SimTab:
     ms = MS
     while len(self.simBodies) < n:
       self.simBodies.append({'mass': tk.StringVar(value='1'), 'colour': tk.StringVar(value='black'),
-                             'x': tk.StringVar(value='0'), 'y': tk.StringVar(value='0')})
+                             'x': tk.StringVar(value='0'), 'y': tk.StringVar(value='0'), 'spin': tk.StringVar(value='0')})
     del self.simBodies[n:]
     self.simBuildBodies()
 
@@ -276,7 +277,7 @@ class SimTab:
       return
     for child in frame.winfo_children():
       child.destroy()
-    for col, head in enumerate(('', 'mass (MS)', 'black / white', 'x', 'y')):
+    for col, head in enumerate(('', 'mass (MS)', 'black / white', 'x', 'y', 'spin a/M')):
       tk.Label(frame, text=head, bg=PAGE, fg=MUTED, font=('Helvetica', 10)).grid(row=0, column=col, sticky='w', padx=6)
     for i, b in enumerate(self.simBodies, 1):
       tk.Label(frame, text='body %d' % i, bg=PAGE, fg=INK2).grid(row=i, column=0, sticky='w', padx=6)
@@ -284,6 +285,8 @@ class SimTab:
       ttk.Combobox(frame, state='readonly', width=7, values=['black', 'white'], textvariable=b['colour']).grid(row=i, column=2, padx=6)
       ttk.Entry(frame, textvariable=b['x'], width=12).grid(row=i, column=3, padx=6)
       ttk.Entry(frame, textvariable=b['y'], width=12).grid(row=i, column=4, padx=6)
+      tip(ttk.Entry(frame, textvariable=b['spin'], width=7), 'A rotating hole\'s spin a/M, -1 to 1, positive anticlockwise; '
+          'used by KerrFlowCalculator (one black hole, its equatorial plane)').grid(row=i, column=5, padx=6)
     if hasattr(self, 'simCount'):
       self.simCount.set(str(len(self.simBodies)))
 
@@ -302,8 +305,16 @@ class SimTab:
       return x
     ms = MS
     bodies = [{'mass': number(b['mass'], 'body %d mass' % i, True) * ms, 'black': b['colour'].get() == 'black',
-               'x': number(b['x'], 'body %d x' % i) * du, 'y': number(b['y'], 'body %d y' % i) * du}
+               'x': number(b['x'], 'body %d x' % i) * du, 'y': number(b['y'], 'body %d y' % i) * du,
+               'spin': number(b['spin'], 'body %d spin' % i)}
               for i, b in enumerate(self.simBodies, 1)]
+    spinning = [b for b in bodies if b['spin']]
+    if any(abs(b['spin']) > 1 for b in bodies):
+      raise ValueError('a spin is a/M, from -1 to 1')
+    if spinning and not v['calculator'].get().startswith('KerrFlowCalculator'):
+      raise ValueError('a spinning body needs the KerrFlowCalculator')
+    if v['calculator'].get().startswith('KerrFlowCalculator') and (len(bodies) != 1 or not bodies[0]['black']):
+      raise ValueError('the KerrFlowCalculator is for one black hole')
     ends = []
     for slot in ('', '2'):
       kind = self.simEndKey(slot)

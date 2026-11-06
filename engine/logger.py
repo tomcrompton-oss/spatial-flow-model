@@ -13,7 +13,7 @@ from datetime import datetime
 import numpy as np
 from engine.constants import *
 from engine.vectors import length
-from engine.exact import grPrecessionExact
+from engine.exact import grPrecessionExact, kerrPrecessionExact
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   #the project folder
 LOG_DIR = os.path.join(ROOT, 'logs')                #study logs
@@ -35,6 +35,11 @@ class OrbitStats:
     self.GM = gm     #for the predicted period and precession; Log.start / logBodies set it from the calculator
     self.centre = np.array([0.0, 0.0])   #the bodies' centre of mass, which distances are from (logBodies sets it)
     self.closest, self.closestPos = float('inf'), None
+    self.spin = 0.0     #a rotating hole's a/M (logBodies sets it): its orbits compare with exact Kerr
+    self.sense = None   #+1 going round anticlockwise, -1 clockwise (from the first step)
+    #every periapsis and apoapsis as it happens - a turning point in the distance - as (distance, angle); unlike
+    #each orbit's closest and farthest points these stay right when the apsides move fast round the orbit
+    self.periapsides, self.apoapsides, self.recent = [], [], []
     self.orbit = 0   #orbits ended so far (the first is a warmup part orbit)
     self.period = 0.0
     self.resetExtremes()
@@ -53,13 +58,23 @@ class OrbitStats:
   def track(self, p, dt):
     """after each step: the time into this orbit and the extremes of the distance"""
     self.period += dt
-    d = length(p.pos - self.centre)
+    rel = p.pos - self.centre
+    if self.sense is None:
+      self.sense = 1.0 if rel[0]*p.v[1] - rel[1]*p.v[0] >= 0 else -1.0
+    d = length(rel)
     if d < self.closest:
       self.closest, self.closestPos = d, p.pos.copy()
     if d > self.max:
       self.max, self.maxpos = d, p.pos.copy()
     if d < self.min:
       self.min, self.minpos = d, p.pos.copy()
+    self.recent = (self.recent + [(d, rel)])[-3:]
+    if len(self.recent) == 3:
+      (d0, _), (d1, r1), (d2, _) = self.recent
+      if d1 < d0 and d1 <= d2:
+        self.periapsides.append((d1, math.atan2(r1[1], r1[0])))
+      elif d1 > d0 and d1 >= d2:
+        self.apoapsides.append((d1, math.atan2(r1[1], r1[0])))
     return d
 
   def endOrbit(self):
@@ -67,8 +82,10 @@ class OrbitStats:
     self.orbit += 1
     sma = (self.min + self.max)/2
     e = 1 - 2/(self.max/self.min + 1)
-    minP = math.pi - math.acos((self.minpos - self.centre)[1]/self.min)   #total precession
-    maxP = math.acos((self.maxpos - self.centre)[1]/self.max)
+    #the apsides' angles round the centre, and their changes from the last orbit's: a step of less than half a turn,
+    #in the direction the orbit goes, so the precession is positive when the apsides move on the way the orbit goes
+    minP, maxP = (math.atan2(*(pos - self.centre)[::-1]) for pos in (self.minpos, self.maxpos))
+    turn = lambda new, old: self.sense*((new - old + math.pi) % (2*math.pi) - math.pi)
     self.periods.append(self.period)
     self.periapsis.append(self.min)
     self.apoapsis.append(self.max)
@@ -76,10 +93,10 @@ class OrbitStats:
     self.eccentricity.append(e)
     self.periapsisAngle.append(minP)
     if len(self.periapsisAngle) > 1:
-      self.periapsisPrecession.append(self.periapsisAngle[-1] - self.periapsisAngle[-2])
+      self.periapsisPrecession.append(turn(self.periapsisAngle[-1], self.periapsisAngle[-2]))
     self.apoapsisAngle.append(maxP)
     if len(self.apoapsisAngle) > 1:
-      self.apoapsisPrecession.append(self.apoapsisAngle[-1] - self.apoapsisAngle[-2])
+      self.apoapsisPrecession.append(turn(self.apoapsisAngle[-1], self.apoapsisAngle[-2]))
     self.period = 0
     return minP, maxP
 
@@ -96,10 +113,21 @@ class OrbitStats:
     self.calcSMA = (self.calcPeriapsis + self.calcApoapsis)/2
     self.predictedPeriod = 2*math.pi*math.sqrt(self.calcSMA**3/self.GM)
     self.calcEccentricity = sum(self.eccentricity)/n
-    self.predictedPrecession = (24*math.pi**3)*(self.calcSMA**2)/(self.predictedPeriod**2 * C**2 * (1 - self.calcEccentricity**2))
     if n > 1:
       self.calcPPrecession = sum(self.periapsisPrecession)/n
       self.calcAPrecession = sum(self.apoapsisPrecession)/n
+    if len(self.periapsides) >= 2 and len(self.apoapsides) >= 2:
+      #better: from each periapsis and apoapsis as it happened
+      turn = lambda new, old: self.sense*((new - old + math.pi) % (2*math.pi) - math.pi)
+      mean = lambda xs: sum(xs)/len(xs)
+      self.calcPeriapsis = mean([d for d, _ in self.periapsides])
+      self.calcApoapsis = mean([d for d, _ in self.apoapsides])
+      self.calcSMA = (self.calcPeriapsis + self.calcApoapsis)/2
+      self.calcEccentricity = (self.calcApoapsis - self.calcPeriapsis)/(self.calcApoapsis + self.calcPeriapsis)
+      self.calcPPrecession = mean([turn(b, a) for (_, a), (_, b) in zip(self.periapsides, self.periapsides[1:])])
+      self.calcAPrecession = mean([turn(b, a) for (_, a), (_, b) in zip(self.apoapsides, self.apoapsides[1:])])
+    self.predictedPeriod = 2*math.pi*math.sqrt(self.calcSMA**3/self.GM)
+    self.predictedPrecession = (24*math.pi**3)*(self.calcSMA**2)/(self.predictedPeriod**2 * C**2 * (1 - self.calcEccentricity**2))
     return True
 
 
@@ -176,10 +204,13 @@ class Log:
     if bodies:
       self.stats.GM = calc.GM   #the predictions use the calculator's bodies, not one solar mass
       self.stats.centre = sum(b.mass*b.pos for b in bodies)/sum(b.mass for b in bodies)
+      if len(bodies) == 1:
+        self.stats.spin = getattr(bodies[0], 'spin', 0.0)
     self.print('bodies:', len(bodies))
     for i, b in enumerate(bodies):
-      self.print('body %d: mass %.6e kg (%.6g MS)  x %.6e m  y %.6e m  %s'
-                 % (i+1, b.mass, b.mass/MS, b.x, b.y, 'black' if b.black else 'white'))
+      self.print('body %d: mass %.6e kg (%.6g MS)  x %.6e m  y %.6e m  %s%s'
+                 % (i+1, b.mass, b.mass/MS, b.x, b.y, 'black' if b.black else 'white',
+                    '  spin %.10g' % b.spin if getattr(b, 'spin', 0) else ''))
 
   def updatePosition(self, p, dt):
     """
@@ -253,8 +284,17 @@ class Log:
     accuracy = lambda calc, predicted: 100 - 100*abs((predicted - calc)/predicted)
     self.print('calc periapsis precession:', s.calcPPrecession, '   accuracy=', accuracy(s.calcPPrecession, s.predictedPrecession), '%')
     self.print('calc apoapsis precession:', s.calcAPrecession, '   accuracy=', accuracy(s.calcAPrecession, s.predictedPrecession), '%')
-    exact = grPrecessionExact(s.calcPeriapsis, s.calcApoapsis, s.GM/G)
-    self.print('GR exact precession for these apsides:', exact, '   periapsis accuracy=', accuracy(s.calcPPrecession, exact),
+    if s.spin:
+      #a rotating hole: the distances here are the river model's flat R; Kerr's r = sqrt(R^2 - a^2)
+      a = s.spin*s.GM/C**2
+      rp, ra = (math.sqrt(R*R - a*a) for R in (s.calcPeriapsis, s.calcApoapsis))
+      prograde = s.sense*s.spin > 0
+      exact = kerrPrecessionExact(rp, ra, s.GM/G, s.spin, prograde)
+      label = 'Kerr exact precession (%s the spin) for these apsides:' % ('with' if prograde else 'against')
+    else:
+      exact = grPrecessionExact(s.calcPeriapsis, s.calcApoapsis, s.GM/G)
+      label = 'GR exact precession for these apsides:'
+    self.print(label, exact, '   periapsis accuracy=', accuracy(s.calcPPrecession, exact),
                '%   apoapsis accuracy=', accuracy(s.calcAPrecession, exact), '%')
 
   def finishFlyby(self, p):

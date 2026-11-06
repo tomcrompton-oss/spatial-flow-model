@@ -57,7 +57,8 @@ Hover over a tab, button or checkbox for what it does.
 
 Bodies and flow: in X / Y mode the bodies listed in the selected tab's log are drawn as circles
 (black or white), with optional arrows for the flow of space (u) and for gravity (g) at regular points,
-lines of equal flow speed |u|, the Schwarzschild radius 2GM/c^2 of each body (a dotted circle, or a dotted
+lines of equal flow speed |u|, the Schwarzschild radius 2GM/c^2 of each body - or a rotating hole's outer horizon -
+(a dotted circle, or a dotted
 line at that distance in distance / time mode), and flow lines: 20 from each body, starting one Sun radius out at the
 escape speed |u| heading away from its centre and following the combined g (engine/flow_lines.py); in distance / time
 mode, the path of space itself along the line from the origin, dd/dt = u, repeated at regular times.

@@ -75,11 +75,13 @@ class Body:
     mass (float): mass in kg
     x, y (float): position in m
     black (bool): True - space flows in, False - space flows out (white)
+    spin (float): a/M for a rotating hole (KerrFlowCalculator only), -1 to 1, positive anticlockwise
   """
-  def __init__(self, mass=MS, x=0.0, y=0.0, black=True):
+  def __init__(self, mass=MS, x=0.0, y=0.0, black=True, spin=0.0):
     self.mass = mass
     self.pos = np.array([float(x), float(y)])
     self.black = black
+    self.spin = spin   #a/M, -1 to 1, positive anticlockwise: used by engine/kerr.py's KerrFlowCalculator
     self.GM = G*mass
 
   @property
@@ -377,8 +379,9 @@ def calculatorName(text):
   for old, name in OLD_NAMES.items():
     if old in text:
       return name
-  if 'SpecialFlowCalculator' in text:
-    return 'SpecialFlowCalculator, first order' if 'order 1' in text else 'SpecialFlowCalculator, second order'
+  for kind in ('KerrFlowCalculator', 'SpecialFlowCalculator'):
+    if kind in text:
+      return kind + (', first order' if 'order 1' in text else ', second order')
   return 'NewtonianCalculator' if 'NewtonianCalculator' in text else None
 
 
@@ -389,3 +392,9 @@ def makeCalculator(name, bodies):
     raise ValueError('unknown calculator %r - one of %s' % (name, ', '.join(CALCULATORS)))
   cls, kwargs = CALCULATORS[key]
   return cls(bodies, **kwargs)
+
+
+#the rotating hole's calculator, in its own module (engine/kerr.py) - added here so it can be made by name
+from engine.kerr import KerrFlowCalculator
+CALCULATORS['KerrFlowCalculator, second order'] = (KerrFlowCalculator, {'order': 2})
+CALCULATORS['KerrFlowCalculator, first order'] = (KerrFlowCalculator, {'order': 1})

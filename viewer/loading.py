@@ -9,6 +9,7 @@ class Loading:
     """the .log file with the same name as the csv, and the bodies it lists"""
     logPath = os.path.splitext(result.path)[0] + '.log'
     result.bodies = []
+    result.spins = []   #a/M of each body, 0 if the log gives none
     if not os.path.exists(logPath):
       result.logText = 'No log file - expected one at\n%s' % logPath
       self.setEnvironment(result)
@@ -17,6 +18,7 @@ class Loading:
       result.logText = f.read()
     for m in BODY_LINE.finditer(result.logText):
       result.bodies.append((float(m.group(1)), float(m.group(2)), float(m.group(3)), m.group(4) == 'black'))
+      result.spins.append(float(m.group(5)) if m.group(5) else 0.0)
     self.setEnvironment(result)
     self.findOrbits(result)
 
@@ -96,9 +98,10 @@ class Loading:
 
   def setEnvironment(self, result):
     """the shared Environment for a result's bodies"""
-    key = Environment.key(result.bodies)
+    spins = getattr(result, 'spins', [])
+    key = Environment.key(result.bodies, spins)
     if key not in self.environments:
-      self.environments[key] = Environment(result.bodies)
+      self.environments[key] = Environment(result.bodies, spins)
     result.env = self.environments[key]
 
   def openDialog(self):

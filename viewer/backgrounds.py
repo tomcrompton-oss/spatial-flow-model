@@ -70,8 +70,9 @@ class Backgrounds:
     c = self.canvas
     l, t, r, b = self.plotRect()
     scale = UNITS[self.unit.get()][1]
-    for mass, x, y, black in self.fieldResult().bodies:
-      rs = self.schwarzschild(mass)
+    env = self.fieldResult()
+    for i, (mass, x, y, black) in enumerate(env.bodies):
+      rs = env.horizon(i)   #2GM/c^2, or a rotating hole's outer horizon
       if self.mode.get() == 'time':
         d = math.hypot(x, y)
         for edge in (d - rs, d + rs):
@@ -80,7 +81,7 @@ class Backgrounds:
           sx, _ = self.toScreen(edge / scale, 0)
           if l <= sx <= r:
             c.create_line(sx, t, sx, b, fill=SCHWARZ, width=1.5, dash=SCHWARZ_DASH)
-            c.create_text(sx + 4 * self.xSign(), t + 4, text='Rs', anchor='nw' if self.xSign() > 0 else 'ne',
+            c.create_text(sx + 4 * self.xSign(), t + 4, text='r+' if env.spins[i] else 'Rs', anchor='nw' if self.xSign() > 0 else 'ne',
                           fill=INK2, font=('Helvetica', 10))
       else:
         (cx, cy), (ex, ey) = self.toScreen(x / scale, y / scale), self.toScreen((x + rs) / scale, (y + rs) / scale)
@@ -120,8 +121,10 @@ class Backgrounds:
     if self.showContours.get():
       keys.append((AXIS, 'lines of equal |u|, km/s'))
     if self.showSchwarzschild.get():
-      radii = sorted({self.schwarzschild(mass) for mass, _, _, _ in self.fieldResult().bodies})
-      keys.append((SCHWARZ, 'Schwarzschild radius 2GM/c²: %s m' % ', '.join(formatShort(float('%.4g' % rs)) for rs in radii)))
+      env = self.fieldResult()
+      radii = sorted({env.horizon(i) for i in range(len(env.bodies))})
+      label = 'horizon (Kerr r+, at flat distance √(r+² + a²))' if any(env.spins) else 'Schwarzschild radius 2GM/c²'
+      keys.append((SCHWARZ, '%s: %s m' % (label, ', '.join(formatShort(float('%.4g' % rs)) for rs in radii))))
     if any(r.visible.get() and r.orbits and r.showPeri.get() for r in self.results):
       keys.append((PERIAPSIS, 'periapsis of each orbit'))
     if any(r.visible.get() and r.orbits and r.showApo.get() for r in self.results):
