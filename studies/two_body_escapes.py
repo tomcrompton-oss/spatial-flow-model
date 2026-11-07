@@ -73,15 +73,21 @@ def escapes(folder, calc, i):
   return path
 
 
-def writeViewerFiles(folder, name, made):
-  """a full config for the viewer in folder: <name>.full.json naming its .prefs.json and .config.json, for the
-  csvs in made, [(path, colour)]; prints how to open it"""
+def writeViewerFiles(folder, name, made, selection=(('pos_x', 'pos_y'),), styles=None, preferences=None):
+  """
+  a full config for the viewer in folder: <name>.full.json naming its .prefs.json and .config.json, for the
+  csvs in made, [(path, colour)]; selection is the column pairs to plot, styles (colour -> the viewer's path styles)
+  how they are drawn - by default one solid line, pos_x against pos_y - and preferences any changes to the viewer's
+  (x / y, equal aspect, no flow or markers); prints how to open it
+  """
+  styles = styles or (lambda colour: {'pos': [colour, 'solid', colour]})
   results = [{'path': path, 'relative': os.path.basename(path), 'visible': True, 'straight': False, 'ends': False,
-              'periapsis': False, 'apoapsis': False, 'styles': {'pos': [colour, 'solid', colour]},
-              'selection': [['pos_x', 'pos_y']], 'group': None, 'hiddenOrbits': []} for path, colour in made]
+              'periapsis': False, 'apoapsis': False, 'styles': styles(colour),
+              'selection': [list(pair) for pair in selection], 'group': None, 'hiddenOrbits': []} for path, colour in made]
   config = {'kind': 'config', 'version': 1, 'results': results, 'selected': made[0][0], 'background': None, 'timeInterval': ''}
   prefs = {'kind': 'preferences', 'version': 1, 'preferences': {'mode': 'xy', 'equalAspect': True, 'showFlow': False,
            'showTimeMarks': False, 'showMarkers': False, 'showBodies': True, 'showPathLegend': True, 'showFieldKey': True}}
+  prefs['preferences'].update(preferences or {})
   full = {'kind': 'full', 'version': 1, 'preferences': name + '.prefs.json', 'config': name + '.config.json'}
   for ext, doc in (('.config.json', config), ('.prefs.json', prefs), ('.full.json', full)):
     with open(os.path.join(folder, name + ext), 'w') as f:

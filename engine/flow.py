@@ -96,10 +96,11 @@ class Body:
 class Calculator:
   runspeed = 30000   #rough steps per second, for the log's estimate of how long a run takes
 
-  def __init__(self, bodies=None):
+  def __init__(self, bodies=None, direction=None):
     """
     Args:
       bodies (list of Body): the masses; default one black solar mass at (0,0)
+      direction: which way the flow points (its magnitude is always the same) - see flowDirection
     """
     if bodies is None:
       bodies = [Body()]
@@ -109,6 +110,7 @@ class Calculator:
       raise TypeError('pass a list of Body objects, e.g. [Body(m)], not ' + repr(bodies))
     self.bodies = list(bodies)
     self.GM = G*sum(b.mass for b in self.bodies) #total, used by the log
+    self.direction = direction   #None: along g (see flowDirection); can be set at any time
     self.log = None #set by the sims so warnings go to the log
 
   def warn(self, message):
@@ -121,7 +123,8 @@ class Calculator:
     """
     velocity of space (u) at pos
       magnitude: square root of the sum of the squares of the flow to each body, sqrt(2GM/d)
-      direction: towards black bodies and away from white ones, weighted by each body's GM/d^2
+      direction: set by self.direction (see flowDirection) - by default towards black bodies and away from white
+                 ones, weighted by each body's GM/d^2
     """
     U2 = 0.0                    #the square of the flow's magnitude
     g = np.array([0.0, 0.0])    #its direction
@@ -134,12 +137,52 @@ class Calculator:
         g -= pull               #towards the body
       else:
         g += pull               #away from the body
+    if self.direction is not None:
+      g = self.flowDirection(pos)
 
     gsize = length(g)
     if gsize == 0:
       self.warn('g=0 at %s, the flow has no direction - using u=0' % pos)
       return np.array([0.0, 0.0])
     return math.sqrt(U2) * g/gsize
+
+  def flowDirection(self, pos):
+    """
+    which way the flow points at pos (any length; flow scales it to the flow's magnitude), by self.direction:
+      None or 'g'  along g - towards black bodies and away from white ones, weighted by GM/d^2 (the default)
+      'nearest'    towards the nearest body (away from it if it is white)
+      'centre'     towards the bodies' centre of mass
+      (x, y)       that way everywhere
+      a function   of pos, returning the direction there
+    """
+    direction = self.direction
+    if direction is None or direction == 'g':
+      g = np.array([0.0, 0.0])
+      for b in self.bodies:
+        r = pos - b.pos
+        d = length(r)
+        g = g + (-1 if b.black else 1)*(b.GM/d**2)*(r/d)
+      return g
+    if direction == 'nearest':
+      b = min(self.bodies, key=lambda b: length(pos - b.pos))
+      return (b.pos - pos) if b.black else (pos - b.pos)
+    if direction == 'centre':
+      centre = sum(b.mass*b.pos for b in self.bodies)/sum(b.mass for b in self.bodies)
+      return centre - pos
+    if callable(direction):
+      return np.asarray(direction(pos), dtype=float)
+    return np.asarray(direction, dtype=float)
+
+  def describeDirection(self):
+    """the flow's direction in words, for logs"""
+    d = self.direction
+    if d is None or d == 'g':
+      return 'along g'
+    if d in ('nearest', 'centre'):
+      return {'nearest': 'towards the nearest body', 'centre': 'towards the centre of mass'}[d]
+    if callable(d):
+      return getattr(d, '__name__', 'a function of position')
+    return 'fixed, along (%g, %g)' % tuple(d)
 
   def gravity(self, pos):
     """newtonian acceleration at pos: the sum of each body's pull"""
@@ -271,8 +314,8 @@ class SpecialFlowCalculator(Calculator):
            light (|w| = c) is kept at exactly c. see studies/compare_second_order.py
   """
 
-  def __init__(self, bodies=None, order=2):
-    super().__init__(bodies)
+  def __init__(self, bodies=None, order=2, direction=None):
+    super().__init__(bodies, direction)
     if order not in (1, 2):
       raise ValueError('order is 1 or 2, not %r' % order)
     self.order = order

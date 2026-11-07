@@ -211,6 +211,8 @@ class Log:
       self.print('body %d: mass %.6e kg (%.6g MS)  x %.6e m  y %.6e m  %s%s'
                  % (i+1, b.mass, b.mass/MS, b.x, b.y, 'black' if b.black else 'white',
                     '  spin %.10g' % b.spin if getattr(b, 'spin', 0) else ''))
+    if getattr(calc, 'direction', None) is not None:
+      self.print('flow direction:', calc.describeDirection())
 
   def updatePosition(self, p, dt):
     """

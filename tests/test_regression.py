@@ -212,6 +212,28 @@ class Engine(unittest.TestCase):
     peri, apo, rp, ra = orbitPrecession(0.9, True, orbits=2, fraction=1e-3)
     self.assertAlmostEqual(peri/kerrPrecessionExact(rp, ra, MASS, 0.9, True), 1, delta=2e-3)   #5e-4; without the twist 0.3
 
+  def testFlowDirection(self):
+    """setting the flow's direction changes only its direction: 'g' is the default, a vector points that way
+    everywhere, 'nearest' at the nearest body and 'centre' at the centre of mass; and a particle runs with it"""
+    bodies = [Body(MS, -0.5*AU, 0.0), Body(MS, 0.5*AU, 0.0)]
+    default = Calculator(bodies)
+    pos = np.array([0.2*AU, 0.3*AU])
+    u = default.flow(pos)
+    self.assertTrue(np.array_equal(Calculator(bodies, 'g').flow(pos), u))
+    unit = lambda v: v/length(v)
+    for direction, want in (((-1.0, 0.0), np.array([-1.0, 0.0])), ((0.0, -2.0), np.array([0.0, -1.0])),
+                            ('nearest', unit(bodies[1].pos - pos)), ('centre', unit(-pos))):
+      got = Calculator(bodies, direction).flow(pos)
+      self.assertAlmostEqual(length(got)/length(u), 1.0, places=14)
+      self.assertLess(length(unit(got) - want), 1e-14)
+    calc = SpecialFlowCalculator(bodies, 2, 'centre')
+    p = Particle()
+    p.pos = np.array([-0.4*AU, 0.0])
+    calc.initPW(p, np.array([0.0, 0.0]))
+    for _ in range(100):
+      calc.move(p, 10.0)
+    self.assertGreater(p.pos[0], -0.4*AU)   #carried towards the middle, away from the nearer hole
+
   def testKerrBackgrounds(self):
     """the rotating river's acceleration is u du/dR (GM/R^2 at spin 0), its twist gradient matches the twist's
     change, and a rotating hole's circles sit where r+, 2M, 0 and the special orbits are"""
