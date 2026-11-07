@@ -159,10 +159,15 @@ class Backgrounds:
       ref = self.drawArrows(lambda calc, pos: calc.flow(pos), 0.0, MUTED)
       if ref:
         keys.append((MUTED, 'u  %s km/s' % formatShort(float('%.3g' % (ref / 1000)))))
-    if not timeMode and self.showTwist.get() and self.fieldResult().ergosphere():
-      ref = self.drawTwist()
-      if ref:
-        keys.append((TWIST, 'twist: a full arc turns something moving straight in at c by %s rad/s, with the spin' % formatShort(float('%.3g' % ref))))
+    if self.showTwist.get():
+      if not self.fieldResult().ergosphere():
+        keys.append((None, 'twist arcs are only round a rotating hole: pick its environment under Background'))
+      elif timeMode:
+        keys.append((None, 'twist arcs are drawn in x / y mode'))
+      else:
+        ref = self.drawTwist()
+        if ref:
+          keys.append((TWIST, 'twist: a full arc turns something moving straight in at c by %s rad/s, with the spin' % formatShort(float('%.3g' % ref))))
     if self.showGravity.get():
       ref = self.drawArrows(lambda calc, pos: calc.gravity(pos), 0.5, G_ARROW)
       if ref:
