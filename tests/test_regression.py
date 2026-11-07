@@ -15,7 +15,7 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   #the project folder, for engine/
 import numpy as np
 from engine.constants import *
-from engine.flow import Body, Particle, Config, MinDistance, NewtonianCalculator, SpecialFlowCalculator, makeCalculator, calculatorName
+from engine.flow import Body, Calculator, Particle, Config, MinDistance, NewtonianCalculator, SpecialFlowCalculator, makeCalculator, calculatorName
 from engine.logger import Log, TEST_LOG_DIR
 from engine.vectors import length
 from engine.exact import fallTime, rayTime, grPrecession, orbitPeriod, schwarzschildRadius, grDeflectionExact, grPrecessionExact, impactParameter
@@ -211,6 +211,32 @@ class Engine(unittest.TestCase):
       self.assertAlmostEqual(bend/kerrDeflectionExact(b, MASS, 0.9), 1, delta=2e-4)   #6e-5; without the twist 1.6e-2
     peri, apo, rp, ra = orbitPrecession(0.9, True, orbits=2, fraction=1e-3)
     self.assertAlmostEqual(peri/kerrPrecessionExact(rp, ra, MASS, 0.9, True), 1, delta=2e-3)   #5e-4; without the twist 0.3
+
+  def testKerrBackgrounds(self):
+    """the rotating river's acceleration is u du/dR (GM/R^2 at spin 0), its twist gradient matches the twist's
+    change, and a rotating hole's circles sit where r+, 2M, 0 and the special orbits are"""
+    from engine.kerr import KerrFlowCalculator
+    from viewer.data import Environment
+    still = KerrFlowCalculator([Body(4e6*MS)])
+    pos = np.array([3e10, 4e10])
+    self.assertLess(length(still.gravity(pos) - Calculator([Body(4e6*MS)]).gravity(pos))/length(still.gravity(pos)), 1e-14)
+    calc = KerrFlowCalculator([Body(4e6*MS, spin=0.9)])
+    M = calc.M
+    for R in (1.7*M, 3*M, 10*M):
+      x, h = np.array([R, 0.0]), R*1e-5
+      speed = lambda d: length(calc.flow(np.array([d, 0.0])))
+      self.assertAlmostEqual(-length(calc.gravity(x))/(speed(R)*(speed(R + h) - speed(R - h))/(2*h)), 1, delta=1e-8)
+      change = (calc.twistAt(x + [h, 0]) - calc.twistAt(x - [h, 0]))/(2*h)
+      self.assertAlmostEqual(calc.twistGradient(x)/change, 1, delta=1e-8)
+    env = Environment([(4e6*MS, 0.0, 0.0, True)], [0.9])
+    self.assertAlmostEqual(env.ergosphere()/(math.sqrt(4 + 0.81)*M), 1, delta=1e-12)
+    self.assertAlmostEqual(env.ring()/(0.9*M), 1, delta=1e-12)
+    radii = {(kind, sense): R/M for kind, sense, R in env.specialOrbits()}
+    self.assertAlmostEqual(radii['isco', 'with'], math.sqrt(2.32088**2 + 0.81), delta=1e-4)   #r = 2.32088 M (Bardeen et al.)
+    self.assertLess(env.horizon(0), radii['photon', 'with']*M)
+    flat = {kind: R/M for kind, sense, R in Environment([(4e6*MS, 0.0, 0.0, True)]).specialOrbits()}
+    self.assertAlmostEqual(flat['photon'], 3, delta=1e-12)
+    self.assertAlmostEqual(flat['isco'], 6, delta=1e-12)
 
   def testCsvRowsWithAdaptiveSteps(self):
     """with uneven steps the csv rows come at the steps nearest each interval"""

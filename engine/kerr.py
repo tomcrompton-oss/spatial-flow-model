@@ -79,6 +79,27 @@ class KerrFlowCalculator(SpecialFlowCalculator):
       return math.nan
     return self.twist*(-(self.a/R)*math.sqrt(2*self.M/r) + self.zeta(r))
 
+  def twistGradient(self, pos):
+    """
+    how fast the twist changes outwards, d mu / dR (rad/m) - the ζ terms cancel, leaving a sqrt(2M) / (2 r^(5/2)):
+    something moving outwards through the river at w_R is turned by -w_R d mu/dR each second (see change)
+    """
+    R, r = self.radii(pos)
+    if r <= 0:
+      return math.nan
+    return self.twist*self.a*math.sqrt(2*self.M)/(2*r**2.5)
+
+  def gravity(self, pos):
+    """
+    the river's acceleration, u du/dR = -(GM/r^2)(R/r) straight inwards: for a non-rotating hole GM/R^2, the
+    newtonian pull, and stronger close to a rotating one
+    """
+    rel = pos - self.bodies[0].pos
+    R, r = self.radii(pos)
+    if r <= 0:
+      return np.array([math.nan, math.nan])
+    return -(G*self.bodies[0].mass/(r*r))*(R/r)*rel/R
+
   def alpha(self, pos):
     """alpha (dimensionless): how a motion round the hole tilts the river's flow through the background"""
     rel = pos - self.bodies[0].pos

@@ -1,4 +1,5 @@
-"""the backgrounds for an environment: bodies, u and g arrows, equal-u lines, flow lines, Schwarzschild radius, light cones, and their key"""
+"""the backgrounds for an environment: bodies, u and g arrows, equal-u lines, flow lines, horizons (and a rotating hole's
+ergosphere, ring and twist), photon orbits and ISCOs, light cones, and their key"""
 from viewer.common import *
 
 
@@ -49,44 +50,88 @@ class Backgrounds:
             c.create_text(x + 4, b - 4, text='%s MS %s' % (formatShort(round(mass / MS, 4)), 'black' if black else 'white'),
                           anchor='sw', fill=INK2, font=('Helvetica', 10))
       return
-    for (x, y), mass, black in self.bodyScreen():
+    spins = self.fieldResult().spins
+    for ((x, y), mass, black), spin in zip(self.bodyScreen(), spins):
       r = BODY_RADIUS
       c.create_oval(x - r - 2, y - r - 2, x + r + 2, y + r + 2, fill=SURFACE, outline='')
       c.create_oval(x - r, y - r, x + r, y + r, fill=INK if black else SURFACE, outline=INK, width=2)
+      if spin:
+        self.drawSpinArrow(x, y, spin)
       if self.showBodyLabels.get():
-        c.create_text(x, y + r + 5, text='%s MS' % formatShort(round(mass / MS, 4)),
+        c.create_text(x, y + r + 5, text='%s MS%s' % (formatShort(round(mass / MS, 4)), ', spin %g' % spin if spin else ''),
                       anchor='n', fill=INK2, font=('Helvetica', 10))
+
+  def drawSpinArrow(self, x, y, spin):
+    """three quarters of a circle round a rotating body at screen (x, y), its arrow the way the body turns"""
+    R = BODY_RADIUS + 5
+    turn = 1 if spin > 0 else -1   #anticlockwise in the plot for positive spin
+    pts = []
+    for th in np.linspace(math.pi / 2, math.pi / 2 + turn * 1.5 * math.pi, 28):
+      pts.extend((x + self.xSign() * R * math.cos(th), y - R * math.sin(th)))   #screen y runs down
+    self.canvas.create_line(*pts, fill=INK, width=1.5, arrow='last', arrowshape=(6, 7, 3), smooth=True)
 
   @staticmethod
   def schwarzschild(mass):
-    """the Schwarzschild radius 2GM/c^2 (m), where the flow speed reaches c"""
+    """the Schwarzschild radius 2GM/c^2 (m), where a non-rotating hole's flow speed reaches c"""
     return 2 * G * mass / C**2
 
-  def drawSchwarzschild(self):
+  def circles(self):
     """
-    each body's Schwarzschild radius: x / y mode, a dotted circle round the body; distance / time mode, a dotted
-    line up the time axis at that distance either side of the body (inside 0 is left out)
+    the circles drawn with the horizon, as (distance from body i's centre (m), body i, label, colour, dash,
+    width): each body's horizon, and a rotating hole's ergosphere edge and ring singularity
+    """
+    env = self.fieldResult()
+    out = [(env.horizon(i), i, 'r+' if env.spins[i] else 'Rs', SCHWARZ, SCHWARZ_DASH, 1.5) for i in range(len(env.bodies))]
+    if env.ergosphere():
+      out.append((env.ergosphere(), 0, 'ergo', SCHWARZ, ERGO_DASH, 1))
+      out.append((env.ring(), 0, 'ring', SCHWARZ, (), 1))
+    return out
+
+  def drawCircle(self, i, rs, label, colour, dash, width):
+    """
+    a circle of radius rs round body i: x / y mode, round the body; distance / time mode, a line up the time axis
+    at that distance either side of the body (inside 0 is left out), labelled at the top
     """
     c = self.canvas
     l, t, r, b = self.plotRect()
     scale = UNITS[self.unit.get()][1]
-    env = self.fieldResult()
-    for i, (mass, x, y, black) in enumerate(env.bodies):
-      rs = env.horizon(i)   #2GM/c^2, or a rotating hole's outer horizon
-      if self.mode.get() == 'time':
-        d = math.hypot(x, y)
-        for edge in (d - rs, d + rs):
-          if edge < 0:
-            continue
-          sx, _ = self.toScreen(edge / scale, 0)
-          if l <= sx <= r:
-            c.create_line(sx, t, sx, b, fill=SCHWARZ, width=1.5, dash=SCHWARZ_DASH)
-            c.create_text(sx + 4 * self.xSign(), t + 4, text='r+' if env.spins[i] else 'Rs', anchor='nw' if self.xSign() > 0 else 'ne',
+    _, x, y, _ = self.fieldResult().bodies[i]
+    if self.mode.get() == 'time':
+      d = math.hypot(x, y)
+      for edge in (d - rs, d + rs):
+        if edge < 0:
+          continue
+        sx, _ = self.toScreen(edge / scale, 0)
+        if l <= sx <= r:
+          c.create_line(sx, t, sx, b, fill=colour, width=width, dash=dash)
+          if label:
+            c.create_text(sx + 4 * self.xSign(), t + 4, text=label, anchor='nw' if self.xSign() > 0 else 'ne',
                           fill=INK2, font=('Helvetica', 10))
-      else:
-        (cx, cy), (ex, ey) = self.toScreen(x / scale, y / scale), self.toScreen((x + rs) / scale, (y + rs) / scale)
-        rx, ry = abs(ex - cx), abs(ey - cy)
-        c.create_oval(cx - rx, cy - ry, cx + rx, cy + ry, outline=SCHWARZ, width=1.5, dash=SCHWARZ_DASH)
+    else:
+      (cx, cy), (ex, ey) = self.toScreen(x / scale, y / scale), self.toScreen((x + rs) / scale, (y + rs) / scale)
+      rx, ry = abs(ex - cx), abs(ey - cy)
+      c.create_oval(cx - rx, cy - ry, cx + rx, cy + ry, outline=colour, width=width, dash=dash)
+
+  def drawSchwarzschild(self):
+    """each body's horizon (the Schwarzschild radius, or a rotating hole's r+), and a rotating hole's ergosphere and ring"""
+    for rs, i, label, colour, dash, width in self.circles():
+      self.drawCircle(i, rs, label, colour, dash, width)
+
+  def drawSpecialOrbits(self):
+    """the one hole's circular photon orbits and innermost stable circular orbits, with the spin and against it"""
+    env = self.fieldResult()
+    for kind, sense, R in env.specialOrbits():
+      colour = PHOTON_ORBIT if kind == 'photon' else ISCO_COLOUR
+      dash = AGAINST_DASH if sense == 'against' else WITH_DASH
+      label = ('photon' if kind == 'photon' else 'ISCO') + {'with': ' +', 'against': ' −', None: ''}[sense]
+      self.drawCircle(0, R, label if self.mode.get() == 'time' else None, colour, dash, 1.5)
+
+  @staticmethod
+  def inM(env, R):
+    """a distance R (m) for the key: in M = GM/c^2 too when there is one hole"""
+    metres = '%s m' % formatShort(float('%.4g' % R))
+    hole = env.hole()
+    return '%s M (%s)' % (formatShort(float('%.3g' % (R / (G * hole[0] / C**2)))), metres) if hole else metres
 
   def drawField(self):
     """equal-u lines, then flow and gravity arrows (and light cones against time), with a key for each"""
@@ -94,8 +139,14 @@ class Backgrounds:
     timeMode = self.mode.get() == 'time'
     if self.showContours.get():
       self.drawContours()
+    if self.showSpecialOrbits.get() and self.fieldResult().hole():
+      self.drawSpecialOrbits()
     if not timeMode and self.showFlowLines.get() and self.drawFlowLines():
-      keys.append((FLOW_LINE, 'flow lines: %d per body from %s m at |u|, outwards, under g' % (FLOW_LINES, formatShort(RSUN))))
+      env = self.fieldResult()
+      if len(env.bodies) == 1:
+        keys.append((FLOW_LINE, 'flow lines: the paths of space, straight %s' % ('in to the hole' if env.bodies[0][3] else 'out of the body')))
+      else:
+        keys.append((FLOW_LINE, 'flow lines: %d per body from %s m at |u|, outwards, under g' % (FLOW_LINES, formatShort(RSUN))))
     if timeMode and self.showFlowLines.get():
       #the flow line is in global time, like the cones
       if self.timeColumn.get() != TIME_COLUMNS[0][0]:
@@ -108,10 +159,15 @@ class Backgrounds:
       ref = self.drawArrows(lambda calc, pos: calc.flow(pos), 0.0, MUTED)
       if ref:
         keys.append((MUTED, 'u  %s km/s' % formatShort(float('%.3g' % (ref / 1000)))))
+    if not timeMode and self.showTwist.get() and self.fieldResult().ergosphere():
+      ref = self.drawTwist()
+      if ref:
+        keys.append((TWIST, 'twist: a full arc turns something moving straight in at c by %s rad/s, with the spin' % formatShort(float('%.3g' % ref))))
     if self.showGravity.get():
       ref = self.drawArrows(lambda calc, pos: calc.gravity(pos), 0.5, G_ARROW)
       if ref:
-        keys.append((G_ARROW, 'g  %s m/s²' % formatShort(float('%.3g' % ref))))
+        what = ' (the river\'s acceleration, u du/dR)' if self.fieldResult().ring() else ''
+        keys.append((G_ARROW, 'g%s  %s m/s²' % (what, formatShort(float('%.3g' % ref)))))
     if timeMode and self.showCones.get():
       #proper time stands still for light, so the cones need t
       if self.timeColumn.get() != TIME_COLUMNS[0][0]:
@@ -120,11 +176,23 @@ class Backgrounds:
         keys.append((CONE, 'light cones: local speed of light outwards and inwards, u ± c'))
     if self.showContours.get():
       keys.append((AXIS, 'lines of equal |u|, km/s'))
+    env = self.fieldResult()
+    hole = env.hole()
     if self.showSchwarzschild.get():
-      env = self.fieldResult()
       radii = sorted({env.horizon(i) for i in range(len(env.bodies))})
       label = 'horizon (Kerr r+, at flat distance √(r+² + a²))' if any(env.spins) else 'Schwarzschild radius 2GM/c²'
-      keys.append((SCHWARZ, '%s: %s m' % (label, ', '.join(formatShort(float('%.4g' % rs)) for rs in radii))))
+      keys.append((SCHWARZ, '%s: %s' % (label, ', '.join(self.inM(env, rs) for rs in radii))))
+      if env.ergosphere():
+        keys.append((ERGO, 'ergosphere edge, r = 2M, where the river reaches c: %s' % self.inM(env, env.ergosphere())))
+        keys.append((RING, 'ring singularity, r = 0: %s (no river inside)' % self.inM(env, env.ring())))
+    if self.showSpecialOrbits.get() and hole:
+      orbits = env.specialOrbits()
+      for kind, colour, name in (('photon', PHOTON_ORBIT, 'circular photon orbit'), ('isco', ISCO_COLOUR, 'innermost stable circular orbit')):
+        found = [(sense, R) for k, sense, R in orbits if k == kind]
+        text = ', '.join('%s%s' % ('' if sense is None else sense + ' the spin ', self.inM(env, R)) for sense, R in found)
+        keys.append(((colour, WITH_DASH), '%s: %s' % (name, text)))
+      if hole[3]:
+        keys.append(((MUTED, AGAINST_DASH), 'short dashes: going round against the spin'))
     if any(r.visible.get() and r.orbits and r.showPeri.get() for r in self.results):
       keys.append((PERIAPSIS, 'periapsis of each orbit'))
     if any(r.visible.get() and r.orbits and r.showApo.get() for r in self.results):
@@ -150,11 +218,28 @@ class Backgrounds:
         self.canvas.config(cursor='crosshair')
     return result.flowLines
 
+  def oneBodyFlowLines(self, env):
+    """
+    one body's flow lines: the river flows straight in to a black body (or out of a white one), so the paths of
+    space are straight lines from it - from a rotating hole's ring, where the river ends, out past the view's corners
+    """
+    mass, bx, by, black = env.bodies[0]
+    scale = UNITS[self.unit.get()][1]
+    x0, x1, y0, y1 = self.view
+    reach = max(math.hypot(x * scale - bx, y * scale - by) for x in (x0, x1) for y in (y0, y1))
+    start = env.ring() or 0.0
+    lines = []
+    for n in range(FLOW_LINES):
+      out = np.array([math.cos(2*math.pi*n/FLOW_LINES), math.sin(2*math.pi*n/FLOW_LINES)])
+      lines.append(np.array([[bx, by] + start*out, [bx, by] + reach*out]))
+    return lines
+
   def drawFlowLines(self):
     """the outward lines from each body, in x / y mode; returns whether any were drawn"""
     scale = UNITS[self.unit.get()][1]
+    env = self.fieldResult()
     drawn = False
-    for line in self.flowLines(self.fieldResult()):
+    for line in (self.oneBodyFlowLines(env) if len(env.bodies) == 1 else self.flowLines(env)):
       pts = []
       for x, y in line:
         pts.extend(self.toScreen(x / scale, y / scale))
@@ -284,6 +369,37 @@ class Backgrounds:
                     arrow='last', arrowshape=(6, 7, 2.5))
     return reference
 
+  def twistArc(self, x, y, radius, sweep, sense, colour=TWIST):
+    """an arc of sweep degrees round screen (x, y), from the top, anticlockwise in the plot if sense > 0, with an arrowhead"""
+    pts = []
+    for th in np.linspace(math.pi / 2, math.pi / 2 + math.copysign(math.radians(sweep), sense), max(4, int(sweep / 10))):
+      pts.extend((x + self.xSign() * radius * math.cos(th), y - radius * math.sin(th)))   #screen y runs down
+    self.canvas.create_line(*pts, fill=colour, width=1, arrow='last', arrowshape=(5, 6, 2.5), smooth=True)
+
+  def drawTwist(self):
+    """
+    round a rotating hole, x / y mode: an arc at each grid point for the river's twist - how fast it turns something
+    moving straight in through it at c, c d mu/dR (rad/s; KerrFlowCalculator.change) - frame dragging, in the river
+    model. the arcs' sweep is in proportion, the strongest capped; returns the rate a full arc stands for, or None
+    """
+    calc = self.fieldResult().flowCalc
+    if not hasattr(calc, 'twistGradient'):
+      return None
+    points = []
+    for sx, sy in self.fieldGrid(0.25):
+      rate = C * calc.twistGradient(self.fieldAt(sx, sy))
+      if math.isfinite(rate) and rate != 0:
+        points.append((sx, sy, rate))
+    if not points:
+      return None
+    full = 300   #degrees for a full arc
+    reference = float(np.percentile([abs(p[2]) for p in points], 90))
+    for sx, sy, rate in points:
+      sweep = full * min(1.0, abs(rate) / reference)
+      if sweep >= 15:
+        self.twistArc(sx, sy, FLOW_SPACING * 0.2, sweep, rate)
+    return reference
+
   def lightSpeeds(self, u):
     """
     the local speeds (m/s) of light going outwards and inwards where the flow is u along the distance axis
@@ -369,6 +485,14 @@ class Backgrounds:
         self.apsisMarker(kx + longest / 2, ky, color, INK2)
       elif color == SCHWARZ:
         c.create_line(kx, ky, kx + longest, ky, fill=SCHWARZ, width=1.5, dash=SCHWARZ_DASH)
+      elif color == ERGO:
+        c.create_line(kx, ky, kx + longest, ky, fill=SCHWARZ, width=1, dash=ERGO_DASH)
+      elif color == RING:
+        c.create_line(kx, ky, kx + longest, ky, fill=SCHWARZ, width=1)
+      elif color == TWIST:
+        self.twistArc(kx + longest / 2, ky, 7, 300, 1)
+      elif isinstance(color, tuple):
+        c.create_line(kx, ky, kx + longest, ky, fill=color[0], width=1.5, dash=color[1])   #(colour, dash): a special orbit
       elif color == FLOW_LINE:
         c.create_line(kx, ky, kx + longest, ky, fill=FLOW_LINE, width=1)
       elif color == CONE:
@@ -381,7 +505,8 @@ class Backgrounds:
 
   def flowSpeedGrid(self):
     """
-    |u| = sqrt(sum of 2GM/d) - the magnitude rule in flow.Calculator.flow - on a fine screen grid
+    |u| = sqrt(sum of 2GM/d) - the magnitude rule in flow.Calculator.flow - on a fine screen grid; for a rotating
+    hole d is its r = sqrt(R^2 - a^2), as in KerrFlowCalculator.flow, with no value inside the ring (R < a)
     returns screen x, screen y and speed (m/s) arrays
     """
     l, t, r, b = self.plotRect()
@@ -394,9 +519,12 @@ class Backgrounds:
     if self.mode.get() == 'time':
       x, y = np.where(x > 0, x, np.nan), np.zeros_like(y)   #distance on the x axis, taken along (d, 0)
     square = np.zeros_like(x)
+    env = self.fieldResult()
+    ring = env.ring() or 0.0
     with np.errstate(divide='ignore', invalid='ignore'):
-      for mass, bx, by, black in self.fieldResult().bodies:
-        square += 2 * G * mass / np.hypot(x - bx, y - by)
+      for mass, bx, by, black in env.bodies:
+        d2 = (x - bx)**2 + (y - by)**2 - ring**2
+        square += 2 * G * mass / np.sqrt(np.where(d2 > 0, d2, np.nan))
     return sx, sy, np.sqrt(square)
 
   def drawContours(self):

@@ -286,6 +286,55 @@ class Environment:
     rPlus = M + math.sqrt(max(M*M - a*a, 0.0))
     return math.sqrt(rPlus*rPlus + a*a)
 
+  def hole(self):
+    """the one black body, if that is all there is: (mass, x, y, spin); else None"""
+    if len(self.bodies) == 1 and self.bodies[0][3]:
+      mass, x, y, _ = self.bodies[0]
+      return mass, x, y, self.spins[0]
+    return None
+
+  def flatDistance(self, r):
+    """the flat distance R in the plot of the one hole's r: sqrt(r^2 + a^2)"""
+    mass, _, _, spin = self.hole()
+    a = spin*G*mass/C**2
+    return math.sqrt(r*r + a*a)
+
+  def ergosphere(self):
+    """
+    a rotating hole's static limit in its equatorial plane, r = 2M, where the river reaches c (as flat distance, m):
+    between it and the horizon nothing can stay still, but light going round with the spin can still get out.
+    None unless there is one rotating hole
+    """
+    hole = self.hole()
+    if hole is None or not hole[3]:
+      return None
+    return self.flatDistance(2*G*hole[0]/C**2)
+
+  def ring(self):
+    """a rotating hole's ring singularity, r = 0 at flat distance a (m); the river has no values inside it"""
+    hole = self.hole()
+    if hole is None or not hole[3]:
+      return None
+    return abs(hole[3])*G*hole[0]/C**2
+
+  def specialOrbits(self):
+    """
+    the one hole's circular photon orbits and innermost stable circular orbits, as flat distances (m):
+    [(kind 'photon' or 'isco', 'with' / 'against' the spin, or None with no spin, R)]
+    """
+    hole = self.hole()
+    if hole is None or exact is None:
+      return []
+    mass, _, _, spin = hole
+    out = []
+    for kind, radius in (('photon', exact.kerrPhotonOrbit), ('isco', exact.kerrISCO)):
+      if spin:
+        for prograde in (True, False):
+          out.append((kind, 'with' if prograde else 'against', self.flatDistance(radius(mass, spin, prograde))))
+      else:
+        out.append((kind, None, radius(mass, 0.0)))
+    return out
+
   @staticmethod
   def key(bodies, spins=()):
     spins = list(spins) + [0.0]*(len(bodies) - len(spins))

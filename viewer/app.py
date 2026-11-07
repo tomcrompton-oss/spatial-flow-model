@@ -56,6 +56,8 @@ class Viewer(ResultsPanel, Loading, View, Drawing, Backgrounds, Replay, SimTab, 
     self.showCones = tk.BooleanVar(value=False)
     self.showFlowLines = tk.BooleanVar(value=False)
     self.showSchwarzschild = tk.BooleanVar(value=False)
+    self.showTwist = tk.BooleanVar(value=False)
+    self.showSpecialOrbits = tk.BooleanVar(value=False)
     self.reverseX = tk.BooleanVar(value=True)   #distance / time mode: distance runs right to left, 0 on the right
     self.timeNote = ''
 
@@ -130,7 +132,9 @@ class Viewer(ResultsPanel, Loading, View, Drawing, Backgrounds, Replay, SimTab, 
     viewMenu.add_checkbutton(label='Gravity arrows (g)', variable=self.showGravity, command=self.redraw)
     viewMenu.add_checkbutton(label='Lines of equal u', variable=self.showContours, command=self.redraw)
     viewMenu.add_checkbutton(label='Flow lines', variable=self.showFlowLines, command=self.redraw)
-    viewMenu.add_checkbutton(label='Schwarzschild radius', variable=self.showSchwarzschild, command=self.redraw)
+    viewMenu.add_checkbutton(label='Horizon (and a rotating hole\'s ergosphere and ring)', variable=self.showSchwarzschild, command=self.redraw)
+    viewMenu.add_checkbutton(label='Twist arcs (rotating hole)', variable=self.showTwist, command=self.redraw)
+    viewMenu.add_checkbutton(label='Photon orbits and ISCO (one hole)', variable=self.showSpecialOrbits, command=self.redraw)
     viewMenu.add_checkbutton(label='Reverse distance axis (distance / time)', variable=self.reverseX, command=self.redraw)
     viewMenu.add_checkbutton(label='Light cones (distance / time)', variable=self.showCones, command=self.redraw)
     legendMenu = tk.Menu(viewMenu, tearoff=0)
@@ -273,7 +277,9 @@ class Viewer(ResultsPanel, Loading, View, Drawing, Backgrounds, Replay, SimTab, 
     check(backgrounds, 'g arrows', self.showGravity, self.redraw)
     check(backgrounds, 'Lines of equal u', self.showContours, self.redraw)
     check(backgrounds, 'Flow lines', self.showFlowLines, self.redraw)
-    check(backgrounds, 'Schwarzschild radius', self.showSchwarzschild, self.redraw)
+    check(backgrounds, 'Horizon', self.showSchwarzschild, self.redraw)
+    check(backgrounds, 'Twist arcs', self.showTwist, self.redraw)
+    check(backgrounds, 'Photon orbits / ISCO', self.showSpecialOrbits, self.redraw)
     check(backgrounds, 'Light cones (distance / time)', self.showCones, self.redraw)
     label(backgrounds, 'for the environment picked in the results panel; in distance / time mode along the line from the origin')
 

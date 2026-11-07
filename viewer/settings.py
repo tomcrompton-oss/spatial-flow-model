@@ -60,6 +60,12 @@ FLOW_LINE = '#c4a46e'   #flow lines
 SCHWARZ = INK       #Schwarzschild radius, dotted
 PERIAPSIS, APOAPSIS = 'periapsis', 'apoapsis'   #key entries for the apsis markers (drawn in each orbit's colour)
 SCHWARZ_DASH = (2, 3)
+ERGO, RING = 'ergosphere', 'ring'   #key entries for a rotating hole's ergosphere edge and ring singularity
+ERGO_DASH = (6, 4)
+TWIST = '#0f766e'   #twist arcs round a rotating hole
+PHOTON_ORBIT = CONE           #circular photon orbits
+ISCO_COLOUR = '#a16207'       #innermost stable circular orbits
+WITH_DASH, AGAINST_DASH = (8, 4), (3, 3)   #special orbits going round with a hole's spin, and against it
 FLOW_LINES = 20     #flow lines from each body
 FLOW_LINE_STEP = 0.01   #each step of a flow line moves about this fraction of the distance to the nearest body
 FLOW_LINE_REACH = 4*AU  #flow lines stop this far from the origin
@@ -81,6 +87,11 @@ except Exception:
   flow = None
 
 try:
+  import engine.exact as exact   #a hole's horizon, photon orbits and innermost stable orbits
+except Exception:
+  exact = None
+
+try:
   import engine.flow_lines as flowlines   #the outward lines from each body
 except Exception:
   flowlines = None
@@ -96,7 +107,7 @@ PREFS_EXT, CONFIG_EXT, FULL_EXT = '.prefs.json', '.config.json', '.full.json'
 #the viewer's look, saved as preferences: none of it depends on the data open
 PREF_VARS = ['mode', 'unit', 'logX', 'logY', 'equalAspect', 'ctTime', 'reverseX', 'showGrid', 'showMarkers',
              'showTimeMarks', 'timeColumn', 'showBodies', 'showFlow', 'showGravity', 'showContours', 'showFlowLines',
-             'showSchwarzschild', 'showCones', 'showPathLegend', 'showFieldKey', 'showMarkNote', 'showMarkLabels',
+             'showSchwarzschild', 'showCones', 'showTwist', 'showSpecialOrbits', 'showPathLegend', 'showFieldKey', 'showMarkNote', 'showMarkLabels',
              'showBodyLabels', 'showSidebar', 'replaySpeed']
 SIM_DIR = os.path.join(ROOT, 'logs', '.sims')   #status files of sims run from the viewer
 STEP_MODES = ['Fixed dt', 'Adaptive']   #the Sim tab's step choice
