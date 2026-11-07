@@ -73,23 +73,27 @@ def escapes(folder, calc, i):
   return path
 
 
-def main():
-  folder = os.path.join(LOG_DIR, 'twoBodyEscapes', 'twoBodyEscapes_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
-  calc = Calculator(BODIES)
-  made = [(escapes(folder, calc, i), COLOURS[i]) for i in range(len(BODIES))]
-
-  #a full config for the viewer: both files, coloured by their hole
+def writeViewerFiles(folder, name, made):
+  """a full config for the viewer in folder: <name>.full.json naming its .prefs.json and .config.json, for the
+  csvs in made, [(path, colour)]; prints how to open it"""
   results = [{'path': path, 'relative': os.path.basename(path), 'visible': True, 'straight': False, 'ends': False,
               'periapsis': False, 'apoapsis': False, 'styles': {'pos': [colour, 'solid', colour]},
               'selection': [['pos_x', 'pos_y']], 'group': None, 'hiddenOrbits': []} for path, colour in made]
   config = {'kind': 'config', 'version': 1, 'results': results, 'selected': made[0][0], 'background': None, 'timeInterval': ''}
   prefs = {'kind': 'preferences', 'version': 1, 'preferences': {'mode': 'xy', 'equalAspect': True, 'showFlow': False,
            'showTimeMarks': False, 'showMarkers': False, 'showBodies': True, 'showPathLegend': True, 'showFieldKey': True}}
-  full = {'kind': 'full', 'version': 1, 'preferences': 'twoBodyEscapes.prefs.json', 'config': 'twoBodyEscapes.config.json'}
-  for fname, doc in (('twoBodyEscapes.config.json', config), ('twoBodyEscapes.prefs.json', prefs), ('twoBodyEscapes.full.json', full)):
-    with open(os.path.join(folder, fname), 'w') as f:
+  full = {'kind': 'full', 'version': 1, 'preferences': name + '.prefs.json', 'config': name + '.config.json'}
+  for ext, doc in (('.config.json', config), ('.prefs.json', prefs), ('.full.json', full)):
+    with open(os.path.join(folder, name + ext), 'w') as f:
       json.dump(doc, f, indent=2)
-  print('open with: python3 viewer/csv_viewer.py', os.path.relpath(os.path.join(folder, 'twoBodyEscapes.full.json'), os.path.dirname(LOG_DIR)))
+  print('open with: python3 viewer/csv_viewer.py', os.path.relpath(os.path.join(folder, name + '.full.json'), os.path.dirname(LOG_DIR)))
+
+
+def main():
+  folder = os.path.join(LOG_DIR, 'twoBodyEscapes', 'twoBodyEscapes_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+  calc = Calculator(BODIES)
+  made = [(escapes(folder, calc, i), COLOURS[i]) for i in range(len(BODIES))]
+  writeViewerFiles(folder, 'twoBodyEscapes', made)
   return folder
 
 
