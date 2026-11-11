@@ -1,7 +1,8 @@
 """
 a set of paths round the two holes of studies/two_body_escapes.py (one solar mass each, fixed at x = -0.5 AU and
-+0.5 AU) in the flow model, with the flow along the net g (Calculator.direction 'g', the default): falls, orbits
-round one hole, orbits round both, flybys, escapes and light
++0.5 AU) in the flow model, with the flow along the net g (Calculator.direction 'g', the default) or another
+direction given on the command line ('eikonal': down zero-energy paths, no curl): falls, orbits round one hole,
+orbits round both, flybys, escapes and light
 
 each runs in the flow model (SpecialFlowCalculator, second order) and, unless it is light, again under newtonian
 gravity (RK4) from the same start for comparison. both stop at 1 Schwarzschild radius from a hole (captured), 20 AU
@@ -16,10 +17,10 @@ for orbits the periapsides and apoapsides are found round the test's centre (a h
 periapsis precession measured; round one hole it is compared with GR's for that hole alone (engine/exact.py), and
 light's bend with GR's at its impact parameter
 
-writes logs/twoBodyTests/twoBodyTests_<datetime>/: a csv for each test (and <name>_newton.csv), summary.log, and a
+writes logs/twoBodyTests/twoBodyTests_<datetime>/ (twoBodyTests_<direction>_<datetime> for a direction other than g): a csv for each test (and <name>_newton.csv), summary.log, and a
 viewer config for each group (flow model solid, newtonian dashed)
 
-run: python3 studies/two_body_tests.py
+run: python3 studies/two_body_tests.py [direction]      (e.g. eikonal)
 """
 import csv
 import json
@@ -38,6 +39,7 @@ from engine.vectors import length
 from engine.exact import grPrecessionExact, grDeflectionExact, schwarzschildRadius
 from two_body_escapes import BODIES, writeViewerFiles
 
+DESCRIPTION = 'along g'        #the flow's direction, for the logs (set by main)
 RS = schwarzschildRadius(MS)   #each hole's Schwarzschild radius
 YEAR = 365.25*DAY
 STEP = 0.002          #each step moves about this fraction of the distance to the nearest hole
@@ -269,7 +271,7 @@ def writeLog(path, lines):
     for i, b in enumerate(BODIES):
       f.write('body %d: mass %.6e kg (%.6g MS)  x %.6e m  y %.6e m  %s\n' % (i + 1, b.mass, b.mass/MS, b.x, b.y,
               'black' if b.black else 'white'))
-    f.write('flow direction: along g\n' + ''.join(line + '\n' for line in lines))
+    f.write('flow direction: %s\n' % DESCRIPTION + ''.join(line + '\n' for line in lines))
 
 
 def distance(d):
@@ -281,10 +283,13 @@ def duration(t):
   return '%.4g s' % t if t < DAY else '%.4g d' % (t/DAY) if t < YEAR else '%.4g yr' % (t/YEAR)
 
 
-def main():
-  folder = os.path.join(LOG_DIR, 'twoBodyTests', 'twoBodyTests_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+def main(direction='g'):
+  global DESCRIPTION
+  folder = os.path.join(LOG_DIR, 'twoBodyTests', 'twoBodyTests_' + ('' if direction == 'g' else direction + '_')
+                        + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder)
-  calc = SpecialFlowCalculator(BODIES, 2, 'g')   #the flow along the net g
+  calc = SpecialFlowCalculator(BODIES, 2, direction)   #by default the flow along the net g
+  DESCRIPTION = calc.describeDirection()
   warnings = []
   calc.warn = warnings.append
   summaries, groups = [], {}
@@ -322,7 +327,7 @@ def main():
     summaries.append(s)
     print('%-16s %-14s %8d steps  t %-10s  (newton: %s)  %.1fs' % (name, reason, steps, duration(s['t']),
           s['newton']['reason'] if 'newton' in s else '-', s['seconds']), flush=True)
-  lines = report(summaries)
+  lines = report(summaries, DESCRIPTION)
   if warnings:
     lines += ['', '%d flow warnings, e.g. %s' % (len(warnings), warnings[0])]
   with open(os.path.join(folder, 'summary.log'), 'w') as f:
@@ -335,8 +340,8 @@ def main():
   return folder
 
 
-def report(summaries):
-  lines = ['paths round two 1 MS holes at x = -0.5 and +0.5 AU, the flow along the net g (flow model) and newtonian', '']
+def report(summaries, description='along g'):
+  lines = ['paths round two 1 MS holes at x = -0.5 and +0.5 AU, the flow %s (flow model) and newtonian' % description, '']
   for s in summaries:
     lines.append('%s  [%s]  %s' % (s['name'], s['group'], s['text']))
     lines.append('  flow:   %-18s t %-11s proper %-11s end (%.4g, %.4g) AU  |v| %.4gc  closest left %s right %s' % (
@@ -362,4 +367,4 @@ def report(summaries):
 
 
 if __name__ == '__main__':
-  main()
+  main(sys.argv[1] if len(sys.argv) > 1 else 'g')
