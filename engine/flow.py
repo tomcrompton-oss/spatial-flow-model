@@ -198,18 +198,17 @@ class Calculator:
 
   def crossSeam(self, p, before):
     """
-    after a step that started in region before: if the particle has crossed the seam, keep its velocity v and
-    take w from the flow on the new side (for light, w back to c) - so the jump in the flow does not kick it
+    after a step that started in region before: if the particle has crossed the seam, w takes the jump in the flow
+    there, added relativistically (as each step adds the flow's change) - u old side - u new side - so the jump does
+    not kick it: v is kept to first order in u/c, and light stays at |w| = c
     """
     after = self.region(p.pos)
     if after == before:
       return
-    p.u = self.flow(p.pos, after)
-    light = abs(length(p.w) - C) < 1e-6*C
-    p.w = p.v - p.u
-    if light:
-      p.w = p.w*C/length(p.w)
-      p.v = p.w + p.u
+    u = self.flow(p.pos, after)
+    p.w = self.addSI(p.w, p.u - u)
+    p.u = u
+    p.v = p.w + p.u
 
   def describeDirection(self):
     """the flow's direction in words, for logs"""

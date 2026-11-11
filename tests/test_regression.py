@@ -272,6 +272,35 @@ class Engine(unittest.TestCase):
     self.assertLess(abs(p.pos[0]), 1e-3*AU)
     self.assertAlmostEqual(low/AU, -1.0, delta=1e-3)
 
+  def testEikonalSeam(self):
+    """for unequal masses the eikonal flow's seam goes through the potential's saddle, S is the same either side of
+    it, and a particle crossing it keeps v (to first order) - light keeping |w| = c"""
+    bodies = [Body(2*MS, -0.5*AU, 0.0), Body(MS, 0.5*AU, 0.0)]
+    calc = SpecialFlowCalculator(bodies, 2, 'eikonal')
+    field = calc.rayField()
+    saddle = field.saddle(0, 1)
+    self.assertAlmostEqual(saddle[0]/AU, 0.5*(math.sqrt(2) - 1)/(math.sqrt(2) + 1), places=9)   #2GM/(x+0.5)^2 = GM/(0.5-x)^2
+    for y in (0.0, 0.5, 2.0, -4.0):
+      lo, hi = -0.4*AU, 3*AU   #in body 0's region, and body 1's
+      for _ in range(60):
+        mid = (lo + hi)/2
+        lo, hi = (mid, hi) if field.region(np.array([mid, y*AU])) == 0 else (lo, mid)
+      seam = np.array([(lo + hi)/2, y*AU])
+      self.assertLess(abs(field.action(seam, 0)/field.action(seam, 1) - 1), 1e-6)
+      if y == 0.0:
+        self.assertAlmostEqual(seam[0]/AU, saddle[0]/AU, delta=1e-4)
+      for w in (np.array([30e3, 5e3]), np.array([C, 0.0])):
+        p = Particle()
+        p.pos = seam - np.array([1.0, 0.0])
+        calc.initPW(p, w)
+        v = p.v.copy()
+        p.pos = seam + np.array([1.0, 0.0])   #now across the seam: re-side it
+        calc.crossSeam(p, 0)
+        if w[0] < C:
+          self.assertLess(length(p.v - v)/length(v), 1e-3)   #the jump is up to 2|u| ~ 1e5 m/s: v kept to ~(u/c)^2
+        else:
+          self.assertAlmostEqual(length(p.w)/C, 1.0, places=12)   #light stays light
+
   def testKerrBackgrounds(self):
     """the rotating river's acceleration is u du/dR (GM/R^2 at spin 0), its twist gradient matches the twist's
     change, and a rotating hole's circles sit where r+, 2M, 0 and the special orbits are"""
