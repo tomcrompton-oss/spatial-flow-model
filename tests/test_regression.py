@@ -234,6 +234,44 @@ class Engine(unittest.TestCase):
       calc.move(p, 10.0)
     self.assertGreater(p.pos[0], -0.4*AU)   #carried towards the middle, away from the nearer hole
 
+  def testEikonalFlow(self):
+    """the 'eikonal' flow has the usual magnitude and no curl, so its acceleration (u . grad) u is g even where g's
+    field lines bend; space released off the half-way line falls as newtonian gravity says, and a particle dropped
+    down the seam keeps to it"""
+    from engine.integrate import rk4Gravity
+    bodies = [Body(MS, -0.5*AU, 0.0), Body(MS, 0.5*AU, 0.0)]
+    calc = SpecialFlowCalculator(bodies, 2, 'eikonal')
+    newton = Calculator(bodies)
+    for pos in (np.array([1.4*AU, 1.4*AU]), np.array([-0.3*AU, 0.2*AU]), np.array([-2*AU, -3*AU])):
+      u = calc.flow(pos)
+      self.assertAlmostEqual(length(u)/length(newton.flow(pos)), 1.0, places=14)
+      h = 1e-6*AU
+      a = length(u)*(calc.flow(pos + u/length(u)*h) - calc.flow(pos - u/length(u)*h))/(2*h)
+      self.assertLess(length(a - newton.gravity(pos))/length(newton.gravity(pos)), 1e-4)
+    #space moving with the flow from (-0.6, 1.2) AU, against newtonian gravity from the same start at v = u
+    p = Particle()
+    p.pos = np.array([-0.6*AU, 1.2*AU])
+    calc.initPFreefall(p)
+    pos, v, t = p.pos.copy(), p.v.copy(), 0.0
+    while t < 2e6:   #down to 0.07 AU from the left hole; the difference falls as the step squared
+      dt = min(0.004*calc.nearest(p.pos)/length(p.v), 2e6 - t)
+      t += dt
+      calc.move(p, dt)
+      pos, v = rk4Gravity(newton, pos, v, dt)
+    self.assertLess(length(p.pos - pos)/length(pos - bodies[0].pos), 1e-5)
+    #dropped from rest on the half-way line it falls down it, through the middle and out the other side (newtonian
+    #gravity: to y = -1 AU), crossing the seam with no kick - the line is unstable near the middle (for y^2 < 0.5
+    #AU^2), so it ends a little off it
+    p = Particle()
+    p.pos = np.array([0.0, 1.0*AU])
+    calc.initPV(p, np.array([0.0, 0.0]))
+    low = p.pos[1]
+    while p.v[1] <= 0:
+      calc.move(p, 0.002*calc.nearest(p.pos)/max(length(p.v), length(p.u)))
+      low = min(low, p.pos[1])
+    self.assertLess(abs(p.pos[0]), 1e-3*AU)
+    self.assertAlmostEqual(low/AU, -1.0, delta=1e-3)
+
   def testKerrBackgrounds(self):
     """the rotating river's acceleration is u du/dR (GM/R^2 at spin 0), its twist gradient matches the twist's
     change, and a rotating hole's circles sit where r+, 2M, 0 and the special orbits are"""

@@ -111,6 +111,7 @@ class Calculator:
     self.bodies = list(bodies)
     self.GM = G*sum(b.mass for b in self.bodies) #total, used by the log
     self.direction = direction   #None: along g (see flowDirection); can be set at any time
+    self.rays = None             #the zero-energy paths for direction 'eikonal' (engine/eikonal.py), built when needed
     self.log = None #set by the sims so warnings go to the log
 
   def warn(self, message):
@@ -119,12 +120,13 @@ class Calculator:
     else:
       print('WARNING:', message)
 
-  def flow(self, pos):
+  def flow(self, pos, region=None):
     """
     velocity of space (u) at pos
       magnitude: square root of the sum of the squares of the flow to each body, sqrt(2GM/d)
       direction: set by self.direction (see flowDirection) - by default towards black bodies and away from white
                  ones, weighted by each body's GM/d^2
+    region: for a direction with a seam ('eikonal'), the side of it to take the flow from (see region)
     """
     U2 = 0.0                    #the square of the flow's magnitude
     g = np.array([0.0, 0.0])    #its direction
@@ -138,7 +140,7 @@ class Calculator:
       else:
         g += pull               #away from the body
     if self.direction is not None:
-      g = self.flowDirection(pos)
+      g = self.flowDirection(pos, region)
 
     gsize = length(g)
     if gsize == 0:
@@ -146,17 +148,24 @@ class Calculator:
       return np.array([0.0, 0.0])
     return math.sqrt(U2) * g/gsize
 
-  def flowDirection(self, pos):
+  def flowDirection(self, pos, region=None):
     """
     which way the flow points at pos (any length; flow scales it to the flow's magnitude), by self.direction:
       None or 'g'  along g - towards black bodies and away from white ones, weighted by GM/d^2 (the default)
       'nearest'    towards the nearest body (away from it if it is white)
       'centre'     towards the bodies' centre of mass
+      'eikonal'    down the zero-energy newtonian path from the nearest body through pos (engine/eikonal.py): no
+                   curl, so space moving with the flow falls at exactly g; a seam where the bodies' regions meet.
+                   region picks the side of the seam (None: the side pos is on); along g past the table
       (x, y)       that way everywhere
       a function   of pos, returning the direction there
     """
     direction = self.direction
-    if direction is None or direction == 'g':
+    if direction == 'eikonal':
+      found = self.rayField().direction(pos, region)
+      if found is not None:
+        return found
+    if direction is None or direction in ('g', 'eikonal'):
       g = np.array([0.0, 0.0])
       for b in self.bodies:
         r = pos - b.pos
@@ -173,11 +182,42 @@ class Calculator:
       return np.asarray(direction(pos), dtype=float)
     return np.asarray(direction, dtype=float)
 
+  def rayField(self):
+    """the zero-energy paths out of each body, for direction 'eikonal' - built the first time (a few seconds)"""
+    key = [(b.mass, b.x, b.y, b.black) for b in self.bodies]
+    if self.rays is None or self.rays[0] != key:
+      from engine.eikonal import RayField
+      self.rays = (key, RayField(self.bodies))
+    return self.rays[1]
+
+  def region(self, pos):
+    """which side of the flow's seam pos is on (the nearest body's index), or None if the flow has no seam"""
+    if self.direction != 'eikonal':
+      return None
+    return self.rayField().region(pos)
+
+  def crossSeam(self, p, before):
+    """
+    after a step that started in region before: if the particle has crossed the seam, keep its velocity v and
+    take w from the flow on the new side (for light, w back to c) - so the jump in the flow does not kick it
+    """
+    after = self.region(p.pos)
+    if after == before:
+      return
+    p.u = self.flow(p.pos, after)
+    light = abs(length(p.w) - C) < 1e-6*C
+    p.w = p.v - p.u
+    if light:
+      p.w = p.w*C/length(p.w)
+      p.v = p.w + p.u
+
   def describeDirection(self):
     """the flow's direction in words, for logs"""
     d = self.direction
     if d is None or d == 'g':
       return 'along g'
+    if d == 'eikonal':
+      return 'down zero-energy paths from the nearest body (no curl; seam where the regions meet)'
     if d in ('nearest', 'centre'):
       return {'nearest': 'towards the nearest body', 'centre': 'towards the centre of mass'}[d]
     if callable(d):
@@ -358,16 +398,18 @@ class SpecialFlowCalculator(Calculator):
       self.moveSecondOrder(p, dt)
 
   def moveFirstOrder(self, p, dt):
-    #the flow where space moves to, and where the particle moves to
-    u2 = self.flow(p.pos + p.u*dt)
+    #the flow where space moves to, and where the particle moves to - from the side of any seam the step starts on
+    side = self.region(p.pos)
+    u2 = self.flow(p.pos + p.u*dt, side)
     p.pos = p.pos + p.v*dt
     p.d += length(p.v*dt)
-    u3 = self.flow(p.pos)
+    u3 = self.flow(p.pos, side)
 
     #the difference changes w (this gives the rotation)
     p.w = self.addSI(p.w, u2 - u3)
     p.u = u3
     p.v = p.w + p.u
+    self.crossSeam(p, side)
 
     p.t += dt
     s = 1 - (length(p.w)**2)/C**2
@@ -377,22 +419,24 @@ class SpecialFlowCalculator(Calculator):
   def moveSecondOrder(self, p, dt):
     light = abs(length(p.w) - C) < 1e-9*C
 
-    #half a step the first-order way, to the middle of the step
+    #half a step the first-order way, to the middle of the step - all from the side of any seam the step starts on
+    side = self.region(p.pos)
     xm = p.pos + p.v*dt/2
-    um = self.flow(xm)
-    wm = self.addSI(p.w, self.flow(p.pos + p.u*dt/2) - um)
+    um = self.flow(xm, side)
+    wm = self.addSI(p.w, self.flow(p.pos + p.u*dt/2, side) - um)
     vm = wm + um
 
     #the whole step from the start, at the middle's rates: the flow difference across the middle point (a centred
     #difference), its relativistic change worked out at the middle w
-    dw = self.flow(xm - wm*dt/2) - self.flow(xm + wm*dt/2)
+    dw = self.flow(xm - wm*dt/2, side) - self.flow(xm + wm*dt/2, side)
     p.w = p.w + (self.addSI(wm, dw) - wm)
     if light:
       p.w = p.w*C/length(p.w)
     p.pos = p.pos + vm*dt
     p.d += length(vm*dt)
-    p.u = self.flow(p.pos)
+    p.u = self.flow(p.pos, side)
     p.v = p.w + p.u
+    self.crossSeam(p, side)
 
     p.t += dt
     s = 1 - (length(wm)**2)/C**2
