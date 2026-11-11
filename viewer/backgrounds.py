@@ -145,6 +145,9 @@ class Backgrounds:
       env = self.fieldResult()
       if len(env.bodies) == 1:
         keys.append((FLOW_LINE, 'flow lines: the paths of space, straight %s' % ('in to the hole' if env.bodies[0][3] else 'out of the body')))
+      elif env.direction == 'eikonal':
+        keys.append((FLOW_LINE, 'flow lines: the eikonal flow, %d per body - zero-energy paths out of each body under g,'
+                                ' to the seam where the regions meet' % FLOW_LINES))
       else:
         keys.append((FLOW_LINE, 'flow lines: %d per body from %s m at |u|, outwards, under g' % (FLOW_LINES, formatShort(RSUN))))
     if timeMode and self.showFlowLines.get():
@@ -209,7 +212,10 @@ class Backgrounds:
       self.drawFieldKey(keys)
 
   def flowLines(self, result):
-    """each body's outward lines (positions in m), worked out once per environment"""
+    """
+    each body's outward lines (positions in m), worked out once per environment; for the eikonal flow they are the
+    flow's own lines, so each stops at the seam, where it comes nearer another body than its own
+    """
     if result.flowLines is None:
       result.flowLines = []
       calc = result.flowCalc
@@ -219,7 +225,14 @@ class Backgrounds:
         for home in calc.bodies:
           for n in range(FLOW_LINES):
             rows, _, _ = flowlines.line(calc, home, 2*math.pi*n/FLOW_LINES, RSUN, FLOW_LINE_REACH, FLOW_LINE_STEP, 2)
-            result.flowLines.append(np.array([pos for _, pos, _ in rows]))
+            points = [pos for _, pos, _ in rows]
+            if result.direction == 'eikonal':
+              own = calc.bodies.index(home)
+              for k, pos in enumerate(points):
+                if calc.region(pos) != own:
+                  points = points[:k + 1]
+                  break
+            result.flowLines.append(np.array(points))
         self.canvas.config(cursor='crosshair')
     return result.flowLines
 

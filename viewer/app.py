@@ -16,7 +16,7 @@ class Viewer(ResultsPanel, Loading, View, Drawing, Backgrounds, Replay, SimTab, 
   def __init__(self, root, paths=None):
     self.root = root
     self.results = []
-    self.environments = {}   #Environment.key(bodies) -> Environment, shared by results with the same bodies
+    self.environments = {}   #(Environment.key(bodies), flow direction) -> Environment, shared by results with the same bodies
     self.colorCount = 0   #paths coloured so far, so each new path gets the next colour
     self.view = [0.0, 1.0, 0.0, 1.0]   #xmin, xmax, ymin, ymax in plotted (unit, log) space
     self.plotSize = None
