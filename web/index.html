@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flow Viewer</title>
+<style>
+  :root {
+    --page: #f4f3ef; --surface: #fbfbf9; --ink: #1f1f1d; --ink2: #5c5b56; --muted: #8a8983; --grid: #e2e1dc;
+    --axis: #b9b8b0; --accent: #2a78d6; --g-arrow: #3d3d3a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #1b1b1a; --surface: #232321; --ink: #ecebe6; --ink2: #b5b3ab; --muted: #8f8d86; --grid: #333330;
+      --axis: #55534d; --accent: #5b9ce8; --g-arrow: #c9c7bf;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.4 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  #app { display: grid; grid-template-columns: 1fr 300px; grid-template-rows: auto 1fr auto; height: 100vh; }
+  header { grid-column: 1 / 3; display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0 8px 0 0; }
+  #plotWrap { position: relative; min-height: 0; }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  aside { border-left: 1px solid var(--grid); padding: 10px 12px; overflow: auto; }
+  aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink2); margin: 14px 0 6px; }
+  aside h2:first-child { margin-top: 0; }
+  #replay { grid-column: 1 / 2; display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--grid); }
+  #replay input[type=range] { flex: 1; }
+  #replayLabel { min-width: 170px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  button, select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--axis); border-radius: 4px; padding: 3px 8px; }
+  button:hover { border-color: var(--ink2); }
+  label.check { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+  .result { display: flex; gap: 6px; align-items: center; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
+  .result.selected { background: var(--grid); }
+  .swatch { width: 18px; height: 3px; flex: none; }
+  .result span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #message { color: var(--ink2); }
+  #drop { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 2px dashed var(--accent); font-size: 16px; }
+  #empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink2); text-align: center; padding: 16px; }
+  .note { color: var(--muted); font-size: 12px; }
+  @media (max-width: 760px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: auto 60vh auto auto; height: auto; }
+    header, #replay { grid-column: 1; }
+    aside { border-left: 0; border-top: 1px solid var(--grid); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Flow Viewer</h1>
+    <button id="openFolder" title="Choose a run folder (logs/&lt;study&gt;/&lt;run&gt;)">Open run folder…</button>
+    <input id="folderInput" type="file" webkitdirectory multiple hidden>
+    <span id="message"></span>
+  </header>
+  <div id="plotWrap">
+    <canvas id="plot"></canvas>
+    <div id="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
+    <div id="drop">Drop a run folder</div>
+  </div>
+  <aside>
+    <h2>Results</h2>
+    <div id="results"></div>
+    <h2>Background</h2>
+    <select id="background"></select>
+    <label class="check"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
+    <label class="check"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
+    <label class="check"><input type="checkbox" id="showBodies"> bodies</label>
+    <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons</label>
+    <p class="note">Arrows come from a run's background frames; runs without frames show bodies only.</p>
+    <h2>View</h2>
+    <select id="unit"></select>
+    <label class="check"><input type="checkbox" id="equalAspect"> equal aspect</label>
+    <label class="check"><input type="checkbox" id="showGrid"> grid</label>
+    <label class="check"><input type="checkbox" id="showPathLegend"> path legend</label>
+    <label class="check"><input type="checkbox" id="showFieldKey"> background key</label>
+    <button id="fit">Fit to paths</button>
+    <p class="note">Drag to pan, scroll to zoom, double-click to fit.</p>
+  </aside>
+  <div id="replay">
+    <button id="play">Play</button>
+    <button id="stop" title="Back to the whole run">Stop</button>
+    <select id="speed"></select>
+    <input id="seek" type="range" min="0" max="1000" value="0">
+    <span id="replayLabel">stopped</span>
+  </div>
+</div>
+<script src="viewer.js"></script>
+</body>
+</html>
