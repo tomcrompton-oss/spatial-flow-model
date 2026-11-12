@@ -213,6 +213,8 @@ class Log:
                     '  spin %.10g' % b.spin if getattr(b, 'spin', 0) else ''))
     if getattr(calc, 'direction', None) is not None:
       self.print('flow direction:', calc.describeDirection())
+    if getattr(calc, 'wave', None) is not None:
+      self.print('gravitational wave:', calc.wave.describe())
 
   def updatePosition(self, p, dt):
     """

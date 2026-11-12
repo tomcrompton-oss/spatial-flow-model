@@ -12,6 +12,9 @@ the flow's direction is Calculator.direction (see flowDirection): with more than
 eikonal flow, which has no curl, so space moving with it falls at exactly g - for two bodies worked out exactly
 (engine/two_centre.py), for more from tables of its paths (engine/eikonal.py)
 
+a gravitational wave (engine/waves.py, Calculator.wave) adds its own flow, which changes with time: flow takes the
+time, and the steps pass it (the flow is otherwise steady)
+
 the calculators that were in flow2.py and are no longer used are in legacy/legacy_calculators.py
 """
 import math
@@ -104,13 +107,14 @@ class Body:
 class Calculator:
   runspeed = 30000   #rough steps per second, for the log's estimate of how long a run takes
 
-  def __init__(self, bodies=None, direction=None):
+  def __init__(self, bodies=None, direction=None, wave=None):
     """
     Args:
-      bodies (list of Body): the masses; default one black solar mass at (0,0)
+      bodies (list of Body): the masses; default one black solar mass at (0,0); [] for none (a wave alone)
       direction: which way the flow points (its magnitude is always the same) - see flowDirection; 'eikonal-exact'
                  only for two bodies. by default 'eikonal-exact' for two bodies, 'eikonal' for more, and along g
                  (straight in or out) for one; 'g' sets along g for any number
+      wave: a gravitational wave whose flow is added (engine/waves.py PlaneWave), or None
     """
     if bodies is None:
       bodies = [Body()]
@@ -128,6 +132,7 @@ class Calculator:
     self.direction = direction   #None (one body): along g (see flowDirection); can be set at any time
     self.rays = None             #the zero-energy paths for the eikonal directions (engine/eikonal.py or
                                  #engine/two_centre.py), made when needed
+    self.wave = wave             #a gravitational wave adding its flow (engine/waves.py), or None
     self.log = None #set by the sims so warnings go to the log
 
   def warn(self, message):
@@ -136,15 +141,25 @@ class Calculator:
     else:
       print('WARNING:', message)
 
-  def flow(self, pos, region=None):
+  def flow(self, pos, region=None, t=0.0):
     """
-    velocity of space (u) at pos
+    velocity of space (u) at pos, at time t (which only a gravitational wave's flow depends on)
       magnitude: square root of the sum of the squares of the flow to each body, sqrt(2GM/d)
       direction: set by self.direction (see flowDirection) - by default, for more than one body, down the eikonal
                  flow's zero-energy paths; along g (towards black bodies and away from white ones, weighted by each
                  body's GM/d^2) when it is None or 'g'
     region: for a direction with a seam ('eikonal', 'eikonal-exact'), the side of it to take the flow from (see region)
+    plus self.wave's flow, if there is one
     """
+    if self.wave is not None:
+      wave = self.wave.flow(pos, t)
+      if not self.bodies:
+        return wave
+      return self.bodiesFlow(pos, region) + wave
+    return self.bodiesFlow(pos, region)
+
+  def bodiesFlow(self, pos, region=None):
+    """the bodies' flow at pos (see flow)"""
     U2 = 0.0                    #the square of the flow's magnitude
     g = np.array([0.0, 0.0])    #its direction
     for b in self.bodies:
@@ -229,7 +244,7 @@ class Calculator:
       return None
     return self.rayField().region(pos)
 
-  def crossSeam(self, p, before):
+  def crossSeam(self, p, before):   #(p.t is the step's end)
     """
     after a step that started in region before: if the particle has crossed the seam, w takes the jump in the flow
     there, added relativistically (as each step adds the flow's change) - u old side - u new side - so the jump does
@@ -238,7 +253,7 @@ class Calculator:
     after = self.region(p.pos)
     if after == before:
       return
-    u = self.flow(p.pos, after)
+    u = self.flow(p.pos, after, p.t)
     p.w = self.addSI(p.w, p.u - u)
     p.u = u
     p.v = p.w + p.u
@@ -310,8 +325,8 @@ class Calculator:
     raise NotImplementedError('Calculator only gives the flow and gravity; use a calculator that moves particles')
 
   def nearest(self, pos):
-    """the distance from pos to the nearest body"""
-    return min(length(pos - b.pos) for b in self.bodies)
+    """the distance from pos to the nearest body (infinite with none)"""
+    return min((length(pos - b.pos) for b in self.bodies), default=float('inf'))
 
   def stepSize(self, p, fraction, dtMax=None):
     """
@@ -389,8 +404,8 @@ class SpecialFlowCalculator(Calculator):
            light (|w| = c) is kept at exactly c. see studies/compare_second_order.py
   """
 
-  def __init__(self, bodies=None, order=2, direction=None):
-    super().__init__(bodies, direction)
+  def __init__(self, bodies=None, order=2, direction=None, wave=None):
+    super().__init__(bodies, direction, wave)
     if order not in (1, 2):
       raise ValueError('order is 1 or 2, not %r' % order)
     self.order = order
@@ -402,18 +417,18 @@ class SpecialFlowCalculator(Calculator):
   def initPV(self, p, v):
     """start moving at v"""
     p.v = v
-    p.u = self.flow(p.pos)
+    p.u = self.flow(p.pos, None, p.t)
     p.w = p.v - p.u
 
   def initPW(self, p, w):
     """start moving at w relative to the local space"""
     p.w = w
-    p.u = self.flow(p.pos)
+    p.u = self.flow(p.pos, None, p.t)
     p.v = p.w + p.u
 
   def initPFreefall(self, p):
     """moving with the flow (v = u, w = 0): a fall from rest at infinity, for a black body"""
-    p.u = self.flow(p.pos)
+    p.u = self.flow(p.pos, None, p.t)
     p.v = p.u
     p.w = np.array([0.0, 0.0])
 
@@ -422,7 +437,7 @@ class SpecialFlowCalculator(Calculator):
     thrown against the flow at twice its speed (v = -2u, w = v - u = -3u), as astroDescend falls into a white body
     (NewSpecialWhiteFlowCalculator's initPFreefall)
     """
-    p.u = self.flow(p.pos)
+    p.u = self.flow(p.pos, None, p.t)
     p.v = -2*p.u
     p.w = p.v - p.u
 
@@ -433,20 +448,22 @@ class SpecialFlowCalculator(Calculator):
       self.moveSecondOrder(p, dt)
 
   def moveFirstOrder(self, p, dt):
-    #the flow where space moves to, and where the particle moves to - from the side of any seam the step starts on
+    #the flow where space moves to, and where the particle moves to - from the side of any seam the step starts on,
+    #both at the step's end (the difference is the flow's change across space; its change in time comes in with u3)
     side = self.region(p.pos)
-    u2 = self.flow(p.pos + p.u*dt, side)
+    end = p.t + dt
+    u2 = self.flow(p.pos + p.u*dt, side, end)
     p.pos = p.pos + p.v*dt
     p.d += length(p.v*dt)
-    u3 = self.flow(p.pos, side)
+    u3 = self.flow(p.pos, side, end)
 
     #the difference changes w (this gives the rotation)
     p.w = self.addSI(p.w, u2 - u3)
     p.u = u3
     p.v = p.w + p.u
+    p.t = end
     self.crossSeam(p, side)
 
-    p.t += dt
     s = 1 - (length(p.w)**2)/C**2
     if s > 0.0:
       p.pt += dt*math.sqrt(s)
@@ -456,24 +473,25 @@ class SpecialFlowCalculator(Calculator):
 
     #half a step the first-order way, to the middle of the step - all from the side of any seam the step starts on
     side = self.region(p.pos)
+    middle, end = p.t + dt/2, p.t + dt
     xm = p.pos + p.v*dt/2
-    um = self.flow(xm, side)
-    wm = self.addSI(p.w, self.flow(p.pos + p.u*dt/2, side) - um)
+    um = self.flow(xm, side, middle)
+    wm = self.addSI(p.w, self.flow(p.pos + p.u*dt/2, side, middle) - um)
     vm = wm + um
 
     #the whole step from the start, at the middle's rates: the flow difference across the middle point (a centred
-    #difference), its relativistic change worked out at the middle w
-    dw = self.flow(xm - wm*dt/2, side) - self.flow(xm + wm*dt/2, side)
+    #difference, at the middle's time), its relativistic change worked out at the middle w
+    dw = self.flow(xm - wm*dt/2, side, middle) - self.flow(xm + wm*dt/2, side, middle)
     p.w = p.w + (self.addSI(wm, dw) - wm)
     if light:
       p.w = p.w*C/length(p.w)
     p.pos = p.pos + vm*dt
     p.d += length(vm*dt)
-    p.u = self.flow(p.pos, side)
+    p.u = self.flow(p.pos, side, end)
     p.v = p.w + p.u
+    p.t = end
     self.crossSeam(p, side)
 
-    p.t += dt
     s = 1 - (length(wm)**2)/C**2
     if s > 0.0:
       p.pt += dt*math.sqrt(s)

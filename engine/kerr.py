@@ -56,7 +56,7 @@ class KerrFlowCalculator(SpecialFlowCalculator):
     R = length(pos - self.bodies[0].pos)
     return R, math.sqrt(max(R*R - self.a*self.a, 0.0))
 
-  def flow(self, pos, region=None):
+  def flow(self, pos, region=None, t=0.0):
     """the river: straight in at c sqrt(2M/r); not a number at the ring singularity (R = a, r = 0) and inside it"""
     rel = pos - self.bodies[0].pos
     R, r = self.radii(pos)

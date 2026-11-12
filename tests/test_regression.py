@@ -332,6 +332,37 @@ class Engine(unittest.TestCase):
     with self.assertRaises(ValueError):
       Calculator([Body(), Body(MS, AU, 0.0), Body(MS, 0.0, AU)], 'eikonal-exact')
 
+  def testGravitationalWave(self):
+    """a plane wave through the plane is a flow of space (engine/waves.py): particles moving with it keep their TT
+    coordinates, particles starting at rest move as geodesic deviation says, and light's round trip along an arm
+    takes as long as in GR - each to first order in h; and a calculator with no bodies is the wave alone"""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'studies'))
+    from engine.waves import PlaneWave
+    from studies.grav_wave import roundTrip, strainMatrix, rateMatrix
+    h = 1e-6
+    wave = PlaneWave(plus=h, cross=0.5*h, frequency=100.0, phasePlus=0.3, phaseCross=1.1)
+    calc = SpecialFlowCalculator([], 2, wave=wave)
+    X0 = np.array([1e6, 4e5])
+    self.assertTrue(np.array_equal(calc.flow(X0, None, 0.01), wave.flow(X0, 0.01)))
+    free, rest = Particle(), Particle()
+    free.pos, rest.pos = X0.copy(), X0.copy()
+    calc.initPW(free, np.array([0.0, 0.0]))
+    calc.initPV(rest, np.array([0.0, 0.0]))
+    tt = X0 - strainMatrix(wave, 0.0) @ X0/2
+    for _ in range(2000):   #one period
+      calc.move(free, 5e-6)
+      calc.move(rest, 5e-6)
+    t = free.t
+    self.assertLess(length(free.pos - (tt + strainMatrix(wave, t) @ tt/2))/(h*length(X0)), 1e-5)
+    geodesic = X0 + (strainMatrix(wave, t) - strainMatrix(wave, 0.0) - rateMatrix(wave, 0.0)*t) @ X0/2
+    self.assertLess(length(rest.pos - geodesic)/(h*length(X0)), 1e-4)
+    arm = PlaneWave(plus=h, frequency=100.0, phasePlus=0.4)
+    calc = SpecialFlowCalculator([], 2, wave=arm)
+    L = 0.25*C/100.0
+    T = roundTrip(calc, L, np.array([1.0, 0.0]), 0.002, steps=1000)
+    want = 2*L*(1 - arm.strain(0.002)[0]/2)/C + arm.integral(0.002, 0.002 + T)[0]/2
+    self.assertLess(abs(T - want)/(h*L/C), 1e-4)
+
   def testKerrBackgrounds(self):
     """the rotating river's acceleration is u du/dR (GM/R^2 at spin 0), its twist gradient matches the twist's
     change, and a rotating hole's circles sit where r+, 2M, 0 and the special orbits are"""
