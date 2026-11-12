@@ -436,14 +436,14 @@ class ResultsPanel:
 
   def updateFieldChoices(self):
     """the Background list: the selected result's environment, or any environment with bodies"""
-    envs = [e for e in self.activeEnvironments() if e.bodies]
+    envs = [e for e in self.activeEnvironments() if e.hasField()]
     if self.fieldChoice not in envs:
       self.fieldChoice = None
     self.fieldBox.config(values=["Selected result's environment"] + [e.name for e in envs])
     self.fieldBox.set(self.fieldChoice.name if self.fieldChoice else "Selected result's environment")
 
   def fieldChoiceChanged(self):
-    self.fieldChoice = next((e for e in self.activeEnvironments() if e.bodies and e.name == self.fieldBox.get()), None)
+    self.fieldChoice = next((e for e in self.activeEnvironments() if e.hasField() and e.name == self.fieldBox.get()), None)
     self.markBackground()
     self.redraw()
 

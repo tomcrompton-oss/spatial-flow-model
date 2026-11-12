@@ -87,6 +87,11 @@ except Exception:
   flow = None
 
 try:
+  import engine.background_frames as backgroundFrames   #a flow that changes with time, written by its study
+except Exception:
+  backgroundFrames = None
+
+try:
   import engine.exact as exact   #a hole's horizon, photon orbits and innermost stable orbits
 except Exception:
   exact = None

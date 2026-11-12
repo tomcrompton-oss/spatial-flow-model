@@ -261,8 +261,11 @@ class Environment:
   backgrounds (flow, gravity, cones, flow lines, Schwarzschild radius)
   """
 
-  def __init__(self, bodies, spins=None, direction=None):
+  def __init__(self, bodies, spins=None, direction=None, frames=None):
     self.bodies = bodies   #(mass kg, x m, y m, black)
+    self.frames = None     #the flow at a run of times, when it changes with time (engine/background_frames.py)
+    if frames and backgroundFrames is not None and os.path.exists(frames):
+      self.frames = backgroundFrames.readFrames(frames)
     self.direction = direction   #the flow's direction (Calculator.direction): None along g, 'eikonal' or 'eikonal-exact'
     self.spins = list(spins or []) + [0.0]*(len(bodies) - len(spins or []))   #a/M of each body
     self.flowCalc = None
@@ -276,6 +279,12 @@ class Environment:
       self.flowCalc.warn = lambda message: None   #g=0 on a grid point just means no arrow
     self.name = self.describe(bodies, self.spins) + {'eikonal': ', eikonal flow',
                                                      'eikonal-exact': ', eikonal flow (exact)'}.get(direction, '')
+    if self.frames is not None:
+      self.name += ', flow changing with time (%s)' % studyName(frames)
+
+  def hasField(self):
+    """whether there is anything to draw a background from: bodies, or frames of the flow"""
+    return bool(self.bodies) or self.frames is not None
 
   def horizon(self, i):
     """

@@ -363,6 +363,36 @@ class Engine(unittest.TestCase):
     want = 2*L*(1 - arm.strain(0.002)[0]/2)/C + arm.integral(0.002, 0.002 + T)[0]/2
     self.assertLess(abs(T - want)/(h*L/C), 1e-4)
 
+  def testBackgroundFrames(self):
+    """a flow that changes with time is written as frames (engine/background_frames.py): read back they give u and
+    the acceleration of space, du/dt + (u . grad) u, at the frames' times, and the viewer's environment draws from
+    them"""
+    from engine.waves import PlaneWave
+    from engine.background_frames import writeFrames, readFrames
+    wave = PlaneWave(plus=1e-3, frequency=10.0)
+    calc = SpecialFlowCalculator([], 2, wave=wave)
+    folder = tempfile.mkdtemp()
+    try:
+      path = os.path.join(folder, 'frames.csv')
+      writeFrames(path, calc, (-1e5, 1e5, -1e5, 1e5), np.arange(9)/80, cells=5)
+      frames = readFrames(path)
+      self.assertEqual((frames.times.size, frames.xs.size, frames.ys.size), (9, 5, 5))
+      t, pos = 3/80, np.array([5e4, -5e4])   #a frame's time, on a grid point
+      frame = frames.at(t)
+      self.assertLess(length(frame.flow(pos) - wave.flow(pos, t))/length(wave.flow(pos, t)), 1e-7)
+      rate = wave.rate(t)[0]
+      second = -wave.plus*wave.omega**2*math.sin(wave.omega*t)
+      want = np.array([(second/2 + rate**2/4)*pos[0], (-second/2 + rate**2/4)*pos[1]])
+      self.assertLess(length(frame.gravity(pos) - want)/length(want), 1e-5)
+      self.assertTrue(np.isnan(frame.flow(np.array([2e5, 0.0]))).all())   #outside the grid
+      sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'viewer'))
+      from viewer.data import Environment
+      env = Environment([], [], None, path)
+      self.assertTrue(env.hasField())
+      self.assertFalse(Environment([], [], None, None).hasField())
+    finally:
+      shutil.rmtree(folder)
+
   def testKerrBackgrounds(self):
     """the rotating river's acceleration is u du/dR (GM/R^2 at spin 0), its twist gradient matches the twist's
     change, and a rotating hole's circles sit where r+, 2M, 0 and the special orbits are"""

@@ -10,6 +10,7 @@ class Loading:
     logPath = os.path.splitext(result.path)[0] + '.log'
     result.bodies = []
     result.spins = []   #a/M of each body, 0 if the log gives none
+    result.frames = None      #the file of the flow's background frames, if it changes with time (engine/background_frames.py)
     result.direction = None   #the flow's direction, if the log names one the backgrounds can draw ('eikonal',
                               #'eikonal-exact')
     if not os.path.exists(logPath):
@@ -23,6 +24,9 @@ class Loading:
       result.spins.append(float(m.group(5)) if m.group(5) else 0.0)
     if 'flow direction: down zero-energy paths' in result.logText:
       result.direction = 'eikonal-exact' if 'exact two-body solution' in result.logText else 'eikonal'
+    frames = re.search(r'^background frames: (.+)$', result.logText, re.M)
+    if frames:
+      result.frames = os.path.join(os.path.dirname(logPath), frames.group(1).strip())
     self.setEnvironment(result)
     self.findOrbits(result)
 
@@ -104,9 +108,10 @@ class Loading:
     """the shared Environment for a result's bodies"""
     spins = getattr(result, 'spins', [])
     direction = getattr(result, 'direction', None)
-    key = (Environment.key(result.bodies, spins), direction)
+    frames = getattr(result, 'frames', None)
+    key = (Environment.key(result.bodies, spins), direction, frames)
     if key not in self.environments:
-      self.environments[key] = Environment(result.bodies, spins, direction)
+      self.environments[key] = Environment(result.bodies, spins, direction, frames)
     result.env = self.environments[key]
 
   def openDialog(self):

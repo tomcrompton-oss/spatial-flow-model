@@ -12,11 +12,28 @@ class Backgrounds:
     result's, or that of the first shown result with bodies
     """
     if self.fieldChoice in self.activeEnvironments():
-      return self.fieldChoice if self.fieldChoice.bodies else None
+      return self.fieldChoice if self.fieldChoice.hasField() else None
     r = self.current()
-    if r is not None and r.visible.get() and r.env.bodies:
+    if r is not None and r.visible.get() and r.env.hasField():
       return r.env
-    return next((r.env for r in self.results if r.visible.get() and r.env.bodies), None)
+    return next((r.env for r in self.results if r.visible.get() and r.env.hasField()), None)
+
+  def backgroundTime(self):
+    """the time the backgrounds are drawn at, for a flow that changes with time: the replay's, or else the start"""
+    env = self.fieldResult()
+    if self.replayState != 'stopped' and self.replayT is not None:
+      return self.replayT
+    return float(env.frames.times[0])
+
+  def fieldCalc(self):
+    """
+    what the arrows, cones and lines of equal |u| are worked out from: the environment's flow calculator, or for a
+    flow that changes with time its frame at backgroundTime (with flow and gravity - space's acceleration - too)
+    """
+    env = self.fieldResult()
+    if env.frames is not None:
+      return env.frames.at(self.backgroundTime())
+    return env.flowCalc
 
   def activeEnvironments(self):
     """the environments of the loaded results, in load order"""
@@ -159,10 +176,13 @@ class Backgrounds:
         every = self.drawFlowLinesTime()
         if every:
           keys.append((FLOW_LINE, 'flow line: space moving at u (dd/dt = u), repeated every %s s' % formatShort(every)))
+    env = self.fieldResult()
+    moment = '  at t = %s s' % formatValue(self.fieldCalc().t) if env.frames is not None else ''
     if self.showFlow.get():
       ref = self.drawArrows(lambda calc, pos: calc.flow(pos), 0.0, MUTED)
       if ref:
-        keys.append((MUTED, 'u  %s km/s' % formatShort(float('%.3g' % (ref / 1000)))))
+        speed = '%s km/s' % formatShort(float('%.3g' % (ref / 1000))) if ref >= 1000 else '%s m/s' % formatShort(float('%.3g' % ref))
+        keys.append((MUTED, 'u  %s%s' % (speed, moment)))
     if self.showTwist.get():
       if not self.fieldResult().ergosphere():
         keys.append((None, 'twist arcs are only round a rotating hole: pick its environment under Background'))
@@ -176,7 +196,9 @@ class Backgrounds:
       ref = self.drawArrows(lambda calc, pos: calc.gravity(pos), 0.5, G_ARROW)
       if ref:
         what = ' (the river\'s acceleration, u du/dR)' if self.fieldResult().ring() else ''
-        keys.append((G_ARROW, 'g%s  %s m/s²' % (what, formatShort(float('%.3g' % ref)))))
+        if env.frames is not None:
+          what = ' (the acceleration of space, du/dt + (u · ∇)u)'
+        keys.append((G_ARROW, 'g%s  %s m/s²%s' % (what, formatShort(float('%.3g' % ref)), moment)))
     if timeMode and self.showCones.get():
       #proper time stands still for light, so the cones need t
       if self.timeColumn.get() != TIME_COLUMNS[0][0]:
@@ -184,10 +206,9 @@ class Backgrounds:
       elif self.drawCones():
         keys.append((CONE, 'light cones: local speed of light outwards and inwards, u ± c'))
     if self.showContours.get():
-      keys.append((AXIS, 'lines of equal |u|, km/s'))
-    env = self.fieldResult()
+      keys.append((AXIS, 'lines of equal |u|, km/s' + moment))
     hole = env.hole()
-    if self.showSchwarzschild.get():
+    if self.showSchwarzschild.get() and env.bodies:
       radii = sorted({env.horizon(i) for i in range(len(env.bodies))})
       label = 'horizon (Kerr r+, at flat distance √(r+² + a²))' if any(env.spins) else 'Schwarzschild radius 2GM/c²'
       keys.append((SCHWARZ, '%s: %s' % (label, ', '.join(self.inM(env, rs) for rs in radii))))
@@ -273,7 +294,7 @@ class Backgrounds:
     from the origin, at (d, 0); u depends on d only, so t(d) = integral of dd / u is the same line at every start time
     returns runs of (d in axis units, t relative to the run's start), split where u is 0, changes sign or is not finite
     """
-    calc = self.fieldResult().flowCalc
+    calc = self.fieldCalc()
     scale = UNITS[self.unit.get()][1]
     x0, x1 = self.view[:2]
     if calc is None or x1 <= 0:
@@ -358,7 +379,7 @@ class Backgrounds:
     in distance / time mode the arrows are the part of the field along the distance axis
     returns the value a full-length arrow stands for, or None
     """
-    calc = self.fieldResult().flowCalc
+    calc = self.fieldCalc()
     if calc is None:
       return None
     c = self.canvas
@@ -434,7 +455,7 @@ class Backgrounds:
     moving with the flow u (along the line from the origin, at (d, 0)); each side runs along that light's path,
     drawn the same length on screen, and a tilted ellipse joins their ends, like the cap of a cone in perspective
     """
-    calc = self.fieldResult().flowCalc
+    calc = self.fieldCalc()
     if calc is None:
       return False
     c = self.canvas
@@ -537,8 +558,10 @@ class Backgrounds:
     x, y = x * scale, y * scale
     if self.mode.get() == 'time':
       x, y = np.where(x > 0, x, np.nan), np.zeros_like(y)   #distance on the x axis, taken along (d, 0)
-    square = np.zeros_like(x)
     env = self.fieldResult()
+    if env.frames is not None:
+      return sx, sy, self.fieldCalc().speed(x, y)
+    square = np.zeros_like(x)
     ring = env.ring() or 0.0
     with np.errstate(divide='ignore', invalid='ignore'):
       for mass, bx, by, black in env.bodies:

@@ -17,11 +17,15 @@ checks, at h = 1e-6, against GR to first order in h (TT coordinates):
            wavelengths: the wave's change during the trip included
 each error is given as a fraction of the wave's effect (h X0, or h L/c)
 
+DYNAMIC_BACKGROUNDS (on; --static turns it off): each ring's flow - and the acceleration of space - on a grid at 32
+moments a period (background_<name>, engine/background_frames.py), named in its log, so the viewer's backgrounds (u
+and g arrows, lines of equal |u|) follow the wave during a replay; pick a ring's environment under Background
+
 writes logs/gravWave/gravWave_<datetime>/: per ring a csv of its particles' paths (ring_<name>: an empty row ending
 each, drawn dotted), a csv of its shape at 8 moments (shapes_<name>) through the last period (solid) and a log; gravWave.full.json to open them
 in the viewer, and checks.log
 
-run: python3 studies/grav_wave.py      (then: python3 viewer/csv_viewer.py logs/gravWave/gravWave_<datetime>/gravWave.full.json)
+run: python3 studies/grav_wave.py [--static]      (then: python3 viewer/csv_viewer.py logs/gravWave/gravWave_<datetime>/gravWave.full.json)
 """
 import copy
 import csv
@@ -35,6 +39,7 @@ import numpy as np
 from engine.flow import SpecialFlowCalculator, Particle
 from engine.waves import PlaneWave
 from engine.logger import Log, LOG_DIR
+from engine.background_frames import writeFrames, LOG_LINE
 from engine.constants import *
 from two_body_escapes import writeViewerFiles
 
@@ -47,6 +52,9 @@ PERIODS = 2           #how long the rings run
 STEPS = 400           #steps a period
 EVERY = 4             #steps between csv rows
 SMALL = 1e-6          #the checks' strain
+DYNAMIC_BACKGROUNDS = True   #write each ring's flow at a run of times, so the viewer's backgrounds change in replays
+FRAMES = 32           #background frames a period
+FRAME_CELLS = 24      #grid points across each frame
 RINGS = [   #(name, centre in ring radii, wave settings, colour)
   ('plus', -3, {'plus': SHOWN}, '#2a78d6'),
   ('cross', 0, {'cross': SHOWN}, '#eb6834'),
@@ -107,6 +115,12 @@ def ring(folder, name, centre, settings):
       for t, pos in shapes[step] + shapes[step][:1]:
         out.writerow([t, pos[0], pos[1]])
       out.writerow([''] * 3)
+  if DYNAMIC_BACKGROUNDS:
+    framesPath = os.path.join(folder, os.path.basename(path).replace('ring_', 'background_', 1))
+    span = 1.6*RADIUS
+    writeFrames(framesPath, calc, (middle[0] - span, middle[0] + span, middle[1] - span, middle[1] + span),
+                np.arange(PERIODS*FRAMES + 1)/FRAMES/FREQUENCY, FRAME_CELLS)
+    log.print(LOG_LINE, os.path.basename(framesPath))
   log.print('the ring stretched and squeezed by up to %.4g of its radius (h/2 = %g)' % (widest, SHOWN/2))
   log.print('its shape at %d moments in the last period: %s' % (SHAPES, os.path.basename(shapePath)))
   log.close()
@@ -212,7 +226,7 @@ def main():
   for name, centre, settings, colour in RINGS:
     tracks, shapes = ring(folder, name, centre, settings)
     made += [(shapes, colour, 'solid'), (tracks, colour, 'dotted')]
-  writeViewerFiles(folder, 'gravWave', made)
+  writeViewerFiles(folder, 'gravWave', made, preferences={'showFlow': DYNAMIC_BACKGROUNDS})
   lines = ['gravitational wave checks: the flow model against GR, to first order in h', '']
   particles = particleChecks(lines)
   light = lightChecks(lines)
@@ -224,4 +238,6 @@ def main():
 
 
 if __name__ == '__main__':
+  if '--static' in sys.argv[1:]:
+    DYNAMIC_BACKGROUNDS = False
   main()
