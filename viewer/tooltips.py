@@ -77,7 +77,7 @@ TAB_TIPS = {
   'Position': 'Zoom, pan and fit the view, or set an exact range',
   'Axis': 'Log axes, grid, units, and equal aspect (x / y) or ct (distance / time)',
   'Markers': 'Time markers along each path, and start / end markers',
-  'Backgrounds': 'Fields drawn behind the paths for the selected environment: bodies, flow, gravity, cones and more',
+  'Backgrounds': 'Fields drawn behind the paths for the chosen environment (or all of them): bodies, flow, gravity, cones and more',
   'Replay': 'Replay the shown runs, drawing each path as its data plays',
   'Legends': 'Show or hide the legends and labels on the plot',
   'Sim': 'Set up and run a new simulation; it opens here when it finishes',

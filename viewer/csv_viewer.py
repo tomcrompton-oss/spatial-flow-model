@@ -32,8 +32,8 @@ Results panel: a list of the loaded csvs, grouped first by environment (the bodi
 logs - runs with the same bodies share one) and then by folder, with each one's path colours, rows
 and last t. Click the Shown column (or press space) to show or hide a result, folder or environment;
 All / None / Only selected / Close act on the picked rows, and a double click shows only that row.
-Background picks the environment the backgrounds are drawn for (by default the selected result's),
-marked ◆ in the list. Below the list, the selected result's colour and line style (solid, dashed,
+Background picks the environment the backgrounds are drawn for (by default the selected result's), or All
+environments for every shown result's at once (one key, naming each), marked ◆ in the list. Below the list, the selected result's colour and line style (solid, dashed,
 dotted) for each path, a summary (environment, calculator, dt, times, distance, speed and any
 accuracy lines from the log), then its .log file (same name), a Show checkbox, and a Straight line
 checkbox that adds a dashed comparison for each path: where it would be with no gravity,
@@ -65,7 +65,12 @@ distance / time mode), and flow lines: for one body the paths of space, straight
 combined g (engine/flow_lines.py); in distance / time mode, the path of space itself along the line from the origin,
 dd/dt = u, repeated at regular times. Round one hole, its circular photon orbits and innermost stable circular orbits
 (with the spin and against it), and round a rotating hole twist arcs: how fast the river's twist turns something
-moving straight in at c - frame dragging in the river model.
+moving straight in at c - frame dragging in the river model. Each arrow starts at its grid point.
+
+A flow that changes with time (a gravitational wave, studies/grav_wave.py): a run whose log names a background
+frames file (engine/background_frames.py) has its u arrows, g arrows - then the acceleration of space,
+du/dt + (u . grad) u - and lines of equal |u| drawn from the frame at the replay time (at the start when stopped),
+to one scale for the whole run, so they grow, shrink and reverse with the flow. Such a run needs no bodies.
 """
 import os
 import sys
