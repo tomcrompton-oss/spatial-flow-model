@@ -312,7 +312,8 @@ class Engine(unittest.TestCase):
       field = calc.rayField()
       newton = Calculator(bodies)
       for pos in (np.array([1.4*AU, 1.4*AU]), np.array([-0.3*AU, 0.2*AU]), np.array([-2*AU, -3*AU]),
-                  np.array([0.05*AU, 0.01*AU]), np.array([0.3*AU, 1e-9*AU]), np.array([2*AU, 0.0])):
+                  np.array([0.05*AU, 0.01*AU]), np.array([0.3*AU, 1e-9*AU]), np.array([2*AU, 0.0]),
+                  np.array([-3*AU, 1e-7*AU])):   #just off the axis beyond a hole, where its path is nearly the axis
         u = calc.flow(pos)
         self.assertAlmostEqual(length(u)/length(newton.flow(pos)), 1.0, places=14)
         h = 1e-5*AU

@@ -21,8 +21,9 @@ parameter tau, dmu/dtau = A' and dnu/dtau = B' (so mu'' = (k/2) sinh mu, and nu 
             pi - 2 am(K - sqrt(|c| - beta) tau/2 | 2|c|/(|c| - beta))         (c < 0, the source the lighter)
 
 with S the integral of A'^2 + B'^2 over tau, in incomplete elliptic integrals too. the path through a point is the
-beta for which nu(tau(mu)) is the point's nu - one equation, solved by bracketing (in log(k + beta), since paths near
-the line between the bodies have k + beta exponentially small). the flow is -grad S, S_x + i S_y proportional to
+beta for which nu(tau(mu)) is the point's nu - one equation, solved in log((k + beta)/(c - beta)), since paths near
+the line between the bodies have k + beta exponentially small, and paths near the axis beyond the source c - beta. the
+flow is -grad S, S_x + i S_y proportional to
 (S_mu + i S_nu) sinh(mu + i nu)
 
   field = TwoCentreField(bodies)    (two bodies; nothing to build)
@@ -115,7 +116,7 @@ class Source:
     self.k = 2*self.a*(body.GM + other.GM)
     self.c = 2*self.a*(body.GM - other.GM)
     self.sign = -1.0 if body.black else 1.0      #the flow runs down the paths into a black body, out of a white one
-    self.guess = -1.0                            #log((k + beta)/(k + c)) of the last path found, to start from
+    self.guess = 0.0                             #log((k + beta)/(c - beta)) of the last path found, to start from
     self.slope = None                            #and the rate of change of nu with it there
     self.last = None                             #(pos, result) of the last point
 
@@ -144,6 +145,8 @@ class Source:
   def round(self, tau, B):
     """nu at tau along the path with c - beta = B (nu'(0)^2), its rate nu' there, and the part of S from nu"""
     c = self.c
+    if B <= 0:                                   #straight out along the axis beyond the source
+      return 0.0, 0.0, 0.0
     if c >= 0 and 2*c <= B:                      #it goes round
       m = 2*c/B
       u = math.sqrt(B)*tau/2
@@ -170,10 +173,17 @@ class Source:
       return 0.0, math.sqrt(c*math.cos(nu) + k), 2*math.sqrt(c + k)*ellipticE(nu/2, m)
     whole = k + c
 
+    def split(x):
+      #k + beta and c - beta (which add up to k + c) from x = log((k + beta)/(c - beta)), each to full precision
+      #however near one end the path is - the line to the other body, or the axis beyond this one
+      e = math.exp(-abs(x))
+      big, small = whole/(1 + e), whole*e/(1 + e)
+      return (big, small) if x >= 0 else (small, big)
+
     def miss(x):
-      A = whole*math.exp(x)
+      A, B = split(x)
       tau, SA = self.outward(mu, A)
-      found = self.round(tau, -whole*math.expm1(x))
+      found = self.round(tau, B)
       last[:] = [x, A, SA, found]
       return found[0] - nu
 
@@ -187,14 +197,14 @@ class Source:
 
   def root(self, miss, nu):
     """
-    the x = log((k + beta)/(k + c)) of the path that reaches nu (miss(x) = 0): secant steps from the last path found
+    the x = log((k + beta)/(c - beta)) of the path that reaches nu (miss(x) = 0): secant steps from the last path found
     (the next point is usually near it), or, if they wander, bracketing - nu at the point falls as the path starts
-    nearer the axis beyond the source (x = 0, where it is 0) - and the Illinois method
+    nearer the axis beyond the source (x large, where it is 0) - and the Illinois method
     """
-    x0 = min(self.guess, -1e-9)
+    x0 = self.guess
     f0 = miss(x0)
     x1 = x0 - f0/self.slope if self.slope else x0 - 1e-7*max(1.0, abs(x0))   #a newton step with the last slope
-    if not -1400 < x1 < 0:
+    if not -700 < x1 < 700:
       x1 = x0 - 1e-7*max(1.0, abs(x0))
     f1 = miss(x1)
     for _ in range(12):
@@ -202,20 +212,20 @@ class Source:
         break
       self.slope = (f1 - f0)/(x1 - x0)
       x2 = x1 - f1/self.slope
-      if not -1400 < x2 < 0:
+      if not -700 < x2 < 700:
         break
       x0, f0, x1 = x1, f1, x2
       f1 = miss(x1)
       if abs(x1 - x0) < 1e-13*max(1.0, abs(x1)):
-        return x1
-    if f1 == 0:
+        break
+    if abs(f1) < 1e-12:   #converged (a small step alone can be a stall, where nu barely changes with x)
       return x1
     if f1 > 0:
       lo, flo = x1, f1
       step = 0.25
       while True:
-        hi = min(lo + step, 0.0)
-        fhi = miss(hi) if hi < 0 else -nu
+        hi = min(lo + step, 700.0)
+        fhi = miss(hi) if hi < 700 else -nu
         if fhi <= 0:
           break
         lo, flo, step = hi, fhi, step*4
@@ -225,7 +235,7 @@ class Source:
       while True:
         lo = hi - step
         flo = miss(lo)
-        if flo > 0 or lo < -1400:
+        if flo > 0 or lo < -700:
           break
         hi, fhi, step = lo, flo, step*4
     side = 0
