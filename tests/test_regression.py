@@ -213,13 +213,15 @@ class Engine(unittest.TestCase):
     self.assertAlmostEqual(peri/kerrPrecessionExact(rp, ra, MASS, 0.9, True), 1, delta=2e-3)   #5e-4; without the twist 0.3
 
   def testFlowDirection(self):
-    """setting the flow's direction changes only its direction: 'g' is the default, a vector points that way
-    everywhere, 'nearest' at the nearest body and 'centre' at the centre of mass; and a particle runs with it"""
+    """setting the flow's direction changes only its direction: the default is the eikonal flow ('eikonal-exact' for
+    two bodies, 'eikonal' for more; along g for one), a vector points that way everywhere, 'nearest' at the nearest
+    body and 'centre' at the centre of mass; and a particle runs with it"""
     bodies = [Body(MS, -0.5*AU, 0.0), Body(MS, 0.5*AU, 0.0)]
-    default = Calculator(bodies)
+    self.assertEqual(Calculator(bodies).direction, 'eikonal-exact')
+    self.assertEqual(Calculator(bodies + [Body(MS, 0.0, AU)]).direction, 'eikonal')
+    self.assertIsNone(Calculator([Body(MS)]).direction)
     pos = np.array([0.2*AU, 0.3*AU])
-    u = default.flow(pos)
-    self.assertTrue(np.array_equal(Calculator(bodies, 'g').flow(pos), u))
+    u = Calculator(bodies, 'g').flow(pos)
     unit = lambda v: v/length(v)
     for direction, want in (((-1.0, 0.0), np.array([-1.0, 0.0])), ((0.0, -2.0), np.array([0.0, -1.0])),
                             ('nearest', unit(bodies[1].pos - pos)), ('centre', unit(-pos))):

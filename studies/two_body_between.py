@@ -13,7 +13,9 @@ the flow points
   down      from top to bottom (-y) everywhere
   nearest   towards the nearest body - flipping half way
   centre    towards the centre of mass - the reverse of nearest, between the holes
-  g         (for comparison, in the log only) along g, the default - on the line between the holes the same as nearest
+  g         (for comparison, in the log only) along g - on the line between the holes the same as nearest
+  eikonal, eikonal-exact   (in the log only) down the eikonal flow's zero-energy paths, from tables and exact (the
+            default for two bodies) - on the line between the holes the same as nearest too
 
 writes logs/twoBodyBetween/twoBodyBetween_<datetime>/: a csv and log for each, a comparison (comparison.log), and
 twoBodyBetween.full.json to open them in the viewer (whose flow background is always along g), and
@@ -44,7 +46,9 @@ DIRECTIONS = [   #(name, Calculator.direction, colour)
   ('down', (0.0, -1.0), '#eb6834'),
   ('nearest', 'nearest', '#1baf7a'),
   ('centre', 'centre', '#8a5cd8'),
-  ('g', None, None),
+  ('g', 'g', None),
+  ('eikonal', 'eikonal', None),
+  ('exact', 'eikonal-exact', None),
 ]
 
 
@@ -116,7 +120,7 @@ def main():
   lines = ['particle from 2 Schwarzschild radii from the left hole at |w| = %gc towards the right one' % (W/C), '', head]
   for s in summaries:
     lines.append('%-8s %-28s %-9s %9d %10.2f %10.2f %7.4fc %7.4fc %7.4fc %7.4fc %7.4fc %7.3g AU' % (
-      s['name'], s['direction'], s['reason'], s['steps'], s['t'], s['pt'], s['vmid'], s['wmid'], s['v'], s['w'],
+      s['name'], s['direction'][:28], s['reason'], s['steps'], s['t'], s['pt'], s['vmid'], s['wmid'], s['v'], s['w'],
       s['vmax'], s['drift']))
   with open(os.path.join(folder, 'comparison.log'), 'w') as f:
     f.write('\n'.join(lines) + '\n')

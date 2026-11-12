@@ -25,6 +25,9 @@ smooth). the flow points back down the path - into a black body, out of a white 
   field.region(pos)                 index of the body whose region pos is in (smallest S)
   field.action(pos, i)              body i's S at pos, with its constant (None where its paths do not reach)
   field.direction(pos, region)      the direction carried on from region's paths, either side of the seam
+
+for exactly two bodies engine/two_centre.py works out the same flow exactly, with no tables (Calculator direction
+'eikonal-exact', the default for two bodies; this one is 'eikonal', the default for three or more)
 """
 import math
 import numpy as np

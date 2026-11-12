@@ -272,7 +272,7 @@ class Environment:
       if len(made) == 1 and made[0].black and self.spins[0]:
         self.flowCalc = flow.KerrFlowCalculator(made)   #a rotating hole: its river (no swirl; r from the flat distance)
       else:
-        self.flowCalc = flow.Calculator(made, direction)
+        self.flowCalc = flow.Calculator(made, direction or 'g')   #a log that names no direction was along g
       self.flowCalc.warn = lambda message: None   #g=0 on a grid point just means no arrow
     self.name = self.describe(bodies, self.spins) + {'eikonal': ', eikonal flow',
                                                      'eikonal-exact': ', eikonal flow (exact)'}.get(direction, '')

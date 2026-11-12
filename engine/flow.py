@@ -8,6 +8,10 @@ the flow model: bodies, a particle, and the calculators that move it
                           flowing space; order=1 is the original step (NewSpecialFlowCalculator), order=2 the
                           second-order step (SecondOrderSpecialFlowCalculator), the default
 
+the flow's direction is Calculator.direction (see flowDirection): with more than one body it is by default the
+eikonal flow, which has no curl, so space moving with it falls at exactly g - for two bodies worked out exactly
+(engine/two_centre.py), for more from tables of its paths (engine/eikonal.py)
+
 the calculators that were in flow2.py and are no longer used are in legacy/legacy_calculators.py
 """
 import math
@@ -105,7 +109,8 @@ class Calculator:
     Args:
       bodies (list of Body): the masses; default one black solar mass at (0,0)
       direction: which way the flow points (its magnitude is always the same) - see flowDirection; 'eikonal-exact'
-                 only for two bodies
+                 only for two bodies. by default 'eikonal-exact' for two bodies, 'eikonal' for more, and along g
+                 (straight in or out) for one; 'g' sets along g for any number
     """
     if bodies is None:
       bodies = [Body()]
@@ -118,7 +123,9 @@ class Calculator:
     if direction == 'eikonal-exact' and len(self.bodies) != 2:
       raise ValueError("the 'eikonal-exact' flow is for two bodies (%d given): use 'eikonal' (the ray tables)"
                        % len(self.bodies))
-    self.direction = direction   #None: along g (see flowDirection); can be set at any time
+    if direction is None and len(self.bodies) > 1:
+      direction = 'eikonal-exact' if len(self.bodies) == 2 else 'eikonal'
+    self.direction = direction   #None (one body): along g (see flowDirection); can be set at any time
     self.rays = None             #the zero-energy paths for the eikonal directions (engine/eikonal.py or
                                  #engine/two_centre.py), made when needed
     self.log = None #set by the sims so warnings go to the log
@@ -133,8 +140,9 @@ class Calculator:
     """
     velocity of space (u) at pos
       magnitude: square root of the sum of the squares of the flow to each body, sqrt(2GM/d)
-      direction: set by self.direction (see flowDirection) - by default towards black bodies and away from white
-                 ones, weighted by each body's GM/d^2
+      direction: set by self.direction (see flowDirection) - by default, for more than one body, down the eikonal
+                 flow's zero-energy paths; along g (towards black bodies and away from white ones, weighted by each
+                 body's GM/d^2) when it is None or 'g'
     region: for a direction with a seam ('eikonal', 'eikonal-exact'), the side of it to take the flow from (see region)
     """
     U2 = 0.0                    #the square of the flow's magnitude
@@ -160,14 +168,17 @@ class Calculator:
   def flowDirection(self, pos, region=None):
     """
     which way the flow points at pos (any length; flow scales it to the flow's magnitude), by self.direction:
-      None or 'g'  along g - towards black bodies and away from white ones, weighted by GM/d^2 (the default)
+      None or 'g'  along g - towards black bodies and away from white ones, weighted by GM/d^2 (the default for one
+                   body, where it is straight in or out)
       'nearest'    towards the nearest body (away from it if it is white)
       'centre'     towards the bodies' centre of mass
       'eikonal'    down the zero-energy newtonian path from the nearest body through pos (engine/eikonal.py): no
                    curl, so space moving with the flow falls at exactly g; a seam where the bodies' regions meet.
-                   region picks the side of the seam (None: the side pos is on); along g past the table
+                   region picks the side of the seam (None: the side pos is on); along g past the table. the
+                   default for three or more bodies
       'eikonal-exact'  the same flow for exactly two bodies, worked out exactly rather than from tables
-                   (engine/two_centre.py: the zero-energy paths separate in elliptic coordinates); everywhere
+                   (engine/two_centre.py: the zero-energy paths separate in elliptic coordinates); everywhere. the
+                   default for two bodies
       (x, y)       that way everywhere
       a function   of pos, returning the direction there
     """

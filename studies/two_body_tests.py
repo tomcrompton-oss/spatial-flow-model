@@ -1,6 +1,6 @@
 """
 a set of paths round the two holes of studies/two_body_escapes.py (one solar mass each, fixed at x = -0.5 AU and
-+0.5 AU) in the flow model, with the flow along the net g (Calculator.direction 'g', the default) or another
++0.5 AU) in the flow model, with the flow along the net g (Calculator.direction 'g', this study's default) or another
 direction given on the command line ('eikonal': down zero-energy paths, no curl, from tables of the paths;
 'eikonal-exact': the same flow worked out exactly, engine/two_centre.py): falls, orbits round one hole,
 orbits round both, flybys, escapes and light
