@@ -24,11 +24,12 @@ LOG_LINE = 'background frames:'   #the log line naming a run's frames file
 
 def writeFrames(path, calc, box, times, cells=32):
   """
-  the frames of calc's flow (calc.flow(pos, None, t)) on a cells x cells grid over box (x0, x1, y0, y1, m), at each
-  of times (s), into the csv at path
+  the frames of calc's flow (calc.flow(pos, None, t)) on a cells x cells grid (or cells = (nx, ny)) over box
+  (x0, x1, y0, y1, m), at each of times (s), into the csv at path
   """
   x0, x1, y0, y1 = box
-  xs, ys = np.linspace(x0, x1, cells), np.linspace(y0, y1, cells)
+  nx, ny = cells if isinstance(cells, tuple) else (cells, cells)
+  xs, ys = np.linspace(x0, x1, nx), np.linspace(y0, y1, ny)
   h = 1e-4*max(x1 - x0, y1 - y0)                       #for the differences in space
   spacing = (times[-1] - times[0])/max(1, len(times) - 1) if len(times) > 1 else 1.0
   dt = 1e-3*spacing                                    #and in time

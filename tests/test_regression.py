@@ -363,6 +363,31 @@ class Engine(unittest.TestCase):
     want = 2*L*(1 - arm.strain(0.002)[0]/2)/C + arm.integral(0.002, 0.002 + T)[0]/2
     self.assertLess(abs(T - want)/(h*L/C), 1e-4)
 
+  def testGravitationalWaveAcross(self):
+    """a wave travelling within the plane (studies/grav_wave_across.py): its flow is along y only, nothing ahead of
+    its front; light along it or across it takes GR's time, and light at an angle does not - by the same amount for
+    the model as for the true geodesics of the flow, since what is missing is the curvature flat space cannot hold"""
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'studies'))
+    from engine.waves import PlaneWave
+    from studies.grav_wave_across import radar, grRadar, mirrorAt, Geodesic, WAVELENGTH
+    h = 1e-6
+    front = PlaneWave(plus=h, frequency=100.0, along=(1, 0))
+    self.assertEqual(front.flow(np.array([0.5*WAVELENGTH, 1e5]), 0.0)[1], 0.0)   #not there yet
+    self.assertEqual(front.flow(np.array([-0.5*WAVELENGTH, 1e5]), 0.0)[0], 0.0)   #across it only
+    wave = PlaneWave(plus=h, frequency=100.0, phasePlus=0.4, start=-1.0, along=(1, 0))
+    calc = SpecialFlowCalculator([], 2, wave=wave)
+    L, t0 = 0.25*WAVELENGTH, 0.002
+    errors = {}
+    for angle in (0, 45, 90):
+      e = np.array([math.cos(math.radians(angle)), math.sin(math.radians(angle))])
+      for name, mover in (('model', calc), ('geodesic', Geodesic(wave))):
+        T = radar(mover, mirrorAt(wave, L, e, t0), e, t0, steps=1000)
+        errors[angle, name] = (T - grRadar(wave, e, L, t0))/(h*L/C)
+    for angle in (0, 90):
+      self.assertLess(abs(errors[angle, 'model']), 1e-4)
+    self.assertGreater(abs(errors[45, 'model']), 0.1)   #0.165
+    self.assertAlmostEqual(errors[45, 'model'], errors[45, 'geodesic'], delta=1e-4)
+
   def testBackgroundFrames(self):
     """a flow that changes with time is written as frames (engine/background_frames.py): read back they give u and
     the acceleration of space, du/dt + (u . grad) u, at the frames' times, and the viewer's environment draws from
