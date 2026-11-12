@@ -18,6 +18,7 @@ from engine.vectors import length
 
 
 EIKONAL = ('eikonal', 'eikonal-exact')   #the directions with no curl: the ray tables, and the exact two-body solution
+RAY_TABLES = {}   #the ray tables built so far (engine/eikonal.py), by bodies: they never change once built
 
 
 class Config:
@@ -195,7 +196,8 @@ class Calculator:
   def rayField(self):
     """
     the zero-energy paths out of each body: for direction 'eikonal' the tables (engine/eikonal.py), built the first
-    time (a few seconds); for 'eikonal-exact' the exact two-body solution (engine/two_centre.py)
+    time for these bodies (a few seconds) and shared by every calculator with them; for 'eikonal-exact' the exact
+    two-body solution (engine/two_centre.py)
     """
     key = [(b.mass, b.x, b.y, b.black) for b in self.bodies] + [self.direction]
     if self.rays is None or self.rays[0] != key:
@@ -203,8 +205,11 @@ class Calculator:
         from engine.two_centre import TwoCentreField
         self.rays = (key, TwoCentreField(self.bodies))
       else:
-        from engine.eikonal import RayField
-        self.rays = (key, RayField(self.bodies))
+        tables = RAY_TABLES.get(str(key))
+        if tables is None:
+          from engine.eikonal import RayField
+          tables = RAY_TABLES[str(key)] = RayField(self.bodies)
+        self.rays = (key, tables)
     return self.rays[1]
 
   def region(self, pos):
