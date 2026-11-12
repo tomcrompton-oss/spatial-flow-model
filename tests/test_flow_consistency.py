@@ -6,13 +6,19 @@ the flow there, u(B) - as it does for a single body, where u is the speed of a f
 each path starts at A with velocity u(A), is integrated (RK4) under Calculator.gravity for a short time, and
 the velocity it arrives with is compared with u(B) in size and direction
 
-each scenario writes tests/logs/flowtest/flowtest_<scenario>_<datetime>.log (bodies and results) and .csv (the paths, with
-the travelled velocity v and the calculated flow u at each point) for the viewer
+each scenario runs with three flow directions (Calculator.direction):
+  'g'              along the net g: the speed always matches, but off the line through the bodies the direction is
+                   1-27 degrees out, since that flow has curl - kept as the case the eikonal flows fix, and expected
+                   to fail
+  'eikonal'        down zero-energy paths from the nearest body, from the ray tables (engine/eikonal.py)
+  'eikonal-exact'  the same, worked out exactly for two bodies (engine/two_centre.py)
+the eikonal flows have no curl, so space at u accelerating at g stays at u - except across their seam, where the
+flow's direction jumps by design: paths that end on the other side of it from A are left out (and logged)
+
+each scenario writes tests/logs/flowtest/flowtest_<scenario>_<direction>_<datetime>.log (bodies and results) and
+.csv (the paths, with the travelled velocity v and the calculated flow u at each point) for the viewer
 
 run: python3 tests/test_flow_consistency.py      (-v lists every scenario)
-
-the direction check fails off the line through the bodies for two bodies: a known property of the model
-(the speed always matches); see the to-do doc
 """
 import csv
 import math
@@ -40,6 +46,8 @@ POINTS = [(0, 0.5), (0, -1), (1, 0), (-1.2, 0.3), (0.3, 0.2), (2, 2), (-0.2, -0.
 POINTS += [(float(x), float(y)) for y in np.arange(-1.5, 1.51, 0.5) for x in np.arange(-2, 2.01, 0.5)]
 POINTS = list(dict.fromkeys(POINTS))   #without repeats
 
+DIRECTIONS = ['g', 'eikonal', 'eikonal-exact']
+
 SCENARIOS = [
   ('twoBlackHoles', [Body(MS, -SEP, 0), Body(MS, SEP, 0)]),
   ('twoWhiteHoles', [Body(MS, -SEP, 0, black=False), Body(MS, SEP, 0, black=False)]),
@@ -47,13 +55,13 @@ SCENARIOS = [
 ]
 
 
-def travel(calc, a):
+def travel(calc, a, region=None):
   """
-  follow space from A: start at u(A), accelerate at g
+  follow space from A: start at u(A) (from the given side of the seam, if the flow has one), accelerate at g
   returns B, the velocity there, and CSV_ROWS + 1 samples (t, pos, v) along the way
   """
   pos = np.array(a, dtype=float)
-  v = calc.flow(pos)
+  v = calc.flow(pos, region)
   nearest = min(np.linalg.norm(pos - b.pos) for b in calc.bodies)
   dt = TRAVEL*nearest/np.linalg.norm(v)/STEPS
   samples = [(0.0, pos, v)]
@@ -64,9 +72,9 @@ def travel(calc, a):
   return pos, v, samples
 
 
-def compare(calc, a):
+def compare(calc, a, region=None):
   """speed error (%) and angle error (degrees) between the travelled velocity and u(B)"""
-  b, v, samples = travel(calc, a)
+  b, v, samples = travel(calc, a, region)
   u = calc.flow(b)
   speedError = 100*abs(np.linalg.norm(v) - np.linalg.norm(u))/np.linalg.norm(u)
   cos = np.dot(v, u)/(np.linalg.norm(v)*np.linalg.norm(u))
@@ -76,9 +84,9 @@ def compare(calc, a):
 
 class FlowTests(unittest.TestCase):
 
-  def checkScenario(self, name, bodies):
-    calc = Calculator(bodies)
-    log = Log('flowtest_' + name, True, False, os.path.join(TEST_LOG_DIR, 'flowtest'))   #apart from the studies' logs
+  def checkScenario(self, name, bodies, direction):
+    calc = Calculator(bodies, direction)
+    log = Log('flowtest_%s_%s' % (name, direction), True, False, os.path.join(TEST_LOG_DIR, 'flowtest'))   #apart from the studies' logs
     calc.log = log
     log.logBodies(calc)
     log.print('flow test: start at A with u(A), accelerate at g; v at B should equal u(B)')
@@ -91,6 +99,7 @@ class FlowTests(unittest.TestCase):
       out.writerow(['elapsed', 'pos_x', 'pos_y', 'v_x', 'v_y', 'u_x', 'u_y'])
       failed = 0
       tested = 0
+      crossed = 0
       for p in POINTS:
         a = np.array(p, dtype=float)*AU
         if min(np.linalg.norm(a - body.pos) for body in bodies) < MIN_DISTANCE:
@@ -98,8 +107,13 @@ class FlowTests(unittest.TestCase):
         if np.linalg.norm(calc.flow(a)) == 0:
           log.print('  %-14s no flow at A (g=0), left out' % ('(%g, %g)' % p))
           continue
+        side = calc.region(a)   #on the seam itself either side will do, but the same one throughout
+        b, v, u, speedError, angleError, samples = compare(calc, a, side)
+        if side != calc.region(b):
+          crossed += 1
+          log.print('  %-14s %-18s crosses the seam, left out' % ('(%g, %g)' % p, '(%.4g, %.4g)' % (b[0]/AU, b[1]/AU)))
+          continue
         tested += 1
-        b, v, u, speedError, angleError, samples = compare(calc, a)
         ok = speedError <= MAX_SPEED_ERROR and angleError <= MAX_ANGLE_ERROR
         failed += not ok
         log.print('  %-14s %-18s %12.4f %12.4f %9.4f %9.4f  %s' % ('(%g, %g)' % p, '(%.4g, %.4g)' % (b[0]/AU, b[1]/AU),
@@ -112,16 +126,19 @@ class FlowTests(unittest.TestCase):
           self.assertLessEqual(speedError, MAX_SPEED_ERROR, 'speed at B is %.3f%% from |u(B)|' % speedError)
           self.assertLessEqual(angleError, MAX_ANGLE_ERROR, 'direction at B is %.3f degrees from u(B)' % angleError)
     log.print()
-    log.print('%s: %d of %d paths passed' % (name, tested - failed, tested))
+    log.print('%s, %s: %d of %d paths passed%s' % (name, direction, tested - failed, tested,
+                                                    ', %d crossed the seam' % crossed if crossed else ''))
+    log.close()
 
-  def testTwoBlackHoles(self):
-    self.checkScenario(*SCENARIOS[0])
 
-  def testTwoWhiteHoles(self):
-    self.checkScenario(*SCENARIOS[1])
+def makeTest(scenario, direction):
+  test = lambda self: self.checkScenario(*SCENARIOS[scenario], direction)
+  return unittest.expectedFailure(test) if direction == 'g' else test   #the flow along g has curl (see above)
 
-  def testWhiteAndBlackHole(self):
-    self.checkScenario(*SCENARIOS[2])
+
+for i, (name, _) in enumerate(SCENARIOS):
+  for direction in DIRECTIONS:
+    setattr(FlowTests, 'test%s%s_%s' % (name[0].upper(), name[1:], direction.replace('-', '_')), makeTest(i, direction))
 
 
 if __name__ == '__main__':
