@@ -377,7 +377,8 @@ class Backgrounds:
 
   def drawArrows(self, field, offset, color, reference=None):
     """
-    arrows on a regular grid (shifted by offset cells) showing the direction and relative size of a field
+    arrows on a regular grid (shifted by offset cells) showing the direction and relative size of a field, each
+    starting at its grid point
     in distance / time mode the arrows are the part of the field along the distance axis
     reference: what a full-length arrow stands for (by default the 90th percentile of the arrows drawn; a flow that
     changes with time passes one for its whole run, so the arrows grow and shrink with it)
@@ -410,8 +411,8 @@ class Backgrounds:
     for sx, sy, direction, size in points:
       length = longest * min(1.0, size / reference)
       dx, dy = self.xSign() * direction[0] * length, -direction[1] * length   #screen y runs down
-      c.create_line(sx - dx / 2, sy - dy / 2, sx + dx / 2, sy + dy / 2, fill=color, width=1,
-                    arrow='last', arrowshape=(6, 7, 2.5))
+      c.create_line(sx, sy, sx + dx, sy + dy, fill=color, width=1,   #from the grid point, so it stays put as the
+                    arrow='last', arrowshape=(6, 7, 2.5))              #field changes and only turns and grows
     return reference
 
   def twistArc(self, x, y, radius, sweep, sense, colour=TWIST):
