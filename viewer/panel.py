@@ -192,10 +192,10 @@ class ResultsPanel:
 
   def markBackground(self):
     """mark the environment row whose backgrounds are drawn"""
-    shown = self.fieldResult()
+    shown = self.fieldEnvironments()
     for item, env in getattr(self, 'envItems', {}).items():
       if self.list.exists(item):
-        self.list.item(item, text=env.name + ('   ◆ background' if env is shown else ''))
+        self.list.item(item, text=env.name + ('   ◆ background' if env in shown else ''))
 
   def selectedResults(self):
     """the results picked in the list (a folder row picks all of its results, an orbit row its result)"""
@@ -435,15 +435,19 @@ class ResultsPanel:
     return rows
 
   def updateFieldChoices(self):
-    """the Background list: the selected result's environment, or any environment with bodies"""
+    """the Background list: the selected result's environment, all of them at once, or any one with a background"""
     envs = [e for e in self.activeEnvironments() if e.hasField()]
-    if self.fieldChoice not in envs:
+    if self.fieldChoice not in envs and self.fieldChoice != ALL_ENVIRONMENTS:
       self.fieldChoice = None
-    self.fieldBox.config(values=["Selected result's environment"] + [e.name for e in envs])
-    self.fieldBox.set(self.fieldChoice.name if self.fieldChoice else "Selected result's environment")
+    self.fieldBox.config(values=["Selected result's environment", ALL_ENVIRONMENTS] + [e.name for e in envs])
+    self.fieldBox.set(ALL_ENVIRONMENTS if self.fieldChoice == ALL_ENVIRONMENTS else
+                      self.fieldChoice.name if self.fieldChoice else "Selected result's environment")
 
   def fieldChoiceChanged(self):
-    self.fieldChoice = next((e for e in self.activeEnvironments() if e.hasField() and e.name == self.fieldBox.get()), None)
+    if self.fieldBox.get() == ALL_ENVIRONMENTS:
+      self.fieldChoice = ALL_ENVIRONMENTS
+    else:
+      self.fieldChoice = next((e for e in self.activeEnvironments() if e.hasField() and e.name == self.fieldBox.get()), None)
     self.markBackground()
     self.redraw()
 

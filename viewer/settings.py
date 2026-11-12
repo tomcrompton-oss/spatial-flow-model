@@ -78,6 +78,7 @@ BODY_RADIUS = 9     #pixels
 REPLAY_SECONDS = 20   #at 1x a replay runs the whole time span in this many seconds
 REPLAY_SPEEDS = ['0.1×', '0.25×', '0.5×', '1×', '2×', '5×', '10×', '20×']
 REPLAY_FRAME = 40     #milliseconds between replay frames
+ALL_ENVIRONMENTS = 'All environments'   #the Background choice that draws every shown environment's backgrounds
 LINE_STYLES = [('solid', ()), ('dashed', (8, 5)), ('dotted', (2, 4))]   #path line styles: name, tk dash pattern
 BODY_LINE = re.compile(r'^body \d+: mass (\S+) kg .*?x (\S+) m\s+y (\S+) m\s+(black|white)(?:\s+spin (\S+))?', re.M)
 

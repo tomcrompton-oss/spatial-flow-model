@@ -39,7 +39,7 @@ class Drawing:
         c.create_line(l, sy, r, sy, fill=GRID)
 
     if self.fieldVisible():
-      self.drawField()
+      self.drawFields()
 
     self.screenPoints = []
     self.labelCells = set()   #grid cells already holding a time label, shared by all paths
@@ -47,9 +47,9 @@ class Drawing:
       self.drawPath(p)
 
     if self.fieldVisible() and self.showBodies.get():
-      self.drawBodies()
+      self.eachField(self.drawBodies)
     if self.fieldVisible() and self.showSchwarzschild.get():
-      self.drawSchwarzschild()
+      self.eachField(self.drawSchwarzschild)
 
     #cover anything drawn outside the plot area
     c.create_rectangle(0, 0, w, t, fill=PAGE, outline='')

@@ -58,7 +58,8 @@ class ConfigTab:
         'hiddenOrbits': [o.name.split('  ')[0] for o in r.orbits if not o.visible.get()]})
     return {'kind': 'config', 'version': CONFIG_VERSION, 'results': results,
             'selected': os.path.abspath(self.selected.path) if self.selected in self.results else None,
-            'background': self.fieldChoice.name if self.fieldChoice else None,
+            'background': (ALL_ENVIRONMENTS if self.fieldChoice == ALL_ENVIRONMENTS else
+                           self.fieldChoice.name if self.fieldChoice else None),
             'timeInterval': self.timeInterval.get(),
             'view': {'range': list(self.view), 'mode': self.mode.get(), 'unit': self.unit.get(),
                      'logX': self.logX.get(), 'logY': self.logY.get()}}
@@ -100,7 +101,10 @@ class ConfigTab:
     if selected:
       self.select(selected)
     self.refreshList()
-    self.fieldChoice = next((e for e in self.activeEnvironments() if e.name == doc.get('background')), None)
+    if doc.get('background') == ALL_ENVIRONMENTS:
+      self.fieldChoice = ALL_ENVIRONMENTS
+    else:
+      self.fieldChoice = next((e for e in self.activeEnvironments() if e.name == doc.get('background')), None)
     self.updateFieldChoices()
     self.prepare()
     view = doc.get('view', {})

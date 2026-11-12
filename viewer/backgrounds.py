@@ -8,15 +8,58 @@ class Backgrounds:
 
   def fieldResult(self):
     """
-    the Environment whose bodies and backgrounds are drawn: the one chosen under Background, or else the selected
-    result's, or that of the first shown result with bodies
+    the Environment whose bodies and backgrounds are drawn: the one being drawn now (with All environments, each in
+    turn), the one chosen under Background, or else the selected result's, or that of the first shown result with
+    bodies
     """
+    if getattr(self, 'drawingEnv', None) is not None:
+      return self.drawingEnv
+    if self.fieldChoice == ALL_ENVIRONMENTS:
+      shown = self.fieldEnvironments()
+      return shown[0] if shown else None
     if self.fieldChoice in self.activeEnvironments():
       return self.fieldChoice if self.fieldChoice.hasField() else None
     r = self.current()
     if r is not None and r.visible.get() and r.env.hasField():
       return r.env
     return next((r.env for r in self.results if r.visible.get() and r.env.hasField()), None)
+
+  def fieldEnvironments(self):
+    """the environments whose backgrounds are drawn: every shown result's, with All environments; else fieldResult's"""
+    if self.fieldChoice == ALL_ENVIRONMENTS:
+      return [e for e in self.activeEnvironments()
+              if e.hasField() and any(r.env is e and r.visible.get() for r in self.results)]
+    env = self.fieldResult()
+    return [env] if env is not None else []
+
+  def eachField(self, draw):
+    """draw() once for each environment in fieldEnvironments, with fieldResult giving that one; returns their results"""
+    out = []
+    try:
+      for env in self.fieldEnvironments():
+        self.drawingEnv = env
+        out.append((env, draw()))
+    finally:
+      self.drawingEnv = None
+    return out
+
+  def drawFields(self):
+    """
+    each drawn environment's backgrounds (drawField), and one key for them all: the end arrows' entries, then each
+    environment's, the first of them naming it when there is more than one result (or environment)
+    """
+    drawn = self.eachField(self.drawField)
+    keys = self.endKeys()
+    named = len(self.results) > 1 or len(drawn) > 1
+    for env, own in drawn:
+      for i, (color, text) in enumerate(own):
+        entry = (color, text + ('  (%s)' % env.name if named and i == 0 else ''))
+        if entry not in keys:
+          keys.append(entry)
+    if self.mode.get() == 'time' and keys:
+      keys[0] = (keys[0][0], keys[0][1] + '  (along the line from the origin, at (d, 0))')
+    if self.showFieldKey.get():
+      self.drawFieldKey(keys)
 
   def backgroundTime(self):
     """the time the backgrounds are drawn at, for a flow that changes with time: the replay's, or else the start"""
@@ -151,7 +194,7 @@ class Backgrounds:
     return '%s M (%s)' % (formatShort(float('%.3g' % (R / (G * hole[0] / C**2)))), metres) if hole else metres
 
   def drawField(self):
-    """equal-u lines, then flow and gravity arrows (and light cones against time), with a key for each"""
+    """equal-u lines, then flow and gravity arrows (and light cones against time); returns a key entry for each"""
     keys = []
     timeMode = self.mode.get() == 'time'
     if self.showContours.get():
@@ -229,11 +272,7 @@ class Backgrounds:
       keys.append((PERIAPSIS, 'periapsis of each orbit'))
     if any(r.visible.get() and r.orbits and r.showApo.get() for r in self.results):
       keys.append((APOAPSIS, 'apoapsis of each orbit'))
-    keys = self.endKeys() + keys
-    if timeMode and keys:
-      keys[0] = (keys[0][0], keys[0][1] + '  (along the line from the origin, at (d, 0))')
-    if self.showFieldKey.get():
-      self.drawFieldKey(keys)
+    return keys
 
   def flowLines(self, result):
     """
@@ -512,13 +551,12 @@ class Backgrounds:
     longest = FLOW_SPACING * 0.8
     if not keys:
       return
-    suffix = '  (%s)' % self.fieldResult().name if len(self.results) > 1 else ''
     kx, rowH = l + 12, 18
     ky0 = b - 14 - rowH * (len(keys) - 1)
     items = []
     for i, (color, text) in enumerate(keys):
       ky = ky0 + rowH * i
-      items.append(c.create_text(kx + longest + 8, ky, text=text + (suffix if i == 0 else ''), anchor='w', fill=INK2, font=('Helvetica', 10)))
+      items.append(c.create_text(kx + longest + 8, ky, text=text, anchor='w', fill=INK2, font=('Helvetica', 10)))
     right = max(c.bbox(item)[2] for item in items)
     box = c.create_rectangle(kx - 6, ky0 - 12, right + 8, b - 4, fill=SURFACE, outline=GRID)
     for item in items:
