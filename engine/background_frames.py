@@ -12,6 +12,8 @@ flow with no curl it is g, and in a wave it is the tidal acceleration of space
   frame = frames.at(t)                               between the two frames either side of t (linear in time)
   frame.flow(pos), frame.gravity(pos)                at pos (bilinear in space; nan outside the grid)
   frame.speed(x, y)                                  |u| on arrays of points, for lines of equal |u|
+  frames.reference('u'), frames.speedRange()         scales for the whole run, so arrows and lines of equal |u| grow
+                                                     and shrink from frame to frame instead of each filling its own
 
 a study writes its frames with writeFrames and names the file in its log (LOG_LINE + the file name, next to the log),
 which is how the viewer finds it
@@ -85,6 +87,26 @@ class Frames:
 
   def __init__(self, times, xs, ys, u, a):
     self.times, self.xs, self.ys, self.u, self.a = times, xs, ys, u, a
+    self.scales = {}
+
+  def sizes(self, field):
+    """the sizes of field ('u' or 'a') at every grid point of every frame, leaving out zeros (before a wave arrives)"""
+    size = np.hypot(*np.moveaxis(self.u if field == 'u' else self.a, -1, 0)).ravel()
+    return size[np.isfinite(size) & (size > 0)]
+
+  def reference(self, field):
+    """the 90th percentile of field's size over the whole run: what a full-length arrow stands for in every frame"""
+    if field not in self.scales:
+      size = self.sizes(field)
+      self.scales[field] = float(np.percentile(size, 90)) if size.size else None
+    return self.scales[field]
+
+  def speedRange(self):
+    """|u| from its 2nd to its 98th percentile over the whole run, for the levels of the lines of equal |u|"""
+    if 'range' not in self.scales:
+      size = self.sizes('u')
+      self.scales['range'] = (float(np.percentile(size, 2)), float(np.percentile(size, 98))) if size.size else None
+    return self.scales['range']
 
   def at(self, t):
     """the frame at time t: between the frames either side (linear in time), the first or last outside them"""

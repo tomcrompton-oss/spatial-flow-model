@@ -410,6 +410,9 @@ class Engine(unittest.TestCase):
       want = np.array([(second/2 + rate**2/4)*pos[0], (-second/2 + rate**2/4)*pos[1]])
       self.assertLess(length(frame.gravity(pos) - want)/length(want), 1e-5)
       self.assertTrue(np.isnan(frame.flow(np.array([2e5, 0.0]))).all())   #outside the grid
+      sizes = np.hypot(frames.u[..., 0], frames.u[..., 1])
+      self.assertAlmostEqual(frames.reference('u'), np.percentile(sizes[sizes > 0], 90))   #one scale for the whole run
+      self.assertLess(frames.speedRange()[0], frames.speedRange()[1])
       sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'viewer'))
       from viewer.data import Environment
       env = Environment([], [], None, path)

@@ -179,7 +179,8 @@ class Backgrounds:
     env = self.fieldResult()
     moment = '  at t = %s s' % formatValue(self.fieldCalc().t) if env.frames is not None else ''
     if self.showFlow.get():
-      ref = self.drawArrows(lambda calc, pos: calc.flow(pos), 0.0, MUTED)
+      ref = self.drawArrows(lambda calc, pos: calc.flow(pos), 0.0, MUTED,
+                            env.frames.reference('u') if env.frames is not None else None)
       if ref:
         speed = '%s km/s' % formatShort(float('%.3g' % (ref / 1000))) if ref >= 1000 else '%s m/s' % formatShort(float('%.3g' % ref))
         keys.append((MUTED, 'u  %s%s' % (speed, moment)))
@@ -193,7 +194,8 @@ class Backgrounds:
         if ref:
           keys.append((TWIST, 'twist: a full arc turns something moving straight in at c by %s rad/s, with the spin' % formatShort(float('%.3g' % ref))))
     if self.showGravity.get():
-      ref = self.drawArrows(lambda calc, pos: calc.gravity(pos), 0.5, G_ARROW)
+      ref = self.drawArrows(lambda calc, pos: calc.gravity(pos), 0.5, G_ARROW,
+                            env.frames.reference('a') if env.frames is not None else None)
       if ref:
         what = ' (the river\'s acceleration, u du/dR)' if self.fieldResult().ring() else ''
         if env.frames is not None:
@@ -373,10 +375,12 @@ class Backgrounds:
         if not self.nearBody(sx, sy):
           yield sx, sy
 
-  def drawArrows(self, field, offset, color):
+  def drawArrows(self, field, offset, color, reference=None):
     """
     arrows on a regular grid (shifted by offset cells) showing the direction and relative size of a field
     in distance / time mode the arrows are the part of the field along the distance axis
+    reference: what a full-length arrow stands for (by default the 90th percentile of the arrows drawn; a flow that
+    changes with time passes one for its whole run, so the arrows grow and shrink with it)
     returns the value a full-length arrow stands for, or None
     """
     calc = self.fieldCalc()
@@ -401,7 +405,8 @@ class Backgrounds:
 
     #lengths in proportion to the field, scaled so most arrows fit; the strongest are capped
     longest = FLOW_SPACING * 0.8
-    reference = float(np.percentile([p[3] for p in points], 90))
+    if not reference:
+      reference = float(np.percentile([p[3] for p in points], 90))
     for sx, sy, direction, size in points:
       length = longest * min(1.0, size / reference)
       dx, dy = self.xSign() * direction[0] * length, -direction[1] * length   #screen y runs down
@@ -577,6 +582,9 @@ class Backgrounds:
     if finite.size == 0:
       return
     lo, hi = np.percentile(finite, 2), np.percentile(finite, 98)
+    frames = self.fieldResult().frames
+    if frames is not None and frames.speedRange():   #the whole run's levels, so the lines move as |u| changes
+      lo, hi = frames.speedRange()
     if not hi > lo:
       return
     step = niceStep(hi - lo, 8)
