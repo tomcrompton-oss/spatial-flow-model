@@ -301,6 +301,34 @@ class Engine(unittest.TestCase):
         else:
           self.assertAlmostEqual(length(p.w)/C, 1.0, places=12)   #light stays light
 
+  def testEikonalExact(self):
+    """the 'eikonal-exact' flow (engine/two_centre.py) is the 'eikonal' flow without tables: its acceleration is g to
+    rounding, it agrees with the ray tables' direction and S, its seam goes through the saddle, and it is only for two
+    bodies"""
+    for masses in ((1, 1), (2, 1)):
+      bodies = [Body(masses[0]*MS, -0.5*AU, 0.0), Body(masses[1]*MS, 0.5*AU, 0.0)]
+      calc = SpecialFlowCalculator(bodies, 2, 'eikonal-exact')
+      rays = SpecialFlowCalculator(bodies, 2, 'eikonal').rayField()
+      field = calc.rayField()
+      newton = Calculator(bodies)
+      for pos in (np.array([1.4*AU, 1.4*AU]), np.array([-0.3*AU, 0.2*AU]), np.array([-2*AU, -3*AU]),
+                  np.array([0.05*AU, 0.01*AU]), np.array([0.3*AU, 1e-9*AU]), np.array([2*AU, 0.0])):
+        u = calc.flow(pos)
+        self.assertAlmostEqual(length(u)/length(newton.flow(pos)), 1.0, places=14)
+        h = 1e-5*AU
+        a = length(u)*(calc.flow(pos + u/length(u)*h, calc.region(pos)) - calc.flow(pos - u/length(u)*h, calc.region(pos)))/(2*h)
+        self.assertLess(length(a - newton.gravity(pos))/length(newton.gravity(pos)), 1e-7)
+        i = field.region(pos)
+        self.assertEqual(i, rays.region(pos))
+        self.assertLess(length(field.direction(pos) - rays.direction(pos)), 1e-6)
+        self.assertLess(abs(field.action(pos, i)/rays.action(pos, i) - 1), 1e-6)
+      saddle = field.saddle(0, 1)
+      self.assertAlmostEqual(field.action(saddle, 0)/field.action(saddle, 1), 1.0, places=12)
+      for side in (-1, 1):
+        self.assertEqual(field.region(saddle + side*np.array([1e-6*AU, 0.0])), 0 if side < 0 else 1)
+    with self.assertRaises(ValueError):
+      Calculator([Body(), Body(MS, AU, 0.0), Body(MS, 0.0, AU)], 'eikonal-exact')
+
   def testKerrBackgrounds(self):
     """the rotating river's acceleration is u du/dR (GM/R^2 at spin 0), its twist gradient matches the twist's
     change, and a rotating hole's circles sit where r+, 2M, 0 and the special orbits are"""

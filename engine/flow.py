@@ -17,6 +17,9 @@ from engine.constants import *
 from engine.vectors import length
 
 
+EIKONAL = ('eikonal', 'eikonal-exact')   #the directions with no curl: the ray tables, and the exact two-body solution
+
+
 class Config:
   """
   a sim's steps: a fixed dt, or (stepFraction set) adaptive steps - each moves at most stepFraction of the distance
@@ -100,7 +103,8 @@ class Calculator:
     """
     Args:
       bodies (list of Body): the masses; default one black solar mass at (0,0)
-      direction: which way the flow points (its magnitude is always the same) - see flowDirection
+      direction: which way the flow points (its magnitude is always the same) - see flowDirection; 'eikonal-exact'
+                 only for two bodies
     """
     if bodies is None:
       bodies = [Body()]
@@ -110,8 +114,12 @@ class Calculator:
       raise TypeError('pass a list of Body objects, e.g. [Body(m)], not ' + repr(bodies))
     self.bodies = list(bodies)
     self.GM = G*sum(b.mass for b in self.bodies) #total, used by the log
+    if direction == 'eikonal-exact' and len(self.bodies) != 2:
+      raise ValueError("the 'eikonal-exact' flow is for two bodies (%d given): use 'eikonal' (the ray tables)"
+                       % len(self.bodies))
     self.direction = direction   #None: along g (see flowDirection); can be set at any time
-    self.rays = None             #the zero-energy paths for direction 'eikonal' (engine/eikonal.py), built when needed
+    self.rays = None             #the zero-energy paths for the eikonal directions (engine/eikonal.py or
+                                 #engine/two_centre.py), made when needed
     self.log = None #set by the sims so warnings go to the log
 
   def warn(self, message):
@@ -126,7 +134,7 @@ class Calculator:
       magnitude: square root of the sum of the squares of the flow to each body, sqrt(2GM/d)
       direction: set by self.direction (see flowDirection) - by default towards black bodies and away from white
                  ones, weighted by each body's GM/d^2
-    region: for a direction with a seam ('eikonal'), the side of it to take the flow from (see region)
+    region: for a direction with a seam ('eikonal', 'eikonal-exact'), the side of it to take the flow from (see region)
     """
     U2 = 0.0                    #the square of the flow's magnitude
     g = np.array([0.0, 0.0])    #its direction
@@ -157,15 +165,17 @@ class Calculator:
       'eikonal'    down the zero-energy newtonian path from the nearest body through pos (engine/eikonal.py): no
                    curl, so space moving with the flow falls at exactly g; a seam where the bodies' regions meet.
                    region picks the side of the seam (None: the side pos is on); along g past the table
+      'eikonal-exact'  the same flow for exactly two bodies, worked out exactly rather than from tables
+                   (engine/two_centre.py: the zero-energy paths separate in elliptic coordinates); everywhere
       (x, y)       that way everywhere
       a function   of pos, returning the direction there
     """
     direction = self.direction
-    if direction == 'eikonal':
+    if direction in EIKONAL:
       found = self.rayField().direction(pos, region)
       if found is not None:
         return found
-    if direction is None or direction in ('g', 'eikonal'):
+    if direction is None or direction == 'g' or direction in EIKONAL:
       g = np.array([0.0, 0.0])
       for b in self.bodies:
         r = pos - b.pos
@@ -183,16 +193,23 @@ class Calculator:
     return np.asarray(direction, dtype=float)
 
   def rayField(self):
-    """the zero-energy paths out of each body, for direction 'eikonal' - built the first time (a few seconds)"""
-    key = [(b.mass, b.x, b.y, b.black) for b in self.bodies]
+    """
+    the zero-energy paths out of each body: for direction 'eikonal' the tables (engine/eikonal.py), built the first
+    time (a few seconds); for 'eikonal-exact' the exact two-body solution (engine/two_centre.py)
+    """
+    key = [(b.mass, b.x, b.y, b.black) for b in self.bodies] + [self.direction]
     if self.rays is None or self.rays[0] != key:
-      from engine.eikonal import RayField
-      self.rays = (key, RayField(self.bodies))
+      if self.direction == 'eikonal-exact':
+        from engine.two_centre import TwoCentreField
+        self.rays = (key, TwoCentreField(self.bodies))
+      else:
+        from engine.eikonal import RayField
+        self.rays = (key, RayField(self.bodies))
     return self.rays[1]
 
   def region(self, pos):
     """which side of the flow's seam pos is on (the nearest body's index), or None if the flow has no seam"""
-    if self.direction != 'eikonal':
+    if self.direction not in EIKONAL:
       return None
     return self.rayField().region(pos)
 
@@ -217,6 +234,9 @@ class Calculator:
       return 'along g'
     if d == 'eikonal':
       return 'down zero-energy paths from the nearest body (no curl; seam where the regions meet)'
+    if d == 'eikonal-exact':
+      return ('down zero-energy paths from the nearest body (no curl; seam where the regions meet), exact two-body'
+              ' solution in elliptic coordinates')
     if d in ('nearest', 'centre'):
       return {'nearest': 'towards the nearest body', 'centre': 'towards the centre of mass'}[d]
     if callable(d):

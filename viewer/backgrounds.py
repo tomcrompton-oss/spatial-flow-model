@@ -145,9 +145,10 @@ class Backgrounds:
       env = self.fieldResult()
       if len(env.bodies) == 1:
         keys.append((FLOW_LINE, 'flow lines: the paths of space, straight %s' % ('in to the hole' if env.bodies[0][3] else 'out of the body')))
-      elif env.direction == 'eikonal':
-        keys.append((FLOW_LINE, 'flow lines: the eikonal flow, %d per body - zero-energy paths out of each body under g,'
-                                ' to the seam where the regions meet' % FLOW_LINES))
+      elif env.direction in ('eikonal', 'eikonal-exact'):
+        keys.append((FLOW_LINE, 'flow lines: the eikonal flow%s, %d per body - zero-energy paths out of each body under g,'
+                                ' to the seam where the regions meet' % (' (exact)' if env.direction == 'eikonal-exact' else '',
+                                                                          FLOW_LINES)))
       else:
         keys.append((FLOW_LINE, 'flow lines: %d per body from %s m at |u|, outwards, under g' % (FLOW_LINES, formatShort(RSUN))))
     if timeMode and self.showFlowLines.get():
@@ -226,7 +227,7 @@ class Backgrounds:
           for n in range(FLOW_LINES):
             rows, _, _ = flowlines.line(calc, home, 2*math.pi*n/FLOW_LINES, RSUN, FLOW_LINE_REACH, FLOW_LINE_STEP, 2)
             points = [pos for _, pos, _ in rows]
-            if result.direction == 'eikonal':
+            if result.direction in ('eikonal', 'eikonal-exact'):
               own = calc.bodies.index(home)
               for k, pos in enumerate(points):
                 if calc.region(pos) != own:

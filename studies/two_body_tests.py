@@ -1,7 +1,8 @@
 """
 a set of paths round the two holes of studies/two_body_escapes.py (one solar mass each, fixed at x = -0.5 AU and
 +0.5 AU) in the flow model, with the flow along the net g (Calculator.direction 'g', the default) or another
-direction given on the command line ('eikonal': down zero-energy paths, no curl): falls, orbits round one hole,
+direction given on the command line ('eikonal': down zero-energy paths, no curl, from tables of the paths;
+'eikonal-exact': the same flow worked out exactly, engine/two_centre.py): falls, orbits round one hole,
 orbits round both, flybys, escapes and light
 
 each runs in the flow model (SpecialFlowCalculator, second order) and, unless it is light, again under newtonian
@@ -20,7 +21,7 @@ light's bend with GR's at its impact parameter
 writes logs/twoBodyTests/twoBodyTests_<datetime>/ (twoBodyTests_<direction>_<datetime> for a direction other than g): a csv for each test (and <name>_newton.csv), summary.log, and a
 viewer config for each group (flow model solid, newtonian dashed)
 
-run: python3 studies/two_body_tests.py [direction]      (e.g. eikonal)
+run: python3 studies/two_body_tests.py [direction]      (e.g. eikonal, or eikonal-exact)
 """
 import csv
 import json

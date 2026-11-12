@@ -263,7 +263,7 @@ class Environment:
 
   def __init__(self, bodies, spins=None, direction=None):
     self.bodies = bodies   #(mass kg, x m, y m, black)
-    self.direction = direction   #the flow's direction (Calculator.direction): None along g, or 'eikonal'
+    self.direction = direction   #the flow's direction (Calculator.direction): None along g, 'eikonal' or 'eikonal-exact'
     self.spins = list(spins or []) + [0.0]*(len(bodies) - len(spins or []))   #a/M of each body
     self.flowCalc = None
     self.flowLines = None  #worked out when first drawn
@@ -274,7 +274,8 @@ class Environment:
       else:
         self.flowCalc = flow.Calculator(made, direction)
       self.flowCalc.warn = lambda message: None   #g=0 on a grid point just means no arrow
-    self.name = self.describe(bodies, self.spins) + (', eikonal flow' if direction == 'eikonal' else '')
+    self.name = self.describe(bodies, self.spins) + {'eikonal': ', eikonal flow',
+                                                     'eikonal-exact': ', eikonal flow (exact)'}.get(direction, '')
 
   def horizon(self, i):
     """

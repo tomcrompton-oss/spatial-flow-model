@@ -10,7 +10,8 @@ class Loading:
     logPath = os.path.splitext(result.path)[0] + '.log'
     result.bodies = []
     result.spins = []   #a/M of each body, 0 if the log gives none
-    result.direction = None   #the flow's direction, if the log names one the backgrounds can draw ('eikonal')
+    result.direction = None   #the flow's direction, if the log names one the backgrounds can draw ('eikonal',
+                              #'eikonal-exact')
     if not os.path.exists(logPath):
       result.logText = 'No log file - expected one at\n%s' % logPath
       self.setEnvironment(result)
@@ -21,7 +22,7 @@ class Loading:
       result.bodies.append((float(m.group(1)), float(m.group(2)), float(m.group(3)), m.group(4) == 'black'))
       result.spins.append(float(m.group(5)) if m.group(5) else 0.0)
     if 'flow direction: down zero-energy paths' in result.logText:
-      result.direction = 'eikonal'
+      result.direction = 'eikonal-exact' if 'exact two-body solution' in result.logText else 'eikonal'
     self.setEnvironment(result)
     self.findOrbits(result)
 
