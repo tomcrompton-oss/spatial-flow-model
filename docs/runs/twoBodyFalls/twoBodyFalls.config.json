@@ -1,0 +1,32 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "falls_2026-11-13_11-05-56.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#1baf7a",
+          "solid",
+          "#1baf7a"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

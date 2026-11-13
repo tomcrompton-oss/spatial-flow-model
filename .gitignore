@@ -8,3 +8,10 @@ archive/
 __pycache__/
 *.pyc
 .DS_Store
+
+# the website build, and the browser viewer copied into it when it is built (.github/workflows/pages.yml)
+site/
+docs/viewer/
+
+# local tooling
+.claude/

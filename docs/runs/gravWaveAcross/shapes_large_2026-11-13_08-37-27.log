@@ -1,0 +1,4 @@
+bodies: 0
+gravitational wave: plane wave in the plane along (1, 0): h+ 0.2, hx 0, 100 Hz (phases 0, 0 rad), from t = 0 s, centred at (0, 0) m
+48 free particles (w = 0) on a ring of 1.49896e+06 m (0.5 wavelengths) round (2.5e+06, 0) m, round in TT coordinates; 3 periods, 400 steps a period
+background frames: background_2026-11-13_08-37-25.csv

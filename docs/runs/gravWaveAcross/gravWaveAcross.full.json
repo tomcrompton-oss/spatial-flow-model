@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "gravWaveAcross.prefs.json",
+  "config": "gravWaveAcross.config.json"
+}

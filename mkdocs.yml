@@ -1,0 +1,44 @@
+site_name: Spatial Flow Model
+site_description: Gravity as a flow of space - simulations, studies against GR, and a browser viewer
+site_url: https://SITE_URL/
+repo_url: https://github.com/REPO_PATH
+repo_name: REPO_PATH
+edit_uri: edit/main/docs/
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle: {icon: material/weather-night, name: Dark mode}
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle: {icon: material/weather-sunny, name: Light mode}
+
+nav:
+  - Overview: index.md
+  - The model: model.md
+  - Two bodies: two-bodies.md
+  - Gravitational waves: waves.md
+  - Viewers: viewers.md
+  - Results: results.md
+  - File formats: formats.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc: {permalink: true}
+  - pymdownx.arithmatex: {generic: true}
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js

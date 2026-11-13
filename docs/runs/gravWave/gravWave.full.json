@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "gravWave.prefs.json",
+  "config": "gravWave.config.json"
+}

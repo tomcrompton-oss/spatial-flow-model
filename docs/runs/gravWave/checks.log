@@ -1,0 +1,34 @@
+gravitational wave checks: the flow model against GR, to first order in h
+
+particles: h+ 1e-06, hx 5e-07, 100 Hz, 2000 steps a period, 5 periods; error / (h |X0|), worst over the run
+  free     2.83e-06
+  at rest  1.05e-05
+
+light round trips: h = 1e-06, 100 Hz (wavelength 2997.92 km), sent at t = 0.002 s; extra time over 2L/c, and the error / (h L/c)
+  wave       L/lambda      arm   flow model (s)           GR (s)      error
+  plus           0.01        x    -7.994498e-13    -7.999964e-13    5.5e-06
+  plus           0.01        y     8.005424e-13     7.999956e-13    5.5e-06
+  plus           0.01 diagonal     5.465192e-16     0.000000e+00    5.5e-06
+  plus           0.25        x    -2.627244e-09    -2.627246e-09    4.5e-07
+  plus           0.25        y     2.627249e-09     2.627248e-09    5.0e-07
+  plus           0.25 diagonal     1.914267e-15     0.000000e+00    7.7e-07
+  plus            0.5        x    -4.981591e-09    -4.981592e-09    2.3e-07
+  plus            0.5        y     4.981589e-09     4.981587e-09    4.4e-07
+  plus            0.5 diagonal     1.769938e-14     0.000000e+00    3.5e-06
+  plus            1.3        x    -1.354158e-08    -1.354157e-08   -6.3e-07
+  plus            1.3        y     1.354159e-08     1.354158e-08    7.0e-07
+  plus            1.3 diagonal     4.683753e-15     0.000000e+00    3.6e-07
+  cross          0.01        x     5.417487e-16     0.000000e+00    5.4e-06
+  cross          0.01        y     5.417487e-16     0.000000e+00    5.4e-06
+  cross          0.01 diagonal    -7.994490e-13    -7.999964e-13    5.5e-06
+  cross          0.25        x     1.759010e-15     0.000000e+00    7.0e-07
+  cross          0.25        y     1.759010e-15     0.000000e+00    7.0e-07
+  cross          0.25 diagonal    -2.627244e-09    -2.627246e-09    4.5e-07
+  cross           0.5        x     1.759183e-14     0.000000e+00    3.5e-06
+  cross           0.5        y     1.759183e-14     0.000000e+00    3.5e-06
+  cross           0.5 diagonal    -4.981591e-09    -4.981592e-09    2.2e-07
+  cross           1.3        x     4.822531e-15     0.000000e+00    3.7e-07
+  cross           1.3        y     4.822531e-15     0.000000e+00    3.7e-07
+  cross           1.3 diagonal    -1.354158e-08    -1.354157e-08   -6.3e-07
+
+worst: free 2.8e-06, at rest 1.1e-05 of h X0; light 5.5e-06 of h L/c

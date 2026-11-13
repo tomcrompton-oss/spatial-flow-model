@@ -1,0 +1,101 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "shapes_small_2026-11-13_08-37-26.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ring_small_2026-11-13_08-37-26.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "dotted",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "shapes_large_2026-11-13_08-37-27.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ring_large_2026-11-13_08-37-27.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "dotted",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}
