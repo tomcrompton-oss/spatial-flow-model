@@ -166,17 +166,25 @@ async function loadRun(source, fullName) {
     } else {
       entries = source.names().filter(n => n.endsWith('.csv') && !n.startsWith('background_')).sort().map(n => ({relative: n}));
     }
-    const frameCache = new Map();
-    for (const [i, entry] of entries.entries()) {
-      const file = entry.relative || entry.path.split('/').pop();
-      const data = parseCsv(await source.read(file));
-      let log = {bodies: []};
-      try { log = parseLog(await source.read(file.replace(/\.csv$/, '.log'))); } catch (e) { /* no log: no bodies */ }
-      const result = {name: studyName(file), file, data, log, visible: entry.visible !== false, color: SERIES[i % SERIES.length]};
+    //every csv and log at once (one after another, each waits for the server), then every frames file they name
+    let done = 0;
+    const files = entries.map(entry => entry.relative || entry.path.split('/').pop());
+    const read = name => source.read(name).finally(() => message('loading… ' + (++done) + ' files'));
+    const texts = await Promise.all(files.map(file => Promise.all([
+      read(file), read(file.replace(/\.csv$/, '.log')).catch(() => null)])));   //no log: no bodies
+    const logs = texts.map(([, log]) => log === null ? {bodies: []} : parseLog(log));
+    const frameCache = new Map(await Promise.all([...new Set(logs.map(l => l.frames).filter(Boolean))].map(async name => {
+      try { return [name, parseFrames(await read(name))]; }
+      catch (e) { message('no frames file ' + name); return [name, null]; }
+    })));
+    entries.forEach((entry, i) => {
+      const file = files[i], log = logs[i];
+      const result = {name: studyName(file), file, data: parseCsv(texts[i][0]), log, visible: entry.visible !== false,
+                      color: SERIES[i % SERIES.length]};
       result.paths = buildPaths(result, entry);
-      result.env = await environmentFor(log, source, frameCache);
+      result.env = environmentFor(log, frameCache);
       state.results.push(result);
-    }
+    });
     state.selected = state.results[0] || null;
     message(fullName ? fullName : state.results.length + ' results');
   } catch (e) {
@@ -213,18 +221,11 @@ function buildPaths(result, entry) {
   });
 }
 
-async function environmentFor(log, source, cache) {
+function environmentFor(log, frameCache) {
   const key = JSON.stringify([log.bodies, log.frames || null, log.direction || null]);
   let env = state.environments.find(e => e.key === key);
   if (env) return env;
-  let frames = null;
-  if (log.frames) {
-    if (!cache.has(log.frames)) {
-      try { cache.set(log.frames, parseFrames(await source.read(log.frames))); }
-      catch (e) { cache.set(log.frames, null); message('no frames file ' + log.frames); }
-    }
-    frames = cache.get(log.frames);
-  }
+  const frames = log.frames ? frameCache.get(log.frames) || null : null;
   env = {key, bodies: log.bodies, frames, name: describe(log, frames)};
   state.environments.push(env);
   return env;
