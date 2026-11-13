@@ -19,6 +19,7 @@ Press Play; choose "All environments" under Background to see every ring's flow.
 | [Viewers](viewers.md) | the desktop viewer and the browser viewer that runs these pages |
 | [Results](results.md) | the published study results, to open in the viewer or download |
 | [File formats](formats.md) | what a study writes and a viewer reads |
+| [References](references.md) | the papers, books and methods the model and its checks rest on |
 
 ## The code
 

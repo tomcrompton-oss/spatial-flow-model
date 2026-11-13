@@ -29,6 +29,7 @@ nav:
   - Viewers: viewers.md
   - Results: results.md
   - File formats: formats.md
+  - References: references.md
 
 markdown_extensions:
   - admonition
