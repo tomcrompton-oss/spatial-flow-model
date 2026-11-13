@@ -29,6 +29,7 @@ from studies.two_body_escapes import BODIES, START, REACH, STEP, EVERY, writeVie
 PATHS = 30            #starting points round the 10 AU circle
 MAX_STEPS = 200000    #paths stop after this many steps
 COLOUR = '#1baf7a'
+BACKGROUND_FRAMES = True   #write the steady flow as one frame over the paths, for the browser viewer (web/)
 
 
 def fall(calc, angle, near):
@@ -90,7 +91,7 @@ def main():
     log.print('%d %s' % (count, reason))
   log.close()
   print(', '.join('%d %s' % (count, reason) for reason, count in sorted(ends.items())))
-  writeViewerFiles(folder, 'twoBodyFalls', [(path, COLOUR)])
+  writeViewerFiles(folder, 'twoBodyFalls', [(path, COLOUR)], frames=calc if BACKGROUND_FRAMES else None)
   return folder
 
 

@@ -54,8 +54,14 @@ Plain text, one statement per line. A viewer reads these lines; it ignores the r
 Written by `engine/background_frames.writeFrames`. Header `t,x,y,u_x,u_y,a_x,a_y`, then one row per grid point per
 frame: frames in time order, and within a frame `y` then `x` ascending. `u` is the flow of space and `a` its
 acceleration, du/dt + (u . grad) u. The grid is regular and the same in every frame. Between frames, interpolate in
-time; within one, bilinearly; outside the grid there is no value. Draw a whole run to one scale (the 90th percentile
-of |u|, or of |a|, over every frame, leaving out zeros), so arrows grow and shrink with the flow.
+time; within one, bilinearly; outside the grid there is no value (nor where a cell is empty, as on a body). Draw a
+whole run to one scale (the 90th percentile of |u|, or of |a|, over every frame, leaving out zeros), so arrows grow
+and shrink with the flow.
+
+A steady flow (round fixed bodies) is one frame at `t = 0`, on a grid over its results' paths
+(`engine/background_frames.staticFrame`; the two-body studies write one per viewer file, as
+`background_<view>.csv`, with `BACKGROUND_FRAMES`). It is for viewers that cannot work the flow out themselves: the
+desktop viewer ignores a steady frame when the log lists bodies, and works the flow out exactly instead.
 
 ## full.json
 

@@ -393,7 +393,7 @@ class Engine(unittest.TestCase):
     the acceleration of space, du/dt + (u . grad) u, at the frames' times, and the viewer's environment draws from
     them"""
     from engine.waves import PlaneWave
-    from engine.background_frames import writeFrames, readFrames
+    from engine.background_frames import writeFrames, readFrames, isSteady
     wave = PlaneWave(plus=1e-3, frequency=10.0)
     calc = SpecialFlowCalculator([], 2, wave=wave)
     folder = tempfile.mkdtemp()
@@ -413,6 +413,16 @@ class Engine(unittest.TestCase):
       sizes = np.hypot(frames.u[..., 0], frames.u[..., 1])
       self.assertAlmostEqual(frames.reference('u'), np.percentile(sizes[sizes > 0], 90))   #one scale for the whole run
       self.assertLess(frames.speedRange()[0], frames.speedRange()[1])
+      self.assertFalse(isSteady(path))
+      #a steady flow round two holes: one frame, nothing on the holes themselves, and taken as steady
+      from engine.background_frames import staticFrame
+      steady = os.path.join(folder, 'steady.csv')
+      staticFrame(steady, Calculator([Body(MS, -AU, 0.0), Body(MS, AU, 0.0)], 'g'), (-2*AU, 2*AU, -2*AU, 2*AU), longest=9)
+      self.assertTrue(isSteady(steady))
+      one = readFrames(steady)
+      self.assertEqual((one.times.size, one.xs.size, one.ys.size), (1, 9, 9))
+      self.assertTrue(np.isnan(one.u[0, 4, 2]).all())   #(-AU, 0) is on a hole: no value
+      self.assertTrue(np.isfinite(one.u[0, 0, 0]).all())
       sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'viewer'))
       from viewer.data import Environment
       env = Environment([], [], None, path)

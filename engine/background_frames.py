@@ -16,7 +16,9 @@ flow with no curl it is g, and in a wave it is the tidal acceleration of space
                                                      and shrink from frame to frame instead of each filling its own
 
 a study writes its frames with writeFrames and names the file in its log (LOG_LINE + the file name, next to the log),
-which is how the viewer finds it
+which is how the viewer finds it. a steady flow (round fixed bodies) is one frame, at t = 0: staticFrame writes it on a
+grid over its results' paths (boxAround), for a viewer that cannot work the flow out itself (the browser viewer, web/);
+the desktop viewer works a steady flow out exactly instead
 """
 import csv
 import numpy as np
@@ -33,8 +35,19 @@ def writeFrames(path, calc, box, times, cells=32):
   nx, ny = cells if isinstance(cells, tuple) else (cells, cells)
   xs, ys = np.linspace(x0, x1, nx), np.linspace(y0, y1, ny)
   h = 1e-4*max(x1 - x0, y1 - y0)                       #for the differences in space
+  steady = len(times) == 1                             #one frame: the flow does not change with time
   spacing = (times[-1] - times[0])/max(1, len(times) - 1) if len(times) > 1 else 1.0
-  dt = 1e-3*spacing                                    #and in time
+  dt = 1e-3*spacing                                    #for the differences in time
+  warn = getattr(calc, 'warn', None)
+  calc.warn = lambda message: None   #a grid point where g = 0 just has no flow
+  try:
+    writeRows(path, calc, xs, ys, times, h, steady, dt)
+  finally:
+    calc.warn = warn
+
+
+def writeRows(path, calc, xs, ys, times, h, steady, dt):
+  """writeFrames' rows"""
   with open(path, 'w', newline='') as f:
     out = csv.writer(f)
     out.writerow(['t', 'x', 'y', 'u_x', 'u_y', 'a_x', 'a_y'])
@@ -42,13 +55,41 @@ def writeFrames(path, calc, box, times, cells=32):
       for y in ys:
         for x in xs:
           pos = np.array([x, y])
-          u = calc.flow(pos, None, t)
-          change = (calc.flow(pos, None, t + dt) - calc.flow(pos, None, t - dt))/(2*dt)
-          size = float(np.hypot(u[0], u[1]))
-          if size > 0:
-            along = u/size
-            change = change + size*(calc.flow(pos + h*along, None, t) - calc.flow(pos - h*along, None, t))/(2*h)
+          try:
+            u = calc.flow(pos, None, t)
+            change = np.zeros(2) if steady else (calc.flow(pos, None, t + dt) - calc.flow(pos, None, t - dt))/(2*dt)
+            size = float(np.hypot(u[0], u[1]))
+            if size > 0:
+              along = u/size
+              change = change + size*(calc.flow(pos + h*along, None, t) - calc.flow(pos - h*along, None, t))/(2*h)
+          except (ZeroDivisionError, ValueError, FloatingPointError):   #on a body: no value there
+            u = change = np.array([np.nan, np.nan])
           out.writerow(['%.10g' % t, '%.10g' % x, '%.10g' % y] + ['%.8g' % v for v in (*u, *change)])
+
+
+def boxAround(csvPaths, margin=0.1):
+  """(x0, x1, y0, y1): the pos_x / pos_y of the csvs' rows, with margin of the larger side added all round"""
+  xs, ys = [], []
+  for path in csvPaths:
+    with open(path, newline='') as f:
+      for row in csv.DictReader(f):
+        try:
+          xs.append(float(row['pos_x']))
+          ys.append(float(row['pos_y']))
+        except (KeyError, TypeError, ValueError):   #an empty row between paths
+          pass
+  x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)
+  pad = margin*max(x1 - x0, y1 - y0, 1.0)
+  return x0 - pad, x1 + pad, y0 - pad, y1 + pad
+
+
+def staticFrame(path, calc, box, longest=64):
+  """a steady flow's one frame, at t = 0, over box: longest points along its longer side, the same spacing across"""
+  x0, x1, y0, y1 = box
+  across = max(x1 - x0, y1 - y0)
+  nx = max(8, round(longest*(x1 - x0)/across))
+  ny = max(8, round(longest*(y1 - y0)/across))
+  writeFrames(path, calc, box, [0.0], (nx, ny))
 
 
 class Frame:
@@ -115,6 +156,17 @@ class Frames:
       f = (t - self.times[k])/(self.times[k + 1] - self.times[k])
       return Frame(self.xs, self.ys, (1 - f)*self.u[k] + f*self.u[k + 1], (1 - f)*self.a[k] + f*self.a[k + 1], t)
     return Frame(self.xs, self.ys, self.u[k], self.a[k], float(self.times[k]))
+
+
+def isSteady(path):
+  """whether the frames file at path is one steady frame (its first and last rows at the same time)"""
+  with open(path) as f:
+    f.readline()
+    first = f.readline()
+    f.seek(0, 2)
+    f.seek(max(0, f.tell() - 4096))
+    last = [l for l in f.read().splitlines() if l.strip()][-1]
+  return first.split(',')[0] == last.split(',')[0]
 
 
 def readFrames(path):

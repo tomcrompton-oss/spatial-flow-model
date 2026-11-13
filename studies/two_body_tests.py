@@ -46,6 +46,7 @@ YEAR = 365.25*DAY
 STEP = 0.002          #each step moves about this fraction of the distance to the nearest hole
 EVERY = 20            #steps between csv rows
 MAX_STEPS = 3000000
+BACKGROUND_FRAMES = True   #write each group's steady flow as one frame over its paths, for the browser viewer (web/)
 ESCAPE = 20*AU        #escaped this far from the centre of mass
 CAPTURE = 1.0         #captured this many Schwarzschild radii from a hole's centre
 COLOURS = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948', '#5b6770']
@@ -337,7 +338,7 @@ def main(direction='g'):
     json.dump(summaries, f, indent=1, default=float)
   print('\n'.join(lines))
   for group, made in groups.items():
-    writeViewerFiles(folder, 'twoBodyTests_' + group, made)
+    writeViewerFiles(folder, 'twoBodyTests_' + group, made, frames=calc if BACKGROUND_FRAMES else None)
   return folder
 
 

@@ -25,6 +25,7 @@ from engine.flow import Body, Calculator
 from engine.logger import Log, LOG_DIR
 from engine.constants import *
 from engine.flow_lines import line
+from engine.background_frames import staticFrame, boxAround, LOG_LINE
 
 SEP = 0.5*AU          #holes at (-SEP, 0) and (+SEP, 0)
 PATHS = 30            #paths from each hole
@@ -35,6 +36,7 @@ EVERY = 10            #steps between csv rows
 
 BODIES = [Body(MS, -SEP, 0.0), Body(MS, SEP, 0.0)]
 COLOURS = ['#2a78d6', '#eb6834']   #paths from the left hole, and from the right
+BACKGROUND_FRAMES = True   #write the steady flow as one frame over the paths, for the browser viewer (web/)
 
 
 def escapes(folder, calc, i):
@@ -73,13 +75,22 @@ def escapes(folder, calc, i):
   return path
 
 
-def writeViewerFiles(folder, name, made, selection=(('pos_x', 'pos_y'),), styles=None, preferences=None):
+def writeViewerFiles(folder, name, made, selection=(('pos_x', 'pos_y'),), styles=None, preferences=None, frames=None):
   """
   a full config for the viewer in folder: <name>.full.json naming its .prefs.json and .config.json, for the
   csvs in made, [(path, colour)] or [(path, colour, line style)]; selection is the column pairs to plot, styles (colour -> the viewer's path styles)
   how they are drawn - by default one solid line, pos_x against pos_y - and preferences any changes to the viewer's
   (x / y, equal aspect, no flow or markers); prints how to open it
+  frames: a calculator whose steady flow is written as one background frame over the csvs' paths
+  (background_<name>.csv, engine/background_frames.py) and named in each csv's log - for the browser viewer, which
+  draws arrows only from frames
   """
+  if frames is not None:
+    framesName = 'background_%s.csv' % name
+    staticFrame(os.path.join(folder, framesName), frames, boxAround([path for path, *_ in made]))
+    for path, *_ in made:
+      with open(path[:-4] + '.log', 'a') as log:
+        log.write('%s %s\n' % (LOG_LINE, framesName))
   styles = styles or (lambda colour, style='solid': {'pos': [colour, style, colour]})
   results = [{'path': path, 'relative': os.path.basename(path), 'visible': True, 'straight': False, 'ends': False,
               'periapsis': False, 'apoapsis': False, 'styles': styles(colour, *style),
@@ -100,7 +111,7 @@ def main():
   folder = os.path.join(LOG_DIR, 'twoBodyEscapes', 'twoBodyEscapes_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   calc = Calculator(BODIES)
   made = [(escapes(folder, calc, i), COLOURS[i]) for i in range(len(BODIES))]
-  writeViewerFiles(folder, 'twoBodyEscapes', made)
+  writeViewerFiles(folder, 'twoBodyEscapes', made, frames=calc if BACKGROUND_FRAMES else None)
   return folder
 
 

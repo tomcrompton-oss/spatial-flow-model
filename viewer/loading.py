@@ -109,6 +109,8 @@ class Loading:
     spins = getattr(result, 'spins', [])
     direction = getattr(result, 'direction', None)
     frames = getattr(result, 'frames', None)
+    if frames and result.bodies and backgroundFrames is not None and os.path.exists(frames) and backgroundFrames.isSteady(frames):
+      frames = None   #a steady flow round bodies: worked out exactly here (its frame is for the browser viewer)
     key = (Environment.key(result.bodies, spins), direction, frames)
     if key not in self.environments:
       self.environments[key] = Environment(result.bodies, spins, direction, frames)

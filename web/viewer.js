@@ -225,18 +225,19 @@ async function environmentFor(log, source, cache) {
     }
     frames = cache.get(log.frames);
   }
-  env = {key, bodies: log.bodies, frames, name: describe(log)};
+  env = {key, bodies: log.bodies, frames, name: describe(log, frames)};
   state.environments.push(env);
   return env;
 }
 
-function describe(log) {
+function describe(log, frames) {
   let name = log.bodies.length ? log.bodies.length + (log.bodies.length === 1 ? ' body: ' : ' bodies: ') + log.bodies.map(b =>
     (+(b.mass / MS).toPrecision(4)) + ' MS ' + (b.black ? 'black' : 'white') + ' at (' + fmt(b.x / AU) + ', ' + fmt(b.y / AU) + ') AU').join(', ')
     : 'No bodies';
   if (log.direction && log.direction.startsWith('down zero-energy paths'))
     name += log.direction.includes('exact two-body solution') ? ', eikonal flow (exact)' : ', eikonal flow';
-  if (log.frames) name += ', flow changing with time (' + studyName(log.frames.replace(/\.csv$/, '')) + ')';
+  if (log.frames) name += (frames && frames.times.length > 1 ? ', flow changing with time (' : ', flow frame (') +
+                          studyName(log.frames.replace(/\.csv$/, '')) + ')';
   return name;
 }
 
@@ -424,7 +425,8 @@ function drawField(env) {
     if (!show || !frames.reference[field]) continue;
     drawArrows(frames, field, t, colour, frames.reference[field], offset);
     const ref = frames.reference[field];
-    keys.push([colour, label + '  ' + (field === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + '  at t = ' + fmt(t) + ' s' + named]);
+    const moment = frames.times.length > 1 ? '  at t = ' + fmt(t) + ' s' : '';
+    keys.push([colour, label + '  ' + (field === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment + named]);
   }
   return keys;
 }
