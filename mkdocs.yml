@@ -1,8 +1,8 @@
 site_name: Spatial Flow Model
 site_description: Gravity as a flow of space - simulations, studies against GR, and a browser viewer
-site_url: https://SITE_URL/
-repo_url: https://github.com/REPO_PATH
-repo_name: REPO_PATH
+site_url: https://tomcrompton-oss.github.io/spatial-flow-model/
+repo_url: https://github.com/tomcrompton-oss/spatial-flow-model
+repo_name: tomcrompton-oss/spatial-flow-model
 edit_uri: edit/main/docs/
 docs_dir: docs
 

@@ -1,7 +1,7 @@
 # Results
 
 Study results published with the site. Each opens in the browser viewer; the files are plain csv, logs and json (see
-[file formats](formats.md)) and can be downloaded from the [repository](https://github.com/REPO_PATH/tree/main/docs/runs).
+[file formats](formats.md)) and can be downloaded from the [repository](https://github.com/tomcrompton-oss/spatial-flow-model/tree/main/docs/runs).
 
 | Run | Study | Open |
 | --- | --- | --- |
