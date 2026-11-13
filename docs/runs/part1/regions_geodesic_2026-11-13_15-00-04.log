@@ -1,0 +1,4 @@
+bodies: 0
+light from (0, 0) along +x through the same flow: the true geodesic of its metric, ds^2 = -c^2 dt^2 + |dx - u dt|^2
+regions_geodesic: crossed 1000107640 m in 3.336 s, w turned 0.00 degrees, v (1.0000c, -0.8000c), |w| 1.000000c
+background frames: background_part1_regions.csv

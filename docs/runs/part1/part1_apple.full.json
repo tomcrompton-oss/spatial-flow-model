@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "part1_apple.prefs.json",
+  "config": "part1_apple.config.json"
+}

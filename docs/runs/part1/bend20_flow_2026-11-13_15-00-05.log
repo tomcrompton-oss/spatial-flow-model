@@ -1,0 +1,5 @@
+bodies: 1
+body 1: mass 1.989000e+30 kg (1 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+light from x = -150 rs at y = 20 rs along +x: the flow model
+b = 20 rs, flow: bent 7.31 degrees
+background frames: background_part1_bending.csv

@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 5.972000e+24 kg (3.00251e-06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+the apple, at rest 11 m up, falls 10 m (steps of 1e-4 s)
+apple_flow: fell 10 m in 1.4272 s, at 14.0150 m/s

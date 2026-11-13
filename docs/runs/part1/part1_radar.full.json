@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "part1_radar.prefs.json",
+  "config": "part1_radar.config.json"
+}

@@ -25,7 +25,10 @@ nav:
   - Overview: index.md
   - Preface: preface.md
   - Part 1 – The Flow of Space:
-      - The model: model.md
+      - 1.1 Hypothesis: part1/hypothesis.md
+      - 1.2 Mechanics of spatial flow: part1/mechanics.md
+      - 1.3 The four tests: part1/tests.md
+      - 1.4 Conclusion: part1/conclusion.md
   - Part 2 – Placeholder:
       - Two bodies: two-bodies.md
       - Gravitational waves: waves.md

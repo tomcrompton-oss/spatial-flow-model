@@ -1,0 +1,32 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "radar_2026-11-13_15-00-09.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos_x / t": [
+          "#eda100",
+          "solid",
+          "#eda100"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "t"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

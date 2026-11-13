@@ -1,0 +1,5 @@
+bodies: 1
+body 1: mass 1.989000e+30 kg (1 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+an orbit from apoapsis at 60 rs with the Newtonian ellipse's speed there (periapsis 20 rs): the flow model
+orbit_flow: six times round in 0.1256 s (Newtonian period 0.0222 s)
+background frames: background_part1_orbit.csv

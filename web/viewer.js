@@ -217,7 +217,8 @@ function buildPaths(result, entry) {
   return selection.map(([xc, yc]) => {
     const label = (pairs(names).find(p => p[1] === xc && p[2] === yc) || [xc + ' / ' + yc])[0];
     const style = (entry.styles || {})[label] || [];
-    return {name: label, x: columns[xc], y: columns[yc], t: time, color: style[0] || null, style: style[1] || 'solid'};
+    return {name: label, xName: xc, yName: yc, x: columns[xc], y: columns[yc], t: time, color: style[0] || null,
+            style: style[1] || 'solid'};
   });
 }
 
@@ -331,25 +332,36 @@ function draw() {
   if (state.prefs.showFieldKey && keys.length) drawKey(keys);
 }
 
+/* each axis's label and scale, from the columns the first shown path plots: time in seconds, distances in the unit */
+function axes() {
+  const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
+  const one = name => {
+    if (/^(t|time|pt|proper_t|tau)$/.test(name || '')) return {label: name + ' (s)', scale: 1};
+    const [unit, scale] = UNITS[state.prefs.unit];
+    return {label: ({pos_x: 'x', pos_y: 'y'}[name] || name || 'x') + ' (' + unit + ')', scale};
+  };
+  return [one(path ? path.xName : 'pos_x'), one(path ? path.yName : 'pos_y')];
+}
+
 function drawAxes(grid) {
-  const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view, scale = UNITS[state.prefs.unit][1];
-  const xt = ticks(x0 / scale, x1 / scale, (r - l) / 100), yt = ticks(y0 / scale, y1 / scale, (b - t) / 60);
+  const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view, [ax, ay] = axes();
+  const xt = ticks(x0 / ax.scale, x1 / ax.scale, (r - l) / 100), yt = ticks(y0 / ay.scale, y1 / ay.scale, (b - t) / 60);
   ctx.font = '11px -apple-system, Helvetica, Arial, sans-serif';
   if (grid) {
     if (!state.prefs.showGrid) return;
     ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1;
-    for (const v of xt.values) { const [sx] = toScreen(v * scale, 0); line(sx, t, sx, b); }
-    for (const v of yt.values) { const [, sy] = toScreen(0, v * scale); line(l, sy, r, sy); }
+    for (const v of xt.values) { const [sx] = toScreen(v * ax.scale, 0); line(sx, t, sx, b); }
+    for (const v of yt.values) { const [, sy] = toScreen(0, v * ay.scale); line(l, sy, r, sy); }
     return;
   }
   ctx.fillStyle = css('--ink2'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for (const v of xt.values) { const [sx] = toScreen(v * scale, 0); ctx.fillText(fmt(v), sx, b + 6); }
+  for (const v of xt.values) { const [sx] = toScreen(v * ax.scale, 0); ctx.fillText(fmt(v), sx, b + 6); }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  for (const v of yt.values) { const [, sy] = toScreen(0, v * scale); ctx.fillText(fmt(v), l - 6, sy); }
+  for (const v of yt.values) { const [, sy] = toScreen(0, v * ay.scale); ctx.fillText(fmt(v), l - 6, sy); }
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  ctx.fillText('x (' + UNITS[state.prefs.unit][0] + ')', (l + r) / 2, canvas.clientHeight - 6);
+  ctx.fillText(ax.label, (l + r) / 2, canvas.clientHeight - 6);
   ctx.save(); ctx.translate(16, (t + b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'top';
-  ctx.fillText('y (' + UNITS[state.prefs.unit][0] + ')', 0, 0); ctx.restore();
+  ctx.fillText(ay.label, 0, 0); ctx.restore();
 }
 
 function line(x0, y0, x1, y1) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }

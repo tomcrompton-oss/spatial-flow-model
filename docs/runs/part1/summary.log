@@ -1,0 +1,22 @@
+apple_flow: fell 10 m in 1.4272 s, at 14.0150 m/s
+apple_newton: fell 10 m in 1.4271 s, at 14.0141 m/s
+
+regions_plain: crossed 1000107640 m in 3.336 s, w turned 38.66 degrees, v (1.0000c, 0.0000c), |w| 1.280625c
+regions_relativistic: crossed 1000031832 m in 3.703 s, w turned 41.61 degrees, v (0.7477c, -0.1360c), |w| 1.000000c
+regions_geodesic: crossed 1000107640 m in 3.336 s, w turned 0.00 degrees, v (1.0000c, -0.8000c), |w| 1.000000c
+
+b = 4 rs, flow: bent 57.47 degrees
+b = 4 rs, newton: bent 14.29 degrees
+b = 6 rs, flow: bent 29.15 degrees
+b = 6 rs, newton: bent 9.55 degrees
+b = 10 rs, flow: bent 15.15 degrees
+b = 10 rs, newton: bent 5.73 degrees
+b = 20 rs, flow: bent 7.31 degrees
+b = 20 rs, newton: bent 2.85 degrees
+b = 30 rs, flow: bent 5.20 degrees
+b = 30 rs, newton: bent 1.88 degrees
+
+orbit_flow: six times round in 0.1256 s (Newtonian period 0.0222 s)
+orbit_newton: six times round in 0.1323 s (Newtonian period 0.0222 s)
+
+out 0.002032 s, back 0.002220 s (flat space: 0.002069 s each way); out - back -0.000189 s; the clock offset between the ends, 2 x 0.000088 s = 0.000176 s; round trip 0.004252 s, 0.000113 s more than flat space

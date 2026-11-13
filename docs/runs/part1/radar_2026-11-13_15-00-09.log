@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 1.989000e+30 kg (1 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+light from x = -150 rs (y = 15 rs) to a mirror at x = +60 rs and back
+out 0.002032 s, back 0.002220 s (flat space: 0.002069 s each way); out - back -0.000189 s; the clock offset between the ends, 2 x 0.000088 s = 0.000176 s; round trip 0.004252 s, 0.000113 s more than flat space
