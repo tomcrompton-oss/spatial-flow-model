@@ -23,12 +23,16 @@ theme:
 
 nav:
   - Overview: index.md
-  - The model: model.md
-  - Two bodies: two-bodies.md
-  - Gravitational waves: waves.md
-  - Viewers: viewers.md
-  - Results: results.md
-  - File formats: formats.md
+  - Preface: preface.md
+  - Part 1 – The Flow of Space:
+      - The model: model.md
+  - Part 2 – Placeholder:
+      - Two bodies: two-bodies.md
+      - Gravitational waves: waves.md
+  - Simulations:
+      - Viewers: viewers.md
+      - Results: results.md
+      - File formats: formats.md
   - References: references.md
 
 markdown_extensions:

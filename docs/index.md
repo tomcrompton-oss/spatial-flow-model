@@ -11,15 +11,16 @@ Press Play; choose "All environments" under Background to see every ring's flow.
 
 ## What is here
 
-| Page | What it covers |
-| --- | --- |
-| [The model](model.md) | space flowing at u, particles moving at v = w + u, and how one hole (still or spinning) matches GR |
-| [Two bodies](two-bodies.md) | why the flow round two holes needs care, the eikonal flow with no curl, its seam, and an exact solution |
-| [Gravitational waves](waves.md) | a wave as a flow of space that changes with time: exact through the plane, approximate across it |
-| [Viewers](viewers.md) | the desktop viewer and the browser viewer that runs these pages |
-| [Results](results.md) | the published study results, to open in the viewer or download |
-| [File formats](formats.md) | what a study writes and a viewer reads |
-| [References](references.md) | the papers, books and methods the model and its checks rest on |
+| Part | Page | What it covers |
+| --- | --- | --- |
+| | [Preface](preface.md) | |
+| Part 1 – The Flow of Space | [The model](model.md) | space flowing at u, particles moving at v = w + u, and how one hole (still or spinning) matches GR |
+| Part 2 – Placeholder | [Two bodies](two-bodies.md) | why the flow round two holes needs care, the eikonal flow with no curl, its seam, and an exact solution |
+| | [Gravitational waves](waves.md) | a wave as a flow of space that changes with time: exact through the plane, approximate across it |
+| Simulations | [Viewers](viewers.md) | the desktop viewer and the browser viewer that runs these pages |
+| | [Results](results.md) | the published study results, to open in the viewer or download |
+| | [File formats](formats.md) | what a study writes and a viewer reads |
+| | [References](references.md) | the papers, books and methods the model and its checks rest on |
 
 ## The code
 
