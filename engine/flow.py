@@ -151,6 +151,7 @@ class Calculator:
       raise ValueError("combine is 'squares' or 'vectors', not %r" % (combine,))
     self.combine = combine
     self.carried = carried
+    self.share = 1               #with carried flows, how fast each body's share falls away: by g^share (see carry)
     self.moving = any(b.moving for b in self.bodies)
     if self.moving and combine == 'squares' and len(self.bodies) > 1 and direction != 'g':
       raise ValueError("the eikonal flows are for bodies at rest: with more than one moving body use combine='vectors'"
@@ -211,13 +212,14 @@ class Calculator:
     """
     with carried flows, what the bodies' motion adds to the flow at pos: near each body the space moves with it, at
     its velocity less the other bodies' flows where it is (so its velocity through their space, where it is, is
-    kept - for one body, its velocity). each body's share is its share of g at pos: all of it close to the body,
-    falling away where another body pulls harder. for one body this is a Galilean change of frame, so exact GR
+    kept - for one body, its velocity). each body's share is its share of g at pos, or of g^self.share: all of it
+    close to the body, falling away where another body pulls harder (faster, the larger self.share). for one body
+    this is a Galilean change of frame, so exact GR
     """
     pulls = []
     for b in self.bodies:
       d = length(pos - b.at(t))
-      pulls.append(b.GM/d**2)
+      pulls.append((b.GM/d**2)**self.share)
     total = sum(pulls)
     extra = np.array([0.0, 0.0])
     for b, pull in zip(self.bodies, pulls):
