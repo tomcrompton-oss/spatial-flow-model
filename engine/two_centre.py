@@ -71,28 +71,32 @@ def carlsonRD(x, y, z):
   return 3*total + scale*series/(mean*math.sqrt(mean))
 
 
-def ellipticK(m):
+#each takes the complementary parameter 1 - m too, if it is known more precisely than 1 - m works out (m near 1)
+
+def ellipticK(m, m1=None):
   """the complete elliptic integral of the first kind, K(m)"""
-  return carlsonRF(0.0, 1 - m, 1.0)
+  return carlsonRF(0.0, 1 - m if m1 is None else m1, 1.0)
 
 
-def ellipticE(phi, m):
+def ellipticE(phi, m, m1=None):
   """the incomplete elliptic integral of the second kind E(phi | m), any phi (m <= 1)"""
+  m1 = 1 - m if m1 is None else m1
   turns = round(phi/math.pi)
   r = phi - turns*math.pi
   s, c = math.sin(abs(r)), math.cos(abs(r))
-  d2 = 1 - m*s*s
+  d2 = c*c + m1*s*s                    #1 - m sin^2
   part = s*carlsonRF(c*c, d2, 1.0) - m/3*s**3*carlsonRD(c*c, d2, 1.0)
-  whole = 2*(carlsonRF(0.0, 1 - m, 1.0) - m/3*carlsonRD(0.0, 1 - m, 1.0)) if turns else 0.0
+  whole = 2*(carlsonRF(0.0, m1, 1.0) - m/3*carlsonRD(0.0, m1, 1.0)) if turns else 0.0
   return turns*whole + math.copysign(part, r)
 
 
-def jacobi(u, m):
+def jacobi(u, m, m1=None):
   """the Jacobi elliptic functions sn, cn, dn of u (parameter 0 <= m <= 1) and the amplitude am(u), unwrapped"""
-  if m >= 1 - 1e-15:
+  m1 = 1 - m if m1 is None else m1
+  if m1 <= 1e-300:
     ph = 2*math.atan(math.tanh(u/2))   #the m = 1 limit (the gudermannian)
   else:
-    a, b, cs = [1.0], math.sqrt(1 - m), [math.sqrt(m)]
+    a, b, cs = [1.0], math.sqrt(m1), [math.sqrt(m)]
     while abs(cs[-1]) > 1e-16 and len(a) < 40:   #the arithmetic-geometric mean
       a.append((a[-1] + b)/2)
       cs.append((a[-2] - b)/2)
@@ -101,7 +105,7 @@ def jacobi(u, m):
     for n in range(len(a) - 1, 0, -1):
       ph = (ph + math.asin(cs[n]/a[n]*math.sin(ph)))/2
   sn, cn = math.sin(ph), math.cos(ph)
-  return sn, cn, math.sqrt(max(0.0, 1 - m*sn*sn)), ph
+  return sn, cn, math.sqrt(cn*cn + m1*sn*sn), ph
 
 
 class Source:
@@ -158,10 +162,10 @@ class Source:
       sn, cn, dn, ph = jacobi(w, n)
       return 2*math.asin(min(1.0, sn*math.sqrt(n))), math.sqrt(B)*cn, B*math.sqrt(2/c)*(ellipticE(ph, n) - (1 - n)*w)/n
     D = B - 2*c                                  #|c| - beta: the source is the lighter
-    m = -2*c/D
-    K = ellipticK(m)
-    sn, cn, dn, ph = jacobi(K - math.sqrt(D)*tau/2, m)
-    return math.pi - 2*ph, math.sqrt(D)*dn, 2*math.sqrt(D)*(ellipticE(math.pi/2, m) - ellipticE(ph, m))
+    m, m1 = -2*c/D, B/D                          #m1 = 1 - m, small for paths near the axis beyond the source
+    K = ellipticK(m, m1)
+    sn, cn, dn, ph = jacobi(K - math.sqrt(D)*tau/2, m, m1)
+    return math.pi - 2*ph, math.sqrt(D)*dn, 2*math.sqrt(D)*(ellipticE(math.pi/2, m, m1) - ellipticE(ph, m, m1))
 
   def path(self, mu, nu):
     """the path through (mu, nu): (S_mu, S_nu, S) there"""
