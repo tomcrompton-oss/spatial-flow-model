@@ -319,15 +319,42 @@ class Calculator:
   def crossSeam(self, p, before):   #(p.t is the step's end)
     """
     after a step that started in region before: if the particle has crossed the seam, w takes the jump in the flow
-    there, added relativistically (as each step adds the flow's change) - u old side - u new side - so the jump does
-    not kick it: v is kept to first order in u/c, and light stays at |w| = c
+    there, as the metric's own paths do. the seam is where the two sides' S are equal, so the jump is across it (u
+    along the seam is the same on both sides, and |u| is), and the metric is continuous there: a path crossing it
+    keeps its momentum along the seam, p = gamma w (for light, any length along w), and its energy,
+    c sqrt(m^2 c^2 + p^2) + u . p - its momentum across the seam changes to keep the energy. a slow particle keeps
+    v (the jump does not kick it); light is turned, as by a change of frame, and stays at |w| = c. (to first order
+    in u/c this is adding the jump to w relativistically, w + (u old side - u new side))
     """
     after = self.region(p.pos)
     if after == before:
       return
-    u = self.flow(p.pos, after, p.t)
-    p.w = self.addSI(p.w, p.u - u)
-    p.u = u
+    old, new = p.u, self.flow(p.pos, after, p.t)
+    jump = old - new
+    if not jump.any():
+      return
+    n = jump/length(jump)                                  #across the seam
+    light = abs(length(p.w) - C) < 1e-9*C
+    q = p.w/C if light else p.w/math.sqrt(1 - (p.w @ p.w)/C**2)
+    rest = 0.0 if light else C*C                           #m^2 c^2, per unit mass (q in m/s), or 0 for light
+    along = q - (q @ n)*n
+    M = rest + along @ along
+    a = new @ n
+    K = C*math.sqrt(rest + q @ q) + old @ q - new @ along   #the energy, less the part along the seam (the same)
+    #c sqrt(M + x^2) + a x = K for x, the new momentum across: (c^2 - a^2) x^2 + 2 a K x... with K - a x > 0
+    A, B, D = C*C - a*a, 2*a*K, C*C*M - K*K
+    root = math.sqrt(max(0.0, B*B - 4*A*D))
+    before_n = p.v @ n
+    best = None
+    for x in ((-B + root)/(2*A), (-B - root)/(2*A)):
+      if K - a*x <= 0:
+        continue
+      vn = C*x/math.sqrt(M + x*x) + a
+      if best is None or abs(vn - before_n) < abs(best[1] - before_n):
+        best = (x, vn)
+    q = along + best[0]*n
+    p.w = C*q/length(q) if light else C*q/math.sqrt(C*C + q @ q)
+    p.u = new
     p.v = p.w + p.u
 
   def describeDirection(self):
