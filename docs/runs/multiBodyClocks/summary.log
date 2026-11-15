@@ -1,0 +1,12 @@
+rates: over a day, the model's clock rate (in GR's static time) less GR's, the steady part taken out - its swing, and the swing in the time the clock keeps; the Sun at rest 1 AU away
+  clock                  rule                       rate (+/-)    time (+/- ns)  range (+/- m)
+  equator                vectors                     5.243e-09        68799.171      20625.472
+  equator                squares (eikonal)           1.665e-16            0.000          0.000
+  GPS                    vectors                     2.568e-09        19736.191       5916.761
+  GPS                    squares (eikonal)           1.665e-16            0.000          0.000
+  the cross term u_E . u_S/c^2 at the surface: 5.243e-09; at GPS: 2.568e-09
+
+signals: light pulses 1 s apart from a clock at rest where it is noon to one at dusk (90 degrees round the equator), the Earth not turning: the second clock's count of the interval over the first's, less 1
+  vectors              -5.2432e-09   (against GR: -5.244e-09; the pulses arrived 1.000000 s apart)
+  squares (eikonal)    4.1855e-13   (against GR: -1.998e-15; the pulses arrived 1.000000 s apart)
+  GR                   4.2055e-13   (the clocks' potentials, sum GM/d c^2)

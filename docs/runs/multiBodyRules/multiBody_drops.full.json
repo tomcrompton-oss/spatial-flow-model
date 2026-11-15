@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "multiBody_drops.prefs.json",
+  "config": "multiBody_drops.config.json"
+}

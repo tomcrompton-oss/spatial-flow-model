@@ -1,0 +1,6 @@
+bodies: 2
+body 1: mass 1.989000e+30 kg (1 MS)  x -1.495979e+11 m  y 0.000000e+00 m  black
+body 2: mass 5.972000e+24 kg (3.00251e-06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+flow direction: down zero-energy paths from the nearest body (no curl; seam where the regions meet), exact two-body solution in elliptic coordinates
+the equator clock's rate (parts in 10^9) and time (ns) against GR over a day, flows combined as squares (eikonal); the steady part taken out
+  equator                squares (eikonal)           1.665e-16            0.000          0.000

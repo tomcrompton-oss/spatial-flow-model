@@ -32,6 +32,7 @@ nav:
   - Part 2 – Placeholder:
       - Two bodies: two-bodies.md
       - Gravitational waves: waves.md
+      - Many bodies: many-bodies.md
   - Simulations:
       - Viewers: viewers.md
       - Results: results.md

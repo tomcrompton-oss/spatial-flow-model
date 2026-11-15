@@ -1,0 +1,11 @@
+bodies: 2
+body 1: mass 1.989000e+30 kg (1 MS)  x -1.495979e+11 m  y 0.000000e+00 m  black
+body 2: mass 5.972000e+24 kg (3.00251e-06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+flow direction: down zero-energy paths from the nearest body (no curl; seam where the regions meet), exact two-body solution in elliptic coordinates
+the extra lunar range (m) the Sun's potential makes in the flow, by angle D from the Sun
+  its cos D part: -0.111 m; mean 3.649 m; swing over the month 0.204 m
+  lunar laser ranging (Williams, Turyshev and Boggs 2004): (2.8 +- 4.1) mm cos D - the flow's is 27 times the uncertainty
+  over the year (D = 90): 3.7959 m at perihelion, 3.6711 m at aphelion - a swing of 6.2 cm
+  GR: the Sun adds only its tide, about GM_S D_moon^3/(AU^3 c^2) = 2.5e-05 m
+  check, D = 90: light run in the model gives 3.7325 m (the straight line 3.7325); its round trips differ from the line's by 4.44e-15 and 1.02e-14 s
+  check, D = 0: light run in the model gives 3.7421 m (the straight line 3.7421); its round trips differ from the line's by 0.00e+00 and 1.02e-14 s

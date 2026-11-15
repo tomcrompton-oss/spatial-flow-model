@@ -20,6 +20,7 @@ Press Play; choose "All environments" under Background to see every ring's flow.
 | | [1.4 Conclusion](part1/conclusion.md) | for one body spatial flow is general relativity in Gullstrand–Painlevé coordinates; the model as it is now |
 | Part 2 – Placeholder | [Two bodies](two-bodies.md) | why the flow round two holes needs care, the eikonal flow with no curl, its seam, and an exact solution |
 | | [Gravitational waves](waves.md) | a wave as a flow of space that changes with time: exact through the plane, approximate across it |
+| | [Many bodies](many-bodies.md) | how bodies' flows combine, clocks, moving bodies, and beyond Newton: where the multi-body model is ruled out, and the open problem |
 | Simulations | [Viewers](viewers.md) | the desktop viewer and the browser viewer that runs these pages |
 | | [Results](results.md) | the published study results, to open in the viewer or download |
 | | [File formats](formats.md) | what a study writes and a viewer reads |

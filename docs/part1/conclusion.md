@@ -25,7 +25,7 @@ time delay is not symmetrical. Part 2 looks at time dilation more closely, inclu
     curl. The time spatial flow runs on — a distant observer's, and anything falling with the space — is
     Gullstrand–Painlevé time. That answers the question the original asks in Part 2, of whether this is "just
     another coordinate system": for one body, yes. Whether it stays so with more than one body is where it gets
-    interesting ([Two bodies](../two-bodies.md)).
+    interesting ([Two bodies](../two-bodies.md), [Many bodies](../many-bodies.md)).
 
 ## The model as it is now
 

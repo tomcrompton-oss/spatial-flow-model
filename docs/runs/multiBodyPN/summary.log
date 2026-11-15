@@ -1,0 +1,45 @@
+constraint: Einstein's (div u)^2 - du_i/dx_j du_j/dx_i (0 in empty space, in GR), here over 4 c0/r^2, round each body in the other's field (angle from the side facing the other body)
+  the Earth, the Sun 1 AU away:
+       r (radii)    30 deg    60 deg    90 deg   120 deg   150 deg
+               2    1.0001    1.0001    1.0000    0.9999    0.9999
+              10    1.0006    1.0003    1.0000    0.9997    0.9994
+              30    1.0017    1.0010    1.0000    0.9990    0.9983
+    (the body alone, at 10 radii: -7.1e-11 of that)
+  Jupiter, the Sun 5.2 AU away:
+       r (radii)    30 deg    60 deg    90 deg   120 deg   150 deg
+               2    1.0003    1.0002    1.0000    0.9998    0.9997
+              10    1.0013    1.0008    1.0000    0.9992    0.9987
+              30    1.0038    1.0022    1.0000    0.9978    0.9962
+    (the body alone, at 10 radii: -1.0e-08 of that)
+
+lunar: radar from the Earth's surface to a mirror at the Moon's distance (384400 km), the Sun 1 AU away, by the mirror's angle from the Sun (D); the round trip less the Earth's alone, as a range (c dt/2, at the Earth's clock), against the mirror's orbit's size
+  the Sun's potential at the Earth, c0/c^2 = 9.8736e-09; c0/c^2 times the distance from the surface: 3.732 m
+   D (deg)      range (m)  in region
+         0         3.7421        Sun
+        30         3.4764        Sun
+        60         3.4440        Sun
+        90         3.7325      Earth
+       120         3.7277      Earth
+       150         3.7242      Earth
+       180         3.7229      Earth
+       210         3.7242      Earth
+       240         3.7277      Earth
+       270         3.7325      Earth
+       300         3.4440        Sun
+       330         3.4764        Sun
+       360         3.7421        Sun
+  its cos D part: -0.111 m; mean 3.649 m; swing over the month 0.204 m
+  lunar laser ranging (Williams, Turyshev and Boggs 2004): (2.8 +- 4.1) mm cos D - the flow's is 27 times the uncertainty
+  over the year (D = 90): 3.7959 m at perihelion, 3.6711 m at aphelion - a swing of 6.2 cm
+  GR: the Sun adds only its tide, about GM_S D_moon^3/(AU^3 c^2) = 2.5e-05 m
+  check, D = 90: light run in the model gives 3.7325 m (the straight line 3.7325); its round trips differ from the line's by 4.44e-15 and 1.02e-14 s
+  check, D = 0: light run in the model gives 3.7421 m (the straight line 3.7421); its round trips differ from the line's by 0.00e+00 and 1.02e-14 s
+
+jupiter: light passing Jupiter on the side away from the Sun (5.2 AU off), 10 AU either side: the bending with both less the Sun's alone and Jupiter's alone (GR: 0 to first order in G)
+     b (R_J)    Jupiter (uas)      GR 4GM/bc^2      both - each     of Jupiter's
+           1         16266.29         16266.28          407.805             2.5%
+          10          1626.63          1626.63          396.944            24.4%
+         100           162.66           162.66          312.333           192.0%
+        1000            16.27            16.27           76.826           472.3%
+  the Sun's potential at Jupiter, c0/c^2 = 1.897e-09; pi c0/c^2 = 1229 uas (the bending a cone's stretch of c0/c^2 would give a line passing right through Jupiter's region)
+  VLBI (Fomalont and Kopeikin 2003): Jupiter's bending 1190 uas at 3.7 arcmin (so b = 13.7 R_J), positions to under 10 uas

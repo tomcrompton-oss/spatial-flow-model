@@ -1,0 +1,7 @@
+bodies: 2
+body 1: mass 1.989000e+30 kg (1 MS)  x -1.495979e+11 m  y 0.000000e+00 m  black
+body 2: mass 5.972000e+24 kg (3.00251e-06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+flow direction: the sum of each body's own flow (combined as vectors)
+a ball let go from rest 100 km above the Earth, 45 degrees from the side facing the Sun; flows combined as vectors
+drops, vectors: from 45 deg, after 150 s: -166.5 km down, 581.3 km sideways
+background frames: background_multiBody_drops_vectors.csv

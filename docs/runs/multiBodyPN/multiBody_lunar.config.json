@@ -1,0 +1,32 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "lunar_range_2026-11-15_14-13-46.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "D / range_m": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "D",
+          "range_m"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

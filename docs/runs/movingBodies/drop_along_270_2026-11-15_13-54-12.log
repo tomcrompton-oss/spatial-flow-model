@@ -1,0 +1,5 @@
+bodies: 1
+body 1: mass 5.972000e+24 kg (3.00251e-06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black  velocity 0.000000e+00 2.978000e+04 m/s
+moving bodies: each takes its flow pattern along, the space not moving with it
+a ball let go at rest beside the Earth (moving at 29780 m/s along +y), 100 km up, 270 degrees round; its flow taken along; in the Earth's frame
+drops, taken along: from 270 deg (90 = ahead), after 150 s: -179.2 km down, 0.0 km sideways

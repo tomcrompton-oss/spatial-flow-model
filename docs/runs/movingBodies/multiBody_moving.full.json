@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "multiBody_moving.prefs.json",
+  "config": "multiBody_moving.config.json"
+}

@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "multiBody_lunar.prefs.json",
+  "config": "multiBody_lunar.config.json"
+}
