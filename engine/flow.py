@@ -22,6 +22,7 @@ the flow is steady
 
 the calculators that were in flow2.py and are no longer used are in legacy/legacy_calculators.py
 """
+import copy
 import math
 import time
 import numpy as np
@@ -82,6 +83,7 @@ class Particle:
     self.pt = 0.0   #proper time
     self.t = 0.0    #coord time
     self.d = 0.0    #distance travelled
+    self.region = None   #the side of any seam it is on (Calculator.sideOf), once it has moved
 
 
 class Body:
@@ -316,9 +318,48 @@ class Calculator:
       return None
     return self.rayField().region(pos)
 
+  def sideOf(self, p):
+    """
+    the side of any seam p is on: where it was put, the first time, and after that kept with it, changing only as
+    it crosses (crossSeam) - so the flow it moves in never changes side without the crossing (near the seam,
+    which side a point is on can come out either way, by rounding)
+    """
+    if getattr(p, 'region', None) is None:
+      p.region = self.region(p.pos)
+    return p.region
+
+  def seamStep(self, p, dt, step):
+    """
+    step(p, dt), a step taking the flow from the side of any seam it starts on; if it ends on the other side, it is
+    taken again in parts - up to the seam (found by halving the step), across it (crossSeam), and on - so no part of
+    the step uses the flow from the wrong side
+    """
+    side = self.sideOf(p)
+    if side is None:
+      step(p, dt)
+      return
+    start = copy.copy(p)
+    step(p, dt)
+    if self.region(p.pos) == side:
+      return
+    lo, hi = 0.0, dt
+    for _ in range(40):
+      mid = (lo + hi)/2
+      trial = copy.copy(start)
+      step(trial, mid)
+      if self.region(trial.pos) == side:
+        lo = mid
+      else:
+        hi = mid
+    p.__dict__.update(start.__dict__)
+    step(p, hi)
+    self.crossSeam(p, side)
+    if dt > hi:
+      self.seamStep(p, dt - hi, step)
+
   def crossSeam(self, p, before):   #(p.t is the step's end)
     """
-    after a step that started in region before: if the particle has crossed the seam, w takes the jump in the flow
+    after a step that started in region before (seamStep): if the particle has crossed the seam, w takes the jump in the flow
     there, as the metric's own paths do. the seam is where the two sides' S are equal, so the jump is across it (u
     along the seam is the same on both sides, and |u| is), and the metric is continuous there: a path crossing it
     keeps its momentum along the seam, p = gamma w (for light, any length along w), and its energy,
@@ -329,6 +370,7 @@ class Calculator:
     after = self.region(p.pos)
     if after == before:
       return
+    p.region = after
     old, new = p.u, self.flow(p.pos, after, p.t)
     jump = old - new
     if not jump.any():
@@ -337,21 +379,24 @@ class Calculator:
     light = abs(length(p.w) - C) < 1e-9*C
     q = p.w/C if light else p.w/math.sqrt(1 - (p.w @ p.w)/C**2)
     rest = 0.0 if light else C*C                           #m^2 c^2, per unit mass (q in m/s), or 0 for light
-    along = q - (q @ n)*n
-    M = rest + along @ along
+    #the energy less the rest energy, c sqrt(m^2 c^2 + q^2) - m c^2, worked out without taking one from the other
+    kinetic = lambda Q: C*Q/(math.sqrt(rest + Q) + math.sqrt(rest))
+    qn = q @ n
+    along = q - qn*n
     a = new @ n
-    K = C*math.sqrt(rest + q @ q) + old @ q - new @ along   #the energy, less the part along the seam (the same)
-    #c sqrt(M + x^2) + a x = K for x, the new momentum across: (c^2 - a^2) x^2 + 2 a K x... with K - a x > 0
-    A, B, D = C*C - a*a, 2*a*K, C*C*M - K*K
-    root = math.sqrt(max(0.0, B*B - 4*A*D))
-    before_n = p.v @ n
-    best = None
-    for x in ((-B + root)/(2*A), (-B - root)/(2*A)):
-      if K - a*x <= 0:
-        continue
-      vn = C*x/math.sqrt(M + x*x) + a
-      if best is None or abs(vn - before_n) < abs(best[1] - before_n):
-        best = (x, vn)
+    #after, the momentum across is x: kinetic(along^2 + x^2) + a x = kinetic(q^2) + (old . n) qn (+ the part along
+    #the seam, the same either side, though rounding may not quite make it so) - by newton's method from the root
+    #where v across is kept (exact for slow particles), the derivative being v across
+    target = kinetic(q @ q) + (old @ n)*qn + (old - new) @ along
+    x = qn if light else qn + (old - new) @ n
+    for _ in range(20):
+      Q = along @ along + x*x
+      miss = kinetic(Q) + a*x - target
+      step = miss/(C*x/math.sqrt(rest + Q) + a)
+      x -= step
+      if abs(step) <= 1e-15*max(abs(x), math.sqrt(along @ along), 1e-300):
+        break
+    best = (x,)
     q = along + best[0]*n
     p.w = C*q/length(q) if light else C*q/math.sqrt(C*C + q @ q)
     p.u = new
@@ -543,15 +588,12 @@ class SpecialFlowCalculator(Calculator):
     p.w = p.v - p.u
 
   def move(self, p, dt):
-    if self.order == 1:
-      self.moveFirstOrder(p, dt)
-    else:
-      self.moveSecondOrder(p, dt)
+    self.seamStep(p, dt, self.moveFirstOrder if self.order == 1 else self.moveSecondOrder)
 
   def moveFirstOrder(self, p, dt):
     #the flow where space moves to, and where the particle moves to - from the side of any seam the step starts on,
     #both at the step's end (the difference is the flow's change across space; its change in time comes in with u3)
-    side = self.region(p.pos)
+    side = self.sideOf(p)
     end = p.t + dt
     u2 = self.flow(p.pos + p.u*dt, side, end)
     p.pos = p.pos + p.v*dt
@@ -563,7 +605,6 @@ class SpecialFlowCalculator(Calculator):
     p.u = u3
     p.v = p.w + p.u
     p.t = end
-    self.crossSeam(p, side)
 
     s = 1 - (length(p.w)**2)/C**2
     if s > 0.0:
@@ -573,7 +614,7 @@ class SpecialFlowCalculator(Calculator):
     light = abs(length(p.w) - C) < 1e-9*C
 
     #half a step the first-order way, to the middle of the step - all from the side of any seam the step starts on
-    side = self.region(p.pos)
+    side = self.sideOf(p)
     middle, end = p.t + dt/2, p.t + dt
     xm = p.pos + p.v*dt/2
     um = self.flow(xm, side, middle)
@@ -591,7 +632,6 @@ class SpecialFlowCalculator(Calculator):
     p.u = self.flow(p.pos, side, end)
     p.v = p.w + p.u
     p.t = end
-    self.crossSeam(p, side)
 
     s = 1 - (length(wm)**2)/C**2
     if s > 0.0:

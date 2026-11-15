@@ -21,8 +21,10 @@ $$
 the zero-energy Hamilton–Jacobi (eikonal) equation. Its flow lines are the paths of things falling from rest at
 infinity. No such flow can be smooth everywhere round two holes, so it has a **seam**: each body's region is filled
 by paths running straight out of it, a point belongs to the body whose S there is smallest, and the seam passes
-through the potential's saddle (where g = 0 between them). Crossing the seam, a particle's w takes the flow's jump,
-added relativistically, so its velocity is kept.
+through the potential's saddle (where g = 0 between them). The flow jumps only across the seam (along it, and in
+size, it is the same on both sides), so the metric is continuous there, and a particle crossing it keeps its energy
+and its momentum along the seam, as the metric's own paths do: a slow particle keeps its velocity, and light is
+turned as by a change of frame.
 
 Two versions, the default for two or more bodies:
 

@@ -49,10 +49,14 @@ class GeodesicCalculator(Calculator):
     return flow(x) + w, -grad @ q   #grad[i][j] = du_j/dx_i, so (grad @ q)_i = q_j du_j/dx_i
 
   def move(self, p, dt):
+    self.seamStep(p, dt, self.step)
+
+  def step(self, p, dt):
+    """one fourth-order step, the flow from the side of any seam it starts on"""
     light = abs(np.linalg.norm(p.w) - C) < 1e-9*C
     q = p.w if light else p.w/math.sqrt(1 - (p.w @ p.w)/C**2)
     x, t = p.pos, p.t
-    side = self.region(x)
+    side = self.sideOf(p)
     k1 = self.rates(t, x, q, light, side)
     k2 = self.rates(t + dt/2, x + k1[0]*dt/2, q + k1[1]*dt/2, light, side)
     k3 = self.rates(t + dt/2, x + k2[0]*dt/2, q + k2[1]*dt/2, light, side)
@@ -68,4 +72,3 @@ class GeodesicCalculator(Calculator):
     p.w = C*q/np.linalg.norm(q) if light else C*q/math.sqrt(C*C + q @ q)
     p.u = self.flow(p.pos, side, p.t)
     p.v = p.w + p.u
-    self.crossSeam(p, side)
