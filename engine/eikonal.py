@@ -90,6 +90,16 @@ class RayField:
       n2 += 2*gm/d
     return gx, gy, n2
 
+  steepest = 0.1   #paths leave the table once cos(their angle from radial) falls below this
+
+  def turn(self, x, y, n2):
+    """any acceleration across the paths besides g's (here none), times |u| - see engine/turning.py"""
+    return 0.0
+
+  def actionRate(self, x, y, c, s, n2):
+    """dS/ds along a path heading (c, s): |u| (engine/turning.py adds the frame's turning)"""
+    return np.sqrt(n2)
+
   def saddle(self, i, j):
     """the point between bodies i and j where g along the line between them is 0 (by bisection)"""
     a, b = self.pos[i], self.pos[j]
@@ -142,7 +152,7 @@ class RayField:
       cosb = (dx*c + dy*s)/r
       gx, gy, n2 = self.accel(x, y)
       ds = r/cosb
-      return c*ds, s*ds, (-gx*s + gy*c)/n2*ds, np.sqrt(n2)*ds
+      return c*ds, s*ds, (-gx*s + gy*c + self.turn(x, y, n2))/n2*ds, self.actionRate(x, y, c, s, n2)*ds
 
     for row in range(self.rows):
       if row > 0:
@@ -157,9 +167,10 @@ class RayField:
           psi = psi + (k1[2] + 2*k2[2] + 2*k3[2] + k4[2])*h/6
           S = S + (k1[3] + 2*k2[3] + 2*k3[3] + k4[3])*h/6
         #a path leaves the table once it is in another body's region, or turns more than ~84 degrees from radial
+        #(steepest)
         phi = np.arctan2(y - by, x - bx)
         beta = (psi - phi + math.pi) % (2*math.pi) - math.pi
-        alive &= (self.overlap(x, y, i) <= OVERLAP) & (np.cos(beta) > 0.1) & np.isfinite(x)
+        alive &= (self.overlap(x, y, i) <= OVERLAP) & (np.cos(beta) > self.steepest) & np.isfinite(x) & np.isfinite(S)
       phi = np.arctan2(y - by, x - bx)
       beta = (psi - phi + math.pi) % (2*math.pi) - math.pi
       if alive.sum() < 2:

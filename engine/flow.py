@@ -85,6 +85,11 @@ class Particle:
     self.d = 0.0    #distance travelled
     self.region = None   #the side of any seam it is on (Calculator.sideOf), once it has moved
 
+def turn(v, angle):
+  """v turned anticlockwise by angle"""
+  c, s = math.cos(angle), math.sin(angle)
+  return np.array([c*v[0] - s*v[1], s*v[0] + c*v[1]])
+
 
 class Body:
   """
@@ -95,22 +100,29 @@ class Body:
     black (bool): True - space flows in, False - space flows out (white)
     spin (float): a/M for a rotating hole (KerrFlowCalculator only), -1 to 1, positive anticlockwise
     velocity ((vx, vy)): in m/s - the body moves in a straight line from (x, y) at t = 0, its flow with it
+    circling (float): or the body goes round the origin at this angular speed (rad/s, anticlockwise), on a circle
+                      through (x, y) - for two bodies on circles about their centre of mass (Calculator combine
+                      'turning')
   """
-  def __init__(self, mass=MS, x=0.0, y=0.0, black=True, spin=0.0, velocity=(0.0, 0.0)):
+  def __init__(self, mass=MS, x=0.0, y=0.0, black=True, spin=0.0, velocity=(0.0, 0.0), circling=0.0):
     self.mass = mass
     self.pos = np.array([float(x), float(y)])   #where it is at t = 0 (see at)
     self.black = black
     self.spin = spin   #a/M, -1 to 1, positive anticlockwise: used by engine/kerr.py's KerrFlowCalculator
     self.GM = G*mass
     self.velocity = np.array([float(v) for v in velocity])
+    self.circling = float(circling)
 
   @property
   def moving(self):
-    return bool(self.velocity.any())
+    return bool(self.velocity.any()) or self.circling != 0.0
 
   def at(self, t):
     """where the body is at time t"""
+    if self.circling:
+      return turn(self.pos, self.circling*t)
     return self.pos + self.velocity*t if self.moving else self.pos
+
 
   @property
   def x(self):
@@ -134,7 +146,9 @@ class Calculator:
       wave: a gravitational wave whose flow is added (engine/waves.py PlaneWave), or None
       combine: how the bodies' flows combine (see bodiesFlow) - 'squares' (the default): |u|^2 = sum 2GM/d, the way
                set by direction; 'vectors': u = the sum of each body's own flow, straight in (out of a white body) at
-               sqrt(2GM/d) - Part 3 of the write-up's rule. direction is then not used
+               sqrt(2GM/d) - Part 3 of the write-up's rule; 'turning': two bodies going round their centre of mass
+               (Body.circling), the eikonal flow turning with them, each carrying its own (engine/turning.py).
+               direction is then not used
       carried: with moving bodies, whether each carries its flow with it - the space round it moving at its velocity
                (see carry) - or only takes it along, the flow pattern moving but not the space
     """
@@ -149,8 +163,14 @@ class Calculator:
     if direction == 'eikonal-exact' and len(self.bodies) != 2:
       raise ValueError("the 'eikonal-exact' flow is for two bodies (%d given): use 'eikonal' (the ray tables)"
                        % len(self.bodies))
-    if combine not in ('squares', 'vectors'):
-      raise ValueError("combine is 'squares' or 'vectors', not %r" % (combine,))
+    if combine not in ('squares', 'vectors', 'turning'):
+      raise ValueError("combine is 'squares', 'vectors' or 'turning', not %r" % (combine,))
+    if combine == 'turning':
+      spins = set(b.circling for b in self.bodies)
+      if len(self.bodies) != 2 or len(spins) != 1 or 0.0 in spins:
+        raise ValueError("the 'turning' flow is for two black bodies going round the origin together (Body.circling)")
+      self.omega = spins.pop()
+      self.jacobi = None   #J (engine/turning.py): by default the carried one, carriedJacobi
     self.combine = combine
     self.carried = carried
     self.share = 1               #with carried flows, how fast each body's share falls away: by g^share (see carry)
@@ -198,11 +218,30 @@ class Calculator:
     """
     if self.combine == 'vectors':
       u = sum((self.bodyFlow(b, pos, t) for b in self.bodies), np.array([0.0, 0.0]))
+    elif self.combine == 'turning':
+      return self.turningFlow(pos, region, t)
     else:
       u = self.squaresFlow(pos, region, t)
     if self.carried and self.moving:
       u = u + self.carry(pos, t)
     return u
+
+  def turningFlow(self, pos, region=None, t=0.0):
+    """
+    the 'turning' flow at pos, time t: in the turning frame, down the region's path through the point at |w| (from
+    J), plus the frame's own motion, Omega x x - turned back to where the bodies are at t
+    """
+    field = self.rayField()
+    x = turn(pos, -self.omega*t)
+    w2 = field.speed2(x)
+    if w2 <= 0:
+      self.warn('no flow at %s: |w|^2 < 0 there for J = %g' % (pos, field.J))
+      return np.array([0.0, 0.0])
+    direction = field.direction(x, region)
+    if direction is None:   #past the tables: straight in to the nearest body
+      b = min(self.bodies, key=lambda b: length(x - b.pos))
+      direction = (b.pos - x)/length(b.pos - x)
+    return turn(math.sqrt(w2)*direction + self.omega*np.array([-x[1], x[0]]), self.omega*t)
 
   def bodyFlow(self, b, pos, t=0.0):
     """body b's own flow at pos: straight in (out of a white body) at sqrt(2GM/d), from where b is at time t"""
@@ -300,8 +339,18 @@ class Calculator:
     two-body solution (engine/two_centre.py)
     """
     key = [(b.mass, b.x, b.y, b.black) for b in self.bodies] + [self.direction]
+    if self.combine == 'turning':
+      from engine.turning import TurningRayField, carriedJacobi
+      if self.jacobi is None:
+        self.jacobi = carriedJacobi(self.bodies, self.omega)
+      key = key + ['turning', self.omega, self.jacobi]
     if self.rays is None or self.rays[0] != key:
-      if self.direction == 'eikonal-exact':
+      if self.combine == 'turning':
+        tables = RAY_TABLES.get(str(key))
+        if tables is None:
+          tables = RAY_TABLES[str(key)] = TurningRayField(self.bodies, self.omega, self.jacobi)
+        self.rays = (key, tables)
+      elif self.direction == 'eikonal-exact':
         from engine.two_centre import TwoCentreField
         self.rays = (key, TwoCentreField(self.bodies))
       else:
@@ -312,11 +361,19 @@ class Calculator:
         self.rays = (key, tables)
     return self.rays[1]
 
-  def region(self, pos):
-    """which side of the flow's seam pos is on (the nearest body's index), or None if the flow has no seam"""
+  def region(self, pos, t=0.0):
+    """which side of the flow's seam pos is on at time t (the nearest body's index), or None if it has no seam"""
+    if self.combine == 'turning':
+      return self.rayField().region(turn(pos, -self.omega*t))
     if self.direction not in EIKONAL or self.combine != 'squares':
       return None
     return self.rayField().region(pos)
+
+  def seamVelocity(self, pos):
+    """how fast the seam at pos moves: with the 'turning' flow, with the turning frame; otherwise it stays put"""
+    if self.combine == 'turning':
+      return self.omega*np.array([-pos[1], pos[0]])
+    return np.array([0.0, 0.0])
 
   def sideOf(self, p):
     """
@@ -325,7 +382,7 @@ class Calculator:
     which side a point is on can come out either way, by rounding)
     """
     if getattr(p, 'region', None) is None:
-      p.region = self.region(p.pos)
+      p.region = self.region(p.pos, p.t)
     return p.region
 
   def seamStep(self, p, dt, step):
@@ -340,14 +397,14 @@ class Calculator:
       return
     start = copy.copy(p)
     step(p, dt)
-    if self.region(p.pos) == side:
+    if self.region(p.pos, p.t) == side:
       return
     lo, hi = 0.0, dt
     for _ in range(40):
       mid = (lo + hi)/2
       trial = copy.copy(start)
       step(trial, mid)
-      if self.region(trial.pos) == side:
+      if self.region(trial.pos, trial.t) == side:
         lo = mid
       else:
         hi = mid
@@ -359,19 +416,22 @@ class Calculator:
 
   def crossSeam(self, p, before):   #(p.t is the step's end)
     """
-    after a step that started in region before (seamStep): if the particle has crossed the seam, w takes the jump in the flow
-    there, as the metric's own paths do. the seam is where the two sides' S are equal, so the jump is across it (u
-    along the seam is the same on both sides, and |u| is), and the metric is continuous there: a path crossing it
+    after a step that started in region before (seamStep): if the particle has crossed the seam, w takes the jump in
+    the flow there, as the metric's own paths do. the seam is where the two sides' S are equal, so the jump is across
+    it (u along the seam is the same on both sides, and |u| is, in the seam's own frame if it moves - seamVelocity -
+    which it is all worked in), and the metric is continuous there: a path crossing it
     keeps its momentum along the seam, p = gamma w (for light, any length along w), and its energy,
     c sqrt(m^2 c^2 + p^2) + u . p - its momentum across the seam changes to keep the energy. a slow particle keeps
     v (the jump does not kick it); light is turned, as by a change of frame, and stays at |w| = c. (to first order
     in u/c this is adding the jump to w relativistically, w + (u old side - u new side))
     """
-    after = self.region(p.pos)
+    after = self.region(p.pos, p.t)
     if after == before:
       return
     p.region = after
-    old, new = p.u, self.flow(p.pos, after, p.t)
+    #in the seam's own frame (a seam that moves - the 'turning' flow's - moving with it)
+    moving = self.seamVelocity(p.pos)
+    old, new = p.u - moving, self.flow(p.pos, after, p.t) - moving
     jump = old - new
     if not jump.any():
       return
@@ -396,16 +456,18 @@ class Calculator:
       x -= step
       if abs(step) <= 1e-15*max(abs(x), math.sqrt(along @ along), 1e-300):
         break
-    best = (x,)
-    q = along + best[0]*n
+    q = along + x*n
     p.w = C*q/length(q) if light else C*q/math.sqrt(C*C + q @ q)
-    p.u = new
+    p.u = new + moving
     p.v = p.w + p.u
 
   def describeDirection(self):
     """the flow's direction in words, for logs"""
     if self.combine == 'vectors':
       return 'the sum of each body\'s own flow (combined as vectors)'
+    if self.combine == 'turning':
+      return ('eikonal, turning with the bodies at %.6e rad/s, Jacobi constant %.9e m^2/s^2 (each body carries its'
+              ' flow)' % (self.omega, self.rayField().J))
     d = self.direction
     if d is None or d == 'g':
       return 'along g'
