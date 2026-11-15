@@ -12,8 +12,13 @@ the flow's direction is Calculator.direction (see flowDirection): with more than
 eikonal flow, which has no curl, so space moving with it falls at exactly g - for two bodies worked out exactly
 (engine/two_centre.py), for more from tables of its paths (engine/eikonal.py)
 
+the bodies' flows combine (Calculator.combine) as the square root of the sum of their squares, |u|^2 = sum 2GM/d - the
+default - or, as Part 3 of the write-up has it, as vectors, u = the sum of each body's own flow
+
 a gravitational wave (engine/waves.py, Calculator.wave) adds its own flow, which changes with time: flow takes the
-time, and the steps pass it (the flow is otherwise steady)
+time, and the steps pass it. bodies can also move (Body.velocity, in a straight line), their flows moving with them -
+and, if Calculator.carried, carried along with them (the space round each moving body moves with it). with neither,
+the flow is steady
 
 the calculators that were in flow2.py and are no longer used are in legacy/legacy_calculators.py
 """
@@ -87,13 +92,23 @@ class Body:
     x, y (float): position in m
     black (bool): True - space flows in, False - space flows out (white)
     spin (float): a/M for a rotating hole (KerrFlowCalculator only), -1 to 1, positive anticlockwise
+    velocity ((vx, vy)): in m/s - the body moves in a straight line from (x, y) at t = 0, its flow with it
   """
-  def __init__(self, mass=MS, x=0.0, y=0.0, black=True, spin=0.0):
+  def __init__(self, mass=MS, x=0.0, y=0.0, black=True, spin=0.0, velocity=(0.0, 0.0)):
     self.mass = mass
-    self.pos = np.array([float(x), float(y)])
+    self.pos = np.array([float(x), float(y)])   #where it is at t = 0 (see at)
     self.black = black
     self.spin = spin   #a/M, -1 to 1, positive anticlockwise: used by engine/kerr.py's KerrFlowCalculator
     self.GM = G*mass
+    self.velocity = np.array([float(v) for v in velocity])
+
+  @property
+  def moving(self):
+    return bool(self.velocity.any())
+
+  def at(self, t):
+    """where the body is at time t"""
+    return self.pos + self.velocity*t if self.moving else self.pos
 
   @property
   def x(self):
@@ -107,7 +122,7 @@ class Body:
 class Calculator:
   runspeed = 30000   #rough steps per second, for the log's estimate of how long a run takes
 
-  def __init__(self, bodies=None, direction=None, wave=None):
+  def __init__(self, bodies=None, direction=None, wave=None, combine='squares', carried=False):
     """
     Args:
       bodies (list of Body): the masses; default one black solar mass at (0,0); [] for none (a wave alone)
@@ -115,6 +130,11 @@ class Calculator:
                  only for two bodies. by default 'eikonal-exact' for two bodies, 'eikonal' for more, and along g
                  (straight in or out) for one; 'g' sets along g for any number
       wave: a gravitational wave whose flow is added (engine/waves.py PlaneWave), or None
+      combine: how the bodies' flows combine (see bodiesFlow) - 'squares' (the default): |u|^2 = sum 2GM/d, the way
+               set by direction; 'vectors': u = the sum of each body's own flow, straight in (out of a white body) at
+               sqrt(2GM/d) - Part 3 of the write-up's rule. direction is then not used
+      carried: with moving bodies, whether each carries its flow with it - the space round it moving at its velocity
+               (see carry) - or only takes it along, the flow pattern moving but not the space
     """
     if bodies is None:
       bodies = [Body()]
@@ -127,7 +147,15 @@ class Calculator:
     if direction == 'eikonal-exact' and len(self.bodies) != 2:
       raise ValueError("the 'eikonal-exact' flow is for two bodies (%d given): use 'eikonal' (the ray tables)"
                        % len(self.bodies))
-    if direction is None and len(self.bodies) > 1:
+    if combine not in ('squares', 'vectors'):
+      raise ValueError("combine is 'squares' or 'vectors', not %r" % (combine,))
+    self.combine = combine
+    self.carried = carried
+    self.moving = any(b.moving for b in self.bodies)
+    if self.moving and combine == 'squares' and len(self.bodies) > 1 and direction != 'g':
+      raise ValueError("the eikonal flows are for bodies at rest: with more than one moving body use combine='vectors'"
+                       " or direction 'g'")
+    if direction is None and len(self.bodies) > 1 and combine == 'squares':
       direction = 'eikonal-exact' if len(self.bodies) == 2 else 'eikonal'
     self.direction = direction   #None (one body): along g (see flowDirection); can be set at any time
     self.rays = None             #the zero-energy paths for the eikonal directions (engine/eikonal.py or
@@ -149,21 +177,63 @@ class Calculator:
                  flow's zero-energy paths; along g (towards black bodies and away from white ones, weighted by each
                  body's GM/d^2) when it is None or 'g'
     region: for a direction with a seam ('eikonal', 'eikonal-exact'), the side of it to take the flow from (see region)
+    with combine 'vectors', the sum of each body's own flow instead (see bodiesFlow)
     plus self.wave's flow, if there is one
     """
     if self.wave is not None:
       wave = self.wave.flow(pos, t)
       if not self.bodies:
         return wave
-      return self.bodiesFlow(pos, region) + wave
-    return self.bodiesFlow(pos, region)
+      return self.bodiesFlow(pos, region, t) + wave
+    return self.bodiesFlow(pos, region, t)
 
-  def bodiesFlow(self, pos, region=None):
-    """the bodies' flow at pos (see flow)"""
+  def bodiesFlow(self, pos, region=None, t=0.0):
+    """
+    the bodies' flow at pos, at time t (see flow): with combine 'squares' its magnitude is sqrt(sum 2GM/d), its
+    direction set by self.direction; with 'vectors' it is the sum of each body's own flow (bodyFlow). if self.carried,
+    plus the moving bodies' velocities near them (carry)
+    """
+    if self.combine == 'vectors':
+      u = sum((self.bodyFlow(b, pos, t) for b in self.bodies), np.array([0.0, 0.0]))
+    else:
+      u = self.squaresFlow(pos, region, t)
+    if self.carried and self.moving:
+      u = u + self.carry(pos, t)
+    return u
+
+  def bodyFlow(self, b, pos, t=0.0):
+    """body b's own flow at pos: straight in (out of a white body) at sqrt(2GM/d), from where b is at time t"""
+    r = pos - b.at(t)
+    d = length(r)
+    return (-1 if b.black else 1)*math.sqrt(2*b.GM/d)*r/d
+
+  def carry(self, pos, t=0.0):
+    """
+    with carried flows, what the bodies' motion adds to the flow at pos: near each body the space moves with it, at
+    its velocity less the other bodies' flows where it is (so its velocity through their space, where it is, is
+    kept - for one body, its velocity). each body's share is its share of g at pos: all of it close to the body,
+    falling away where another body pulls harder. for one body this is a Galilean change of frame, so exact GR
+    """
+    pulls = []
+    for b in self.bodies:
+      d = length(pos - b.at(t))
+      pulls.append(b.GM/d**2)
+    total = sum(pulls)
+    extra = np.array([0.0, 0.0])
+    for b, pull in zip(self.bodies, pulls):
+      if not b.moving:
+        continue
+      there = b.at(t)
+      others = sum((self.bodyFlow(o, there, t) for o in self.bodies if o is not b), np.array([0.0, 0.0]))
+      extra = extra + pull/total*(b.velocity - others)
+    return extra
+
+  def squaresFlow(self, pos, region=None, t=0.0):
+    """the bodies' flow at pos with combine 'squares' (see bodiesFlow)"""
     U2 = 0.0                    #the square of the flow's magnitude
     g = np.array([0.0, 0.0])    #its direction
     for b in self.bodies:
-      r = pos - b.pos
+      r = pos - b.at(t)
       d = length(r)
       U2 += 2*b.GM/d            #the square of the flow to this body
       pull = b.GM/d**2 * r/d
@@ -172,7 +242,7 @@ class Calculator:
       else:
         g += pull               #away from the body
     if self.direction is not None:
-      g = self.flowDirection(pos, region)
+      g = self.flowDirection(pos, region, t)
 
     gsize = length(g)
     if gsize == 0:
@@ -180,7 +250,7 @@ class Calculator:
       return np.array([0.0, 0.0])
     return math.sqrt(U2) * g/gsize
 
-  def flowDirection(self, pos, region=None):
+  def flowDirection(self, pos, region=None, t=0.0):
     """
     which way the flow points at pos (any length; flow scales it to the flow's magnitude), by self.direction:
       None or 'g'  along g - towards black bodies and away from white ones, weighted by GM/d^2 (the default for one
@@ -205,7 +275,7 @@ class Calculator:
     if direction is None or direction == 'g' or direction in EIKONAL:
       g = np.array([0.0, 0.0])
       for b in self.bodies:
-        r = pos - b.pos
+        r = pos - b.at(t)
         d = length(r)
         g = g + (-1 if b.black else 1)*(b.GM/d**2)*(r/d)
       return g
@@ -240,7 +310,7 @@ class Calculator:
 
   def region(self, pos):
     """which side of the flow's seam pos is on (the nearest body's index), or None if the flow has no seam"""
-    if self.direction not in EIKONAL:
+    if self.direction not in EIKONAL or self.combine != 'squares':
       return None
     return self.rayField().region(pos)
 
@@ -260,6 +330,8 @@ class Calculator:
 
   def describeDirection(self):
     """the flow's direction in words, for logs"""
+    if self.combine == 'vectors':
+      return 'the sum of each body\'s own flow (combined as vectors)'
     d = self.direction
     if d is None or d == 'g':
       return 'along g'
@@ -324,9 +396,9 @@ class Calculator:
   def move(self, p, dt):
     raise NotImplementedError('Calculator only gives the flow and gravity; use a calculator that moves particles')
 
-  def nearest(self, pos):
-    """the distance from pos to the nearest body (infinite with none)"""
-    return min((length(pos - b.pos) for b in self.bodies), default=float('inf'))
+  def nearest(self, pos, t=0.0):
+    """the distance from pos to the nearest body at time t (infinite with none)"""
+    return min((length(pos - b.at(t)) for b in self.bodies), default=float('inf'))
 
   def stepSize(self, p, fraction, dtMax=None):
     """
@@ -336,7 +408,7 @@ class Calculator:
     error in each step is about the same everywhere
     """
     speed = max(length(p.v), length(p.u), length(p.w))
-    dt = fraction*self.nearest(p.pos)/speed if speed > 0 else float('inf')
+    dt = fraction*self.nearest(p.pos, p.t)/speed if speed > 0 else float('inf')
     return min(dt, dtMax) if dtMax else dt
 
   def steps(self, p, config, duration=None):
@@ -404,8 +476,8 @@ class SpecialFlowCalculator(Calculator):
            light (|w| = c) is kept at exactly c. see studies/compare_second_order.py
   """
 
-  def __init__(self, bodies=None, order=2, direction=None, wave=None):
-    super().__init__(bodies, direction, wave)
+  def __init__(self, bodies=None, order=2, direction=None, wave=None, combine='squares', carried=False):
+    super().__init__(bodies, direction, wave, combine, carried)
     if order not in (1, 2):
       raise ValueError('order is 1 or 2, not %r' % order)
     self.order = order

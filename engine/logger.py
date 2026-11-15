@@ -208,11 +208,15 @@ class Log:
         self.stats.spin = getattr(bodies[0], 'spin', 0.0)
     self.print('bodies:', len(bodies))
     for i, b in enumerate(bodies):
-      self.print('body %d: mass %.6e kg (%.6g MS)  x %.6e m  y %.6e m  %s%s'
+      self.print('body %d: mass %.6e kg (%.6g MS)  x %.6e m  y %.6e m  %s%s%s'
                  % (i+1, b.mass, b.mass/MS, b.x, b.y, 'black' if b.black else 'white',
-                    '  spin %.10g' % b.spin if getattr(b, 'spin', 0) else ''))
-    if getattr(calc, 'direction', None) is not None:
+                    '  spin %.10g' % b.spin if getattr(b, 'spin', 0) else '',
+                    '  velocity %.6e %.6e m/s' % tuple(b.velocity) if getattr(b, 'moving', False) else ''))
+    if getattr(calc, 'direction', None) is not None or getattr(calc, 'combine', 'squares') != 'squares':
       self.print('flow direction:', calc.describeDirection())
+    if getattr(calc, 'moving', False):
+      self.print('moving bodies:', 'each carries its flow (the space round it moves with it)' if calc.carried
+                 else 'each takes its flow pattern along, the space not moving with it')
     if getattr(calc, 'wave', None) is not None:
       self.print('gravitational wave:', calc.wave.describe())
 
