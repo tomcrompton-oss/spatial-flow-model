@@ -1,0 +1,6 @@
+bodies: 2
+body 1: mass 1.989000e+30 kg (1 MS)  x -4.491684e+05 m  y 0.000000e+00 m  black  velocity 0.000000e+00 0.000000e+00 m/s
+body 2: mass 5.972000e+24 kg (3.00251e-06 MS)  x 1.495975e+11 m  y 0.000000e+00 m  black  velocity 0.000000e+00 0.000000e+00 m/s
+flow direction: eikonal, turning with the bodies at 1.991282e-07 rad/s, Jacobi constant -1.331085137e+09 m^2/s^2 (each body carries its flow)
+moving bodies: each takes its flow pattern along, the space not moving with it
+a space path out of the Sun, run back in time in the turning frame (J = -1.331085137e+09)

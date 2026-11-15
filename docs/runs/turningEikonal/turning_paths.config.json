@@ -1,0 +1,561 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "path_sun_00_2026-11-15_14-50-50.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_01_2026-11-15_14-50-51.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_02_2026-11-15_14-50-51.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_03_2026-11-15_14-50-52.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_04_2026-11-15_14-50-52.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_05_2026-11-15_14-50-53.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_06_2026-11-15_14-50-54.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_07_2026-11-15_14-50-54.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_08_2026-11-15_14-50-55.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_09_2026-11-15_14-50-55.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_10_2026-11-15_14-50-56.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_sun_11_2026-11-15_14-50-56.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_00_2026-11-15_14-50-57.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_01_2026-11-15_14-50-57.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_02_2026-11-15_14-50-58.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_03_2026-11-15_14-50-58.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_04_2026-11-15_14-50-59.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_05_2026-11-15_14-50-59.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_06_2026-11-15_14-51-00.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_07_2026-11-15_14-51-00.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_08_2026-11-15_14-51-01.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_09_2026-11-15_14-51-02.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_10_2026-11-15_14-51-02.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "path_earth_11_2026-11-15_14-51-03.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}
