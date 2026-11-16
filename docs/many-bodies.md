@@ -6,8 +6,8 @@ simulation, in five steps. Each runs the flow model itself: particles, clocks an
 
 | Question | Result |
 | --- | --- |
-| [How do the flows combine?](#1-how-the-flows-combine) | Not as vectors: that puts g at the Earth's surface out by 37–74 m/s². By their squares, $|\mathbf u|^2 = \sum 2GM/d$, it is Newton's |
-| [Clocks](#2-clocks) | As vectors, a GPS clock would drift ±20 µs a day (5.9 km of range). By squares, none |
+| [How do the flows combine?](#1-how-the-flows-combine) | By their squares, $|\mathbf u|^2 = \sum 2GM/d$: g is Newton's |
+| [Clocks](#2-clocks) | Clocks on the Earth and in GPS orbit keep GR's rates |
 | [Moving bodies](#3-moving-bodies) | A moving body must carry its flow with it. If not, g is out by 26–52 m/s² |
 | [Beyond Newton](#4-beyond-newton) | By squares, the Sun's potential stretches space round the Earth and Jupiter: ruled out by lunar laser ranging (27σ), and very likely by VLBI past Jupiter |
 | [Carrying the flow](#5-carrying-the-flow) | Each body carrying its own flow fixes the Earth but squeezes space round the Sun: 9.6 mas off its light bending, 1000 × Cassini's limit. Curl doesn't help |
@@ -20,38 +20,21 @@ differs from GR measurably ([Where this leaves the model](#where-this-leaves-the
 
 ## 1. How the flows combine
 
-Part 3 of the original adds the bodies' flows as **vectors**: $\mathbf u = \sum \mathbf u_i$, each straight in at
-$\sqrt{2GM_i/d_i}$. That is why it says the flow stops between the Earth and the Moon. The simulation instead takes
-the **square root of the sum of their squares**, $|\mathbf u|^2 = \sum 2GM_i/d_i$, pointing down the eikonal flow
-([Two bodies](two-bodies.md)).
+The simulation combines the bodies' flows by the **sum of their squares**, $|\mathbf u|^2 = \sum 2GM_i/d_i$, pointing
+down the eikonal flow ([Two bodies](two-bodies.md)).
 
 The choice is not free. Space falling at $\mathbf u$ accelerates at $(\mathbf u\cdot\nabla)\mathbf u =
-\nabla(u^2/2)$ when the flow has no curl, so the rule for $|\mathbf u|^2$ *is* the law of gravity. Squares give
-Newton's g exactly. Vectors add $\nabla(\mathbf u_E\cdot\mathbf u_S)$, a cross term between the Sun's flow at the
-Earth (42 km/s) and the Earth's own (11 km/s at its surface).
+\nabla(u^2/2)$ when the flow has no curl, so the rule for $|\mathbf u|^2$ *is* the law of gravity. Because the
+potentials add, the squares give Newton's g exactly.
 
-A particle let go from rest at the Earth's surface, with the Sun 1 AU away (`studies/multi_body_rules.py`):
-
-| Rule | Error in g at the surface | at the Moon's distance |
-| --- | --- | --- |
-| vectors | 37–74 m/s² (the Earth's own g is 9.8) | 0.08–0.16 m/s² (the Earth's g there is 0.0027) |
-| squares | under 10⁻⁶ m/s², the calculation's precision | under 2 × 10⁻⁶ m/s² |
-
-Under vectors a ball dropped on the side facing the Sun is pushed 300 km *up* in 150 s. Others veer up to 800 km
-sideways. Under squares they all fall straight down in 145 s, as Newton's do:
-
-<iframe src="../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json" width="100%" height="560" loading="lazy" title="Balls dropped round the Earth, the Sun to the left"></iframe>
-
-*Balls let go 100 km above the Earth, the Sun 1 AU to the left: flows added as vectors (solid), by squares
-(dashed).* [Open full screen](../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json){ target=_blank }
+A particle let go from rest with the Sun 1 AU away (`studies/multi_body_rules.py`) has Newton's g to under
+10⁻⁶ m/s² at the Earth's surface, the calculation's precision, and to under 2 × 10⁻⁶ m/s² at the Moon's distance.
+Balls dropped 100 km up all round the Earth fall straight down in 145 s, as Newton's do.
 
 !!! warning "Correction to Part 3"
-    Part 3's argument needs the vector rule, and the vector rule fails Newtonian gravity by a factor of about 10⁸
-    against the Sun's tide. Under the simulation's rule there is no point where space stops. At P, between the Earth
-    and the Moon, a clock at rest ticks at GR's rate. The flow is 1.6 km/s there, and $\sqrt{1-u^2/c^2}$ is GR's
+    Part 3 has space stop at P, between the Earth and the Moon. Under the simulation's rule there is no point where
+    space stops. At P a clock at rest ticks at GR's rate. The flow is 1.6 km/s there, and $\sqrt{1-u^2/c^2}$ is GR's
     $1 - U/c^2$ to first order everywhere on the line. So the "irreconcilable" difference in 3.2 does not arise.
-    Even under vectors the flow would not stop at P: it would stop 4,700 km from the Moon, where
-    $\sqrt{M_E/d_E} = \sqrt{M_M/d_M}$, not 38,000 km out where g = 0.
 
 !!! tip "Suggestion"
     Replace 3.2–3.3 with this test. The theory's claim becomes: *the speeds of the flows add as squares*, because
@@ -60,24 +43,11 @@ sideways. Under squares they all fall straight down in 145 s, as Newton's do:
 
 ## 2. Clocks
 
-A clock ticks at $\sqrt{1 - |\mathbf v - \mathbf u|^2/c^2}$. Under vectors the cross term $\mathbf u_E\cdot\mathbf u_S
-/c^2$ changes round the Earth, so clocks would run fast at noon and slow at midnight. In `studies/multi_body_clocks.py`
-the Sun is at rest 1 AU away, and the model's clock times are converted to GR's static time. Over a day, against GR:
-
-| Clock | Rule | Rate swing | Time swing | As GPS range |
-| --- | --- | --- | --- | --- |
-| on the equator | vectors | ±5.2 × 10⁻⁹ | ±69 µs | ±21 km |
-| GPS orbit | vectors | ±2.6 × 10⁻⁹ | ±20 µs | ±5.9 km |
-| either | squares | below 2 × 10⁻¹⁶ (rounding) | 0 | 0 |
-
-GPS keeps its clocks to nanoseconds. Light pulses between a clock at noon and one at dusk show that the swing could
-be measured, not just a matter of setting clocks: the dusk clock counts 5.2 × 10⁻⁹ fewer seconds under vectors, and
-GR's 4.2 × 10⁻¹³ under squares.
-
-<iframe src="../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json" width="100%" height="480" loading="lazy" title="Clock rates against GR over a day"></iframe>
-
-*Each clock's rate against GR's over a day, in parts in 10⁹.* [Open full
-screen](../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json){ target=_blank }
+A clock ticks at $\sqrt{1 - |\mathbf v - \mathbf u|^2/c^2}$. With $|\mathbf u|^2 = 2U$, that is GR's
+$1 - (U + v^2/2)/c^2$ to first order. In `studies/multi_body_clocks.py` the Sun is at rest 1 AU away, and the model's
+clock times are converted to GR's static time. Over a day, a clock on the equator and one in GPS orbit both keep GR's
+rate to below 2 × 10⁻¹⁶, the rounding. Light pulses between a clock at noon and one at dusk show the same: the dusk
+clock counts GR's 4.2 × 10⁻¹³ fewer seconds.
 
 ## 3. Moving bodies
 
@@ -100,10 +70,8 @@ in the body's frame the moving flow adds $\partial\mathbf u/\partial t = -(\math
 fall. So **each body carries its flow**.
 
 With the Sun as well, and only the Earth moving, the carried flow has to fade out away from the Earth.
-(`Calculator.carry` gives each body its share of g, or of $g^n$ to fade faster.) With flows added as vectors, g at the
-surface is still out by 0.005–0.01 m/s² however sharp the fade. That is the vectors' own cross term,
-$\mathbf u_E\cdot(\mathbf u_S(\mathbf x)-\mathbf u_S(\text{Earth}))$, about $u_E u_S/\text{AU}$, and 10⁴ times the
-Sun's real tide. The eikonal flow is built for bodies at rest, so carrying it is the open question below.
+(`Calculator.carry` gives each body its share of g, or of $g^n$ to fade faster.) The eikonal flow is built for bodies
+at rest, so carrying it properly is the question of [section 5](#5-carrying-the-flow).
 
 <iframe src="../viewer/index.html?run=../runs/movingBodies/multiBody_moving.full.json" width="100%" height="560" loading="lazy" title="Balls dropped beside the moving Earth"></iframe>
 
@@ -265,7 +233,6 @@ measurement:
 
 | Version | Ruled out by |
 | --- | --- |
-| flows added as vectors | Newton (g out by 37–74 m/s²), GPS clocks |
 | flows taken along by moving bodies | Newton (26–52 m/s²) |
 | by squares, bodies at rest | lunar laser ranging (27σ); very likely VLBI past Jupiter |
 | turning, the Earth carrying its flow | Cassini and VLBI on the Sun's light bending (1000×) |
@@ -276,8 +243,8 @@ flow (a lapse, as in GR's general form), or space could be curved as well as flo
 of Part 1, which is for the author to decide.
 
 !!! tip "For Part 3"
-    A revised Part 3 could say: with more than one body, the flows' speeds must add as squares (or Newtonian gravity
-    fails), and the bodies must carry their flows (or there is a preferred frame). Even so, one flowing space
+    A revised Part 3 could say: with more than one body, the flows' speeds add as squares (so
+    gravity is Newton's), and the bodies must carry their flows (or there is a preferred frame). Even so, one flowing space
     cannot carry a planet's flow and the Sun's at once: whichever body's flow is right, the other's space is stretched or
     squeezed, by about 10⁻⁸. Lunar laser ranging and the bending of light past the Sun measure far finer than that. So
     spatial flow as a complete theory differs from GR, measurably, with more than one body: it is GR for one body.
