@@ -4,10 +4,10 @@
 rest frame. A step works out what each body's flow alone would do to a particle, using the one-body model's own step,
 and applies the changes one after the other: the Sun's, then the Earth's. The particle moves once, at its velocity.
 
-**Verdict: ❌ fails, at the last test.** With Lorentz frames it passes every test of a fixed geometry – Newton's g,
-clocks, light past Jupiter, causality, a moving system – but with the Moon on its own orbit and the Earth going round
-the Sun, the lunar range has a 2.7 m term at half the Moon's synodic period, where lunar laser ranging measures
-millimetres.
+**Verdict: ❌ fails, at the last test, by less each time.** It passes every test of a fixed geometry – Newton's g,
+clocks, light past Jupiter, causality, a moving system. With the Moon on its own orbit and the Earth going round the
+Sun, Lorentz frames leave 2.2 m in the lunar range; taking each body's frame to be its free-fall frame in the other's
+space brings that to 0.49 m. Lunar laser ranging measures millimetres.
 
 ## Why it might make sense
 
@@ -64,24 +64,29 @@ for "the body's own frame". The ones that pass, after trying others:
 - **A moving body's frame:** a Lorentz boost of the particle's place, time and velocity, not a Galilean shift. (With a
   Galilean shift, orbits round a moving body don't contract while light does, and radar to the Moon changes with
   direction by $LV^2/2c^2$.)
+- **...relative to the other bodies' space:** the body's free-fall frame in the space the other bodies' flows carry
+  past it – shifted to their flow at the body's centre, then Lorentz-boosted by the body's velocity through it. (Boosted
+  from the lab instead, the lunar range is out by 2.2 m; from the other bodies' static frame, which is held up against
+  their pull rather than falling, by 240 m.) This is the one place where the bodies' flows meet: each body's frame
+  depends on the others' flow at its centre.
 
 ## Tests
 
 The Sun and the Earth, or the Sun and Jupiter (`engine/split.py`, `studies/split_bodies.py`, `split_checks.py`,
-`lunar_orbit.py`). The three versions: the first rules tried (Galilean frames, light from a combined interval), then
-light's rule fixed, then Lorentz frames as well.
+`lunar_orbit.py`). The four versions: the first rules tried (Galilean frames, light from a combined interval), then
+light's rule fixed, then Lorentz frames, then free-fall frames.
 
-| Test | Expected | Galilean, interval light | Galilean, static light | Lorentz, static light |
-| --- | --- | --- | --- | --- |
-| One body alone | the one-body flow model (GR) | ✅ to rounding | ✅ | ✅ |
-| g at the Earth's surface and the Moon's distance; a moving Earth | Newton's | ✅ to 10⁻⁷ m/s² | ✅ | ✅ |
-| A term in the steps that would move the Moon against the Earth | none | ✅ none, to 7 × 10⁻¹³ m/s² | ✅ | ✅ |
-| Clocks on the equator and in GPS orbit; light pulses noon to dusk | GR's | ✅ to 2 × 10⁻¹⁶; 1.6 × 10⁻¹⁵ | ✅ | ✅ |
-| Light past Jupiter: both bodies less each alone | 0 (the eikonal flow: 408 µas) | ✅ 0.26 µas at 1 R_J | ✅ | ✅ |
-| Lunar range to a mirror held still: both bodies less each alone | 0 | ❌ 0.45 m | ✅ 0 | ✅ 6 × 10⁻⁷ m |
-| Particles at γ up to 10⁶: can matter outrun light? | never | ❌ by 3.6 × 10⁻⁹ c | ✅ never | ✅ never |
-| The whole system moving together: radar to the Moon | no change | ❌ 1.9 m at 29.8 km/s, 290 m at 370 km/s | – (light's rule needs bodies at rest) | ✅ 0.0000 m |
-| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.7 m at half the synodic period; 0.29 m at the synodic period |
+| Test | Expected | Galilean, interval light | Galilean, static light | Lorentz | Free-fall |
+| --- | --- | --- | --- | --- | --- |
+| One body alone | the one-body flow model (GR) | ✅ to rounding | ✅ | ✅ | ✅ |
+| g at the Earth's surface and the Moon's distance; a moving Earth | Newton's | ✅ to 10⁻⁷ m/s² | ✅ | ✅ | ✅ |
+| A term in the steps that would move the Moon against the Earth, the Earth held at rest | none | ✅ none, to 7 × 10⁻¹³ m/s² | ✅ | ✅ | – 10⁻¹⁰ m/s²: a held Earth isn't falling, so the next-but-one row is the test |
+| Clocks on the equator and in GPS orbit; light pulses noon to dusk | GR's | ✅ to 2 × 10⁻¹⁶; 1.6 × 10⁻¹⁵ | ✅ | ✅ | ✅ |
+| Light past Jupiter: both bodies less each alone | 0 (the eikonal flow: 408 µas) | ✅ 0.26 µas at 1 R_J | ✅ | ✅ | ✅ |
+| Lunar range to a mirror held still: both bodies less each alone | 0 | ❌ 0.45 m | ✅ 0 | ✅ 6 × 10⁻⁷ m | ✅ 0 |
+| Particles at γ up to 10⁶: can matter outrun light? | never | ❌ by 3.6 × 10⁻⁹ c | ✅ never | ✅ never | ✅ never |
+| The whole system moving together: radar to the Moon | no change | ❌ 1.9 m at 29.8 km/s, 290 m at 370 km/s | – (light's rule needs bodies at rest) | ✅ 0.0000 m | ✅ 0.0000 m |
+| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❌ 0.49 m rms; 0.26 m at half the synodic period, 0.12 m at it |
 
 ## In detail: lunar laser ranging with the Moon's own orbit
 
@@ -101,29 +106,39 @@ Two checks show the test can see centimetres. With the Earth alone (moving at 29
 exactly, and the fit leaves 5 cm rms, with every term at the Moon's synodic angle under 5 mm. The model's own step error
 goes as the step squared (4 m at 20 s steps), so its ranges are run at 10 s and 20 s steps and extrapolated to zero.
 
-With the Sun, the fit leaves 2.2 m rms, 4.1 m at most. Almost all of it is a term at twice the Moon's synodic angle D,
-2.67 m, with 0.29 m at D itself:
+With the Sun and Lorentz frames, the fit leaves 2.2 m rms, 4.1 m at most, almost all of it at twice the Moon's synodic
+angle D. With free-fall frames it leaves 0.49 m:
 
-| Residual after the fit | the Earth alone (the floor) | the Sun, and the Earth on its orbit | LLR's limit |
-| --- | --- | --- | --- |
-| rms | 0.05 m | 2.18 m | millimetres |
-| at the synodic angle D | 0.004 m | 0.29 m | (2.8 ± 4.1) mm |
-| at 2D | 0.006 m | 2.67 m | millimetres |
+| Residual after the fit | the Earth alone (the floor) | the Sun, Lorentz frames | the Sun, free-fall frames | LLR's limit |
+| --- | --- | --- | --- | --- |
+| rms | 0.05 m | 2.18 m | 0.49 m | millimetres |
+| at the synodic angle D | 0.004 m | 0.29 m | 0.12 m | (2.8 ± 4.1) mm |
+| at 2D | 0.006 m | 2.67 m | 0.26 m | millimetres |
 
 <iframe src="../../viewer/index.html?run=../runs/lunarOrbit/lunarOrbit.full.json" width="100%" height="460" loading="lazy" title="Lunar range, the split model less GR"></iframe>
 
-*The lunar range in the split model less GR's, after the fit (m), over two synodic months (days): with the Sun, and
-with the Earth alone (the test's floor).* [Open full
+*The lunar range in the split model less GR's, after the fit (m), over two synodic months (days): Lorentz frames,
+free-fall frames, and the Earth alone (the test's floor).* [Open full
 screen](../../viewer/index.html?run=../runs/lunarOrbit/lunarOrbit.full.json){ target=_blank }
 
-**Why.** The Earth moves at V = 29.8 km/s through the Sun's flow, which is 42 km/s at the Earth. The split model works
-out the Earth's effects in the Earth's frame and the Sun's in the Sun's, and nothing ties the Earth's frame to the
-Sun's space around it. Radar between two points moving with the Earth then picks up $(\mathbf n\cdot\mathbf V)
-(\mathbf n\cdot\mathbf u_{\text{Sun}})L/c^2$, where L is the Earth–Moon distance and n the direction to the Moon.
-With V across the Sun's flow, as on a circular orbit, that is a term at twice the Moon's angle, of amplitude
-$V u_{\text{Sun}} L/2c^2 = 2.6$ m. That figure comes from radar to a mirror held still, without the GR code, and the
-Moon's own orbit, with the Sun pulling on it, keeps it rather than cancelling it.
+**Why the Lorentz frames fail.** The Earth moves at V = 29.8 km/s through the Sun's flow, which is 42 km/s at the
+Earth. With Lorentz frames the split model works out the Earth's effects in a frame boosted from the lab, and nothing
+ties it to the Sun's space round the Earth. Two terms follow, both from light crossing the Sun's space while the
+Moon's orbit ignores it: from simultaneity, $-(\mathbf n\cdot\mathbf V)(\mathbf n\cdot\mathbf u_{\text{Sun}})L/c^2$
+(2.6 m at 2D), and from the Sun's space making light's speed depend on direction, $(\mathbf n\cdot
+\mathbf u_{\text{Sun}})^2 L/2c^2$ (1.9 m at 2D), with L the Earth–Moon distance and n the direction to the Moon. Put
+through the same fit, the two account for the residual: they leave 0.62 m of the 2.18 m, and 0.21 m of 1.24 m with the
+Earth at 2 AU. The checks agree. Fitting the Sun's mass as well doesn't absorb it; with the Earth going round the other
+way, or at 2 AU, it changes as those terms do.
 
-In GR the Earth–Moon system falls freely in the Sun's field, and its local physics is the same as if the Sun weren't
-there, apart from the tide. Treating each body only in its own frame loses that: the Earth's frame needs to be set
-relative to the Sun's space, which means the flows are not separate after all.
+**The free-fall frame.** In GR the Earth–Moon system falls freely in the Sun's field, and its local physics is the
+same as if the Sun weren't there, apart from the tide. So the Earth's frame should be its free-fall frame in the Sun's
+space: shifted to the Sun's flow at the Earth, then boosted by the Earth's velocity through it, $\mathbf V - \mathbf
+u_{\text{Sun}}$. That takes out most of the residual – 0.49 m left at 1 AU, 0.47 m with the Earth going round the other
+way, and 0.08 m at 2 AU against the 0.05 m floor – and keeps every other test passed. What is left falls steeply with
+the Earth's distance from the Sun. Candidates are what the free-fall frame leaves out: the Sun's tide across the
+Earth–Moon system (estimated at millimetres), and the slow turning of a free-falling frame round the Sun (GR's de
+Sitter precession, 19 mas a year, worth about 0.1 m here). Neither has been tested yet.
+
+The free-fall frame also gives up part of the idea: each body's frame now depends on the other bodies' flow at its
+centre, so the flows are not wholly separate any more.
