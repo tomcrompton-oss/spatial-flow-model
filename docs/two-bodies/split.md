@@ -90,6 +90,10 @@ light's rule fixed, then Lorentz frames, then free-fall frames.
 | **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❓ 0.15 m rms, against the test's 8 cm with the Sun; 8 cm at half the synodic period, 3 cm at it |
 | **A binary of comparable masses: the periastron advance** | GR's, for any mass ratio; the double pulsar to about 10⁻⁴ | – | – | ❌ 25% too much at equal masses | ❌ 17% too little at equal masses |
 | A binary of comparable masses: the centre of mass | stays put (momentum is conserved) | – | – | ❌ accelerates | ❌ accelerates, 0.17 m/s² at a mass ratio of 0.1 |
+| The binary's period (orbital decay) | shrinks only by gravitational waves: GR −2.5 × 10⁻¹⁰ s/s; Hulse–Taylor matches GR to 0.2% | – | – | ❌ −7.8 × 10⁻⁴ s/s | ❌ −1.4 × 10⁻³ s/s |
+| Light past a moving Jupiter: GR's (1 − v·k/c) in the bending | VLBI (2003), to about 20% | – | – | ✅ to 3 × 10⁻⁷ | ✅ (one body: the same) |
+| The Nordtvedt effect: a bound pair falling towards the Sun | falls as a single body; lunar laser ranging η < 10⁻⁴ | – | – | ❌ η = 1.00 | – (three bodies: see below) |
+| De Sitter precession of the Moon's orbit, over a year | GR's 19.2 mas a year; lunar laser ranging to 0.3% | – | – | – | ❓ not converged: −12 to −36 mas a year from GR's |
 
 ## In detail: lunar laser ranging with the Moon's own orbit
 
@@ -193,4 +197,25 @@ of the pull between them, where the first-order relativistic forces are about 10
 a thousand times larger it falls to the scheme's own 0.002 m/s². In GR momentum is conserved and the centre of mass
 only swings, by metres here. A binary pulsar that accelerated like this would change its observed period, which the
 pulsars rule out.
+
+## Four more tests
+
+`studies/split_more.py`:
+
+- **Light past a moving Jupiter ✅.** GR's bending past a body moving at v along the light's way carries a factor
+  $1 - \mathbf v\cdot\mathbf k/c$, the velocity-dependent part VLBI measured past Jupiter. Each body's Lorentz frame
+  gives it: to 3 × 10⁻⁷ at Jupiter's 13 km/s and at 0.001c, and to the expected second-order 5 × 10⁻⁵ at 0.01c.
+- **Orbital decay ❌.** GR's binary loses energy only to gravitational waves, and its period shrinks by
+  2.5 × 10⁻¹⁰ s/s here. The split model's equal-mass binary shrinks by 1.4 × 10⁻³ s/s with free-fall frames (7.8 × 10⁻⁴
+  with Lorentz frames) – the same at both step sizes, and going away with c a thousand times larger. Like momentum,
+  energy is not conserved: the relativistic parts of the two bodies' pulls don't match.
+- **The Nordtvedt effect ❌.** A pair of bodies orbiting each other, let fall towards the Sun beside a single body of the
+  same mass, falls slower by exactly g E/Mc², E the pair's binding energy: Nordtvedt's η = 1.00, where lunar laser
+  ranging has η below 10⁻⁴. In GR the binding energy weighs through the bodies' fields acting on each other, which
+  the split model leaves out. (With free-fall frames this test has three bodies, and the frame then adds the other
+  bodies' moving spaces together, counting their orbital motion as flow: the pair falls 2.3% too fast, a fault of the
+  frame rule, not a measurement.)
+- **De Sitter precession ❓.** A year of the Moon's orbit, model against GR from the same start, with GR turned at the
+  de Sitter rate as a check (it gives −18.6 mas a year, as it should). The model's perigee turns 12 to 36 mas a year
+  less than GR's, but the two step sizes don't converge, so this is not yet a result.
 
