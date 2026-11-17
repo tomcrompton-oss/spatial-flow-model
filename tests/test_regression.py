@@ -490,6 +490,27 @@ class Engine(unittest.TestCase):
     rest = bend([sun, jupiter]) - bend([sun]) - bend([jupiter])
     self.assertLess(abs(rest), 1e-2*bend([jupiter]))   #0.1% with these coarse steps; the squares rule's is 24%
 
+  def testSplitLorentz(self):
+    #with the 'lorentz' boost, a Moon round a moving Earth is the orbit at rest, boosted (studies/split_checks.py)
+    from engine.split import SplitFlowCalculator, Boost
+    r0, v0 = np.array([3.844e8, 0.0]), np.array([0.0, math.sqrt(G*ME/3.844e8)])
+    V = np.array([0.0, 370e3])
+    f, inverse = Boost(V, 0.0, [0.0, 0.0]), Boost(-V, 0.0, [0.0, 0.0])
+    moving = SplitFlowCalculator([Body(ME, velocity=V)], 'static', 'lorentz')
+    p = Particle()
+    p.t, p.pos = inverse.event(0.0, r0)
+    moving.initPV(p, f.back(v0))
+    for _ in range(1000):
+      moving.move(p, 10.0)
+    T, x = f.event(p.t, p.pos)
+    rest = SplitFlowCalculator([Body(ME)], 'static', 'lorentz')
+    q = Particle()
+    q.pos = r0.copy()
+    rest.initPV(q, v0)
+    while q.t < T - 1e-9:
+      rest.move(q, min(10.0, T - q.t))
+    self.assertLess(length(x - q.pos), 1e-3)   #Galilean: 15 m after a day
+
   def testCsvRowsWithAdaptiveSteps(self):
     """with uneven steps the csv rows come at the steps nearest each interval"""
     log = Log('regressionRows', False, True, scratch(self))
