@@ -7,7 +7,7 @@ and applies the changes one after the other: the Sun's, then the Earth's. The pa
 **Verdict: ❌ fails, at the last test, by less each time.** It passes every test of a fixed geometry – Newton's g,
 clocks, light past Jupiter, causality, a moving system. With the Moon on its own orbit and the Earth going round the
 Sun, Lorentz frames leave 2.2 m in the lunar range; taking each body's frame to be its free-fall frame in the other's
-space brings that to 0.49 m. Lunar laser ranging measures millimetres.
+space brings that to 0.15 m, with 3 cm at the Moon's synodic period. Lunar laser ranging measures millimetres.
 
 ## Why it might make sense
 
@@ -86,7 +86,7 @@ light's rule fixed, then Lorentz frames, then free-fall frames.
 | Lunar range to a mirror held still: both bodies less each alone | 0 | ❌ 0.45 m | ✅ 0 | ✅ 6 × 10⁻⁷ m | ✅ 0 |
 | Particles at γ up to 10⁶: can matter outrun light? | never | ❌ by 3.6 × 10⁻⁹ c | ✅ never | ✅ never | ✅ never |
 | The whole system moving together: radar to the Moon | no change | ❌ 1.9 m at 29.8 km/s, 290 m at 370 km/s | – (light's rule needs bodies at rest) | ✅ 0.0000 m | ✅ 0.0000 m |
-| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❌ 0.49 m rms; 0.26 m at half the synodic period, 0.12 m at it |
+| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❌ 0.15 m rms; 9 cm at half the synodic period, 3 cm at it |
 
 ## In detail: lunar laser ranging with the Moon's own orbit
 
@@ -107,13 +107,13 @@ exactly, and the fit leaves 5 cm rms, with every term at the Moon's synodic angl
 goes as the step squared (4 m at 20 s steps), so its ranges are run at 10 s and 20 s steps and extrapolated to zero.
 
 With the Sun and Lorentz frames, the fit leaves 2.2 m rms, 4.1 m at most, almost all of it at twice the Moon's synodic
-angle D. With free-fall frames it leaves 0.49 m:
+angle D. With free-fall frames it leaves 0.15 m:
 
 | Residual after the fit | the Earth alone (the floor) | the Sun, Lorentz frames | the Sun, free-fall frames | LLR's limit |
 | --- | --- | --- | --- | --- |
-| rms | 0.05 m | 2.18 m | 0.49 m | millimetres |
-| at the synodic angle D | 0.004 m | 0.29 m | 0.12 m | (2.8 ± 4.1) mm |
-| at 2D | 0.006 m | 2.67 m | 0.26 m | millimetres |
+| rms | 0.05 m | 2.16 m | 0.15 m | millimetres |
+| at the synodic angle D | 0.004 m | 0.27 m | 0.03 m | (2.8 ± 4.1) mm |
+| at 2D | 0.006 m | 2.64 m | 0.09 m | millimetres |
 
 <iframe src="../../viewer/index.html?run=../runs/lunarOrbit/lunarOrbit.full.json" width="100%" height="460" loading="lazy" title="Lunar range, the split model less GR"></iframe>
 
@@ -134,11 +134,20 @@ way, or at 2 AU, it changes as those terms do.
 **The free-fall frame.** In GR the Earth–Moon system falls freely in the Sun's field, and its local physics is the
 same as if the Sun weren't there, apart from the tide. So the Earth's frame should be its free-fall frame in the Sun's
 space: shifted to the Sun's flow at the Earth, then boosted by the Earth's velocity through it, $\mathbf V - \mathbf
-u_{\text{Sun}}$. That takes out most of the residual – 0.49 m left at 1 AU, 0.47 m with the Earth going round the other
-way, and 0.08 m at 2 AU against the 0.05 m floor – and keeps every other test passed. What is left falls steeply with
-the Earth's distance from the Sun. Candidates are what the free-fall frame leaves out: the Sun's tide across the
-Earth–Moon system (estimated at millimetres), and the slow turning of a free-falling frame round the Sun (GR's de
-Sitter precession, 19 mas a year, worth about 0.1 m here). Neither has been tested yet.
+u_{\text{Sun}}$. That takes out almost all of the residual, 0.15 m left of 2.16 m, and keeps every other test passed.
+
+**What is left.** Three candidates were tested:
+
+| Candidate | Test | Result |
+| --- | --- | --- |
+| The test's own step error | the frames are taken at each step's middle, and the run repeated at half the step | 0.149 m and 0.150 m: converged. (An earlier version took the frames at each step's start, which gave 0.49 m) |
+| The Sun's tide across the Earth–Moon system, which the frame leaves out | the two frame terms worked out with the Sun's flow's change along the path, put through the fit | under 6 mm |
+| GR's de Sitter precession of a frame falling round the Sun (19 mas a year) | a turning of GR's Moon's frame added to the fit | takes out 2% |
+
+None of them accounts for the 0.15 m. The terms that are left, 3 cm at the synodic period and 9 cm at twice it, are 8
+to 15 times the test's floor and 10 to 20 times lunar laser ranging's limits. The test's floor comes from the Earth
+alone, though, so it checks the GR code's Earth terms and not its Sun terms. At this level the remaining question is
+as much whether the test is right as whether the model is.
 
 The free-fall frame also gives up part of the idea: each body's frame now depends on the other bodies' flow at its
 centre, so the flows are not wholly separate any more.
