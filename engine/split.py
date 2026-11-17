@@ -344,13 +344,13 @@ class SplitFlowCalculator(Calculator):
 
   def moveLorentz(self, p, dt):
     """
-    move with the 'lorentz' boost: the same two passes, each body's part in its rest frame at the step's start - the
+    move with a Lorentz-type boost: the same two passes, each body's part in its rest frame at the step's middle - the
     step's start, middle and end events boosted there, the particle's velocity boosted there and its change boosted back
     """
     x, v, t = p.pos, p.v, p.t
     middle, end = t + dt/2, t + dt
     xm = x + v*dt/2
-    frames = [self.frame(b, t) for b in self.bodies]
+    frames = [self.frame(b, middle) for b in self.bodies]   #at the middle, so the step stays symmetric
     #half a step, body by body
     vm = v.copy()
     for b, f in zip(self.bodies, frames):
