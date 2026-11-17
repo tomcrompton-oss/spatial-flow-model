@@ -17,7 +17,8 @@ the model is then GR exactly, so what is left is the test's floor
 the model's light is timed along the straight line, at its light speed (studies/split_bodies.py roundTrip, with the
 ends moving; bending changes the time only to second order)
 
-run: python3 studies/lunar_orbit.py      (prints, and writes logs/multiBody/lunarOrbit_<datetime>/: summary.log and a
+run: python3 studies/lunar_orbit.py [case ...] [--target residual.csv]   (cases: CASES; default alone and sun. prints, and
+     writes logs/multiBody/lunarOrbit_<cases>_<datetime>/: summary.log and a
      csv of each residual)
 """
 import csv
@@ -34,7 +35,6 @@ from engine.constants import *
 from multi_body_pn import NODES, WEIGHTS
 
 DMOON = 3.844e8
-OMEGA = math.sqrt(G*MS/AU**3)         #the Earth's angular speed round the Sun
 SYNODIC = 29.5306*DAY
 SPAN = 2*SYNODIC
 SAMPLE = 2*3600.0
@@ -68,37 +68,49 @@ class Track:
 #the bodies
 
 class Setup:
-  """the Earth's path, the Sun at the origin or none: in the model's coordinates or GR's"""
+  """
+  the Earth's path, the Sun at the origin or none: in the model's coordinates or GR's. radius: the Earth's orbit's;
+  sense: +1 anticlockwise (as the Moon goes), -1 the other way; sunScale: GR's GM_Sun, times this, for the Moon
+  """
 
-  def __init__(self, sun, harmonic):
-    self.sun = sun
-    self.radius = AU - (G*MS/C**2 if harmonic else 0.0)
+  def __init__(self, sun, harmonic, radius=AU, sense=1, sunScale=1.0):
+    self.sun, self.sense, self.sunScale = sun, sense, sunScale
+    self.omega = sense*math.sqrt(G*MS/radius**3)
+    self.orbit = radius
+    self.radius = radius - (G*MS/C**2 if harmonic else 0.0)
     self.V = np.array([0.0, 29.8e3])
+
+  def scaled(self, k):
+    return Setup(self.sun, self.radius != self.orbit, self.orbit, self.sense, k)
+
+  def synodic(self):
+    """the Moon's synodic period here"""
+    return 2*math.pi/(2*math.pi/(27.3217*DAY) - (self.omega if self.sun else 0.0))
 
   def earth(self, t):
     if self.sun:
-      a = OMEGA*t
+      a = self.omega*t
       return self.radius*np.array([math.cos(a), math.sin(a)])
     return np.array([AU, 0.0]) + self.V*t
 
   def earthV(self, t):
     if self.sun:
-      a = OMEGA*t
-      return self.radius*OMEGA*np.array([-math.sin(a), math.cos(a)])
+      a = self.omega*t
+      return self.radius*self.omega*np.array([-math.sin(a), math.cos(a)])
     return self.V
 
   def earthA(self, t):
-    return -OMEGA**2*self.earth(t) if self.sun else np.array([0.0, 0.0])
+    return -self.omega**2*self.earth(t) if self.sun else np.array([0.0, 0.0])
 
   def bodies(self):
-    earth = Body(ME, AU, 0.0, circling=OMEGA) if self.sun else Body(ME, AU, 0.0, velocity=self.V)
+    earth = Body(ME, self.orbit, 0.0, circling=self.omega) if self.sun else Body(ME, AU, 0.0, velocity=self.V)
     return ([Body(MS)] if self.sun else []) + [earth]
 
 
 #the model
 
-def modelRun(setup, dt):
-  calc = SplitFlowCalculator(setup.bodies(), 'static', 'lorentz')
+def modelRun(setup, dt, boost='lorentz'):
+  calc = SplitFlowCalculator(setup.bodies(), 'static', boost)
   f = Boost(setup.earthV(0.0), 0.0, setup.earth(0.0))
   p = Particle()
   p.pos = setup.earth(0.0) + START[0]
@@ -132,7 +144,7 @@ def grAccel(setup, t, x, v):
   """the Moon's acceleration by the EIH equations (first post-Newtonian, harmonic coordinates)"""
   bodies = [(G*ME, setup.earth(t), setup.earthV(t), setup.earthA(t))]
   if setup.sun:
-    bodies.append((G*MS, np.zeros(2), np.zeros(2), np.zeros(2)))
+    bodies.append((G*MS*setup.sunScale, np.zeros(2), np.zeros(2), np.zeros(2)))
   c2 = C*C
   pot = sum(gm/np.linalg.norm(x - xb) for gm, xb, _, _ in bodies)
   a = np.zeros(2)
@@ -219,59 +231,97 @@ def grRanges(setup, start, times):
   return ranges(setup, moon, times, leg, lambda x, t: grRate(setup, x, t))
 
 
-def fit(setup, target, times, iterations=6):
-  """GR's starting place and velocity (and a constant), by Gauss-Newton, to match target best"""
-  params = np.concatenate([START[0], START[1]])
-  steps = np.array([1.0, 1.0, 1e-5, 1e-5])
+def fit(setup, target, times, iterations=6, sun=False):
+  """
+  GR's starting place and velocity (and a constant), by Gauss-Newton, to match target best; with sun, the Sun's GM
+  for the Moon as well
+  """
+  params = np.concatenate([START[0], START[1], [1.0]])
+  steps = np.array([1.0, 1.0, 1e-5, 1e-5, 1e-7])
+  free = 5 if sun else 4
+  ranges = lambda q: grRanges(setup.scaled(q[4]), (q[:2], q[2:4]), times)
   for _ in range(iterations):
-    base = grRanges(setup, (params[:2], params[2:]), times)
+    base = ranges(params)
     J = [np.ones_like(times)]
-    for i in range(4):
+    for i in range(free):
       q = params.copy()
       q[i] += steps[i]
-      J.append((grRanges(setup, (q[:2], q[2:]), times) - base)/steps[i])
+      J.append((ranges(q) - base)/steps[i])
     J = np.array(J).T
-    resid = target - base
-    delta = np.linalg.lstsq(J, resid, rcond=None)[0]
-    params = params + delta[1:]
-    if np.abs(delta[1:]/steps).max() < 1e-3:
+    delta = np.linalg.lstsq(J, target - base, rcond=None)[0]
+    params[:free] += delta[1:]
+    if np.abs(delta[1:]/steps[:free]).max() < 1e-3:
       break
-  base = grRanges(setup, (params[:2], params[2:]), times)
-  resid = target - base
+  resid = target - ranges(params)
   return resid - resid.mean(), params
 
 
 def describe(times, resid, setup):
   """the residual's size, and its parts at the Moon's synodic angle D: cos D, sin D, cos 2D, sin 2D"""
-  D = 2*math.pi*times/SYNODIC
+  D = 2*math.pi*times/setup.synodic()
   A = np.array([np.ones_like(D), np.cos(D), np.sin(D), np.cos(2*D), np.sin(2*D)]).T
   coef = np.linalg.lstsq(A, resid, rcond=None)[0]
   return ('rms %.4f m, largest %.4f m; cos D %+.4f, sin D %+.4f, cos 2D %+.4f, sin 2D %+.4f m'
           % (np.sqrt(np.mean(resid**2)), np.abs(resid).max(), *coef[1:]))
 
 
-def main():
-  folder = os.path.join(LOG_DIR, 'multiBody', 'lunarOrbit_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
-  os.makedirs(folder, exist_ok=True)
-  times = np.arange(DAY, SPAN, SAMPLE)
-  lines = ['lunar laser ranging with the Moon\'s orbit, the split model against GR: two synodic months, a range every'
-           ' %.0f h; GR\'s Moon fitted to the model\'s range (its start, and a constant); what is left' % (SAMPLE/3600)]
-  for title, sun in (('the Earth alone, moving at 29.8 km/s (the floor)', False),
-                     ('the Sun, and the Earth on its orbit', True)):
-    model = Setup(sun, harmonic=False)
+CASES = {   #name: (title, the Sun, the Earth's orbit's radius, its sense, the boost)
+  'alone': ('the Earth alone, moving at 29.8 km/s (the floor)', False, AU, 1, 'lorentz'),
+  'sun': ('the Sun, and the Earth on its orbit', True, AU, 1, 'lorentz'),
+  'reverse': ('the Earth going round the Sun the other way', True, AU, -1, 'lorentz'),
+  'far': ('the Earth on an orbit of 2 AU', True, 2*AU, 1, 'lorentz'),
+  'local': ('the Sun and the Earth, each body\'s frame set from the other\'s static time (boost \'local\')', True, AU, 1,
+            'local'),
+  'freefall': ('the Sun and the Earth, each body\'s frame its free-fall frame in the other\'s space (boost \'freefall\')',
+               True, AU, 1, 'freefall'),
+  'freefall-reverse': ('the same, the Earth going round the other way', True, AU, -1, 'freefall'),
+  'freefall-far': ('the same, the Earth on an orbit of 2 AU', True, 2*AU, 1, 'freefall'),
+}
+
+
+def run(name, folder, times, target=None):
+  """one case: the model's ranges (or target, from an earlier run), and GR fitted to them with and without the Sun's
+  GM free"""
+  title, sun, radius, sense, boost = CASES[name]
+  model = Setup(sun, False, radius, sense)
+  if target is None:
     runs = {}
     for dt in (10.0, 20.0):
-      calc, moon = modelRun(model, dt)
+      calc, moon = modelRun(model, dt, boost)
       runs[dt] = modelRanges(model, calc, moon, times)
     target = (4*runs[10.0] - runs[20.0])/3
-    resid, params = fit(Setup(sun, harmonic=True), target, times)
-    lines.append('  %s: %s' % (title, describe(times, resid, model)))
+  lines = []
+  for sunFree in ((False, True) if sun else (False,)):
+    resid, params = fit(Setup(sun, True, radius, sense), target, times, sun=sunFree)
+    lines.append('  %s%s: %s' % (title, ', the Sun\'s GM fitted too (by %+.2e)' % (params[4] - 1) if sunFree else '',
+                                 describe(times, resid, model)))
     print(lines[-1], flush=True)
-    with open(os.path.join(folder, 'residual_%s.csv' % ('sun' if sun else 'alone')), 'w', newline='') as f:
+    with open(os.path.join(folder, 'residual_%s%s.csv' % (name, '_sunfit' if sunFree else '')), 'w', newline='') as f:
       w = csv.writer(f)
       w.writerow(['t_days', 'range_m', 'residual_m'])
       for t, r, e in zip(times, target, resid):
         w.writerow([t/DAY, r, e])
+  return lines
+
+
+def main():
+  """python3 studies/lunar_orbit.py [case ...] [--target csv]: by default the cases alone and sun"""
+  args = sys.argv[1:]
+  target = None
+  if '--target' in args:
+    i = args.index('--target')
+    with open(args[i + 1]) as f:
+      target = np.array([float(r['range_m']) for r in csv.DictReader(f)])
+    del args[i:i + 2]
+  names = args or ['alone', 'sun']
+  folder = os.path.join(LOG_DIR, 'multiBody', 'lunarOrbit_%s_%s' % ('-'.join(names),
+                                                                      datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
+  os.makedirs(folder, exist_ok=True)
+  times = np.arange(DAY, SPAN, SAMPLE)
+  lines = ['lunar laser ranging with the Moon\'s orbit, the split model against GR: two synodic months, a range every'
+           ' %.0f h; GR\'s Moon fitted to the model\'s range (its start, and a constant); what is left' % (SAMPLE/3600)]
+  for name in names:
+    lines += run(name, folder, times, target)
   lines.append('  lunar laser ranging: range residuals at the millimetre level; its fit to the synodic term,'
                ' (2.8 +- 4.1) mm cos D')
   with open(os.path.join(folder, 'summary.log'), 'w') as f:

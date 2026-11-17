@@ -34,6 +34,18 @@ lab second), and light's 'static' rule becomes: each body's change to light's sl
 the one-body speed a + sqrt(c^2 - u_perp^2) along light's direction there, times D^2 = gamma^2 (1 - V . n/c)^2 (how a
 delay along a light ray carries from a frame moving at V), added up. for bodies at rest the two boosts are the same
 step; the clock and light rules agree with the others to first order in G
+
+'local' is 'lorentz' with each body's frame boosted from the other bodies' static time, T = t + phi/c^2 (phi their
+one-body potentials for the flow, u = grad phi), not the lab's time: in GR a body's local frame is set against the
+space round it, and a body moving at V through another's flow u sees simultaneity shifted by u . x/c^2 (radar along
+a moving Earth picks up (n . V)(n . u_Sun) L/c^2 with 'lorentz': studies/lunar_orbit.py). the other bodies are taken
+at rest for their phi and u. but a static frame is held up against the others' pull, not falling freely, and with it
+the Moon's range is out by 240 m
+
+'freefall' sets each body's frame in the local free-fall frame of the other bodies' space: shifted (Galilean, the
+flow's time being its free-falling observers' own) to the others' flow at the body's centre, U0, then Lorentz-boosted
+by the body's velocity through that space, V - U0. the other bodies are taken at rest, and their flow uniform across
+the body's region (their tide left out)
 """
 import math
 import numpy as np
@@ -50,33 +62,61 @@ def bodyVelocity(b, t):
 
 
 class Boost:
-  """the Lorentz frame moving at V whose origin is the event (t0, x0)"""
+  """
+  the Lorentz frame moving at V whose origin is the event (t0, x0) - boosted from the lab's time t, or, given the
+  other bodies' phi and flow U (u = grad phi), from their static time T = t + phi/c^2, in which a velocity is
+  dx/dT = v/(1 + v . U/c^2); or, given shift, boosted from the frame moving at shift (Galilean: the same t, x less
+  shift t - the local free-fall frame of a flow moving at shift, whose time is the lab's)
+  """
 
-  def __init__(self, V, t0, x0):
+  def __init__(self, V, t0, x0, phi=None, U=None, shift=None):
     self.V, self.t0, self.x0 = np.array(V, dtype=float), t0, np.array(x0, dtype=float)
+    self.shift = np.zeros(2) if shift is None else np.array(shift, dtype=float)
     speed = length(self.V)
     self.gamma = 1/math.sqrt(1 - speed*speed/C**2)
     self.n = self.V/speed if speed > 0 else np.array([1.0, 0.0])
+    self.phi, self.U = phi, U
+    self.T0 = t0 + (phi(self.x0)/C**2 if phi else 0.0)
 
   def event(self, t, x):
     """(t', x') of the event (t, x)"""
-    dt, dx = t - self.t0, x - self.x0
+    dt, dx = t + (self.phi(x)/C**2 if self.phi else 0.0) - self.T0, x - self.x0
+    dx = dx - self.shift*(t - self.t0)
     along = dx @ self.n
     return self.gamma*(dt - self.V @ dx/C**2), dx + (self.gamma - 1)*along*self.n - self.gamma*self.V*dt
 
-  def velocity(self, v):
-    """v seen in the frame"""
+  def velocity(self, v, x=None):
+    """v (at x) seen in the frame"""
+    if self.U:
+      v = v/(1 + v @ self.U(self.x0 if x is None else x)/C**2)
+    v = v - self.shift
     along = (v @ self.n)*self.n
     return (along - self.V + (v - along)/self.gamma)/(1 - v @ self.V/C**2)
 
-  def back(self, v):
-    """a velocity in the frame, seen in the lab"""
+  def back(self, v, x=None):
+    """a velocity in the frame (at x), seen in the lab"""
     along = (v @ self.n)*self.n
-    return (along + self.V + (v - along)/self.gamma)/(1 + v @ self.V/C**2)
+    v = (along + self.V + (v - along)/self.gamma)/(1 + v @ self.V/C**2) + self.shift
+    if self.U:
+      v = v/(1 - v @ self.U(self.x0 if x is None else x)/C**2)
+    return v
 
-  def time(self, v):
-    """dt'/dt along a path moving at v"""
-    return self.gamma*(1 - v @ self.V/C**2)
+  def time(self, v, x=None):
+    """dt'/dt along a path moving at v (at x)"""
+    shift = v @ self.U(self.x0 if x is None else x)/C**2 if self.U else 0.0
+    return self.gamma*(1 + shift - (v - self.shift) @ self.V/C**2)
+
+  def light(self, n):
+    """
+    how a change in light's slowness along n carries from this frame to the lab: D^2 = gamma^2 (1 - V . n_F/c)^2 for
+    the boost, n_F light's direction in the shifted frame, times (s_F/c)/(1 + n_F . shift/s_F) for the shift, s_F its
+    speed there
+    """
+    w = C*n - self.shift
+    sF = length(w)
+    nF = w/sF
+    D = self.gamma*(1 - self.V @ nF/C)
+    return D*D*(sF/C)/(1 + nF @ self.shift/sF)
 
 
 class SplitFlowCalculator(Calculator):
@@ -90,12 +130,12 @@ class SplitFlowCalculator(Calculator):
     super().__init__(bodies, direction='g')
     if light not in ('interval', 'static'):
       raise ValueError("light is 'interval' or 'static', not %r" % (light,))
-    if boost not in ('galilean', 'lorentz'):
-      raise ValueError("boost is 'galilean' or 'lorentz', not %r" % (boost,))
+    if boost not in ('galilean', 'lorentz', 'local', 'freefall'):
+      raise ValueError("boost is 'galilean', 'lorentz', 'local' or 'freefall', not %r" % (boost,))
     if light == 'static' and self.moving and boost == 'galilean':
       raise ValueError("the 'static' light rule with Galilean boosts is for bodies at rest")
-    if light == 'interval' and boost == 'lorentz':
-      raise ValueError("the 'lorentz' boost has the 'static' light rule")
+    if light == 'interval' and boost != 'galilean':
+      raise ValueError("the '%s' boost has the 'static' light rule" % boost)
     self.light, self.boost = light, boost
 
   def __repr__(self):
@@ -118,8 +158,21 @@ class SplitFlowCalculator(Calculator):
     return q
 
   def frame(self, b, t):
-    """body b's rest frame at time t, b at its origin"""
-    return Boost(bodyVelocity(b, t), t, b.at(t))
+    """
+    body b's rest frame at time t, b at its origin: with the 'local' boost, from the other bodies' static time (their
+    phi = -2 sqrt(2GM d) each, with u = grad phi their flow - as for bodies at rest)
+    """
+    others = [o for o in self.bodies if o is not b]
+    if self.boost == 'freefall' and others:
+      U0 = sum(self.restFlow(o, b.at(t) - o.at(t)) for o in others)
+      return Boost(bodyVelocity(b, t) - U0, t, b.at(t), shift=U0)
+    if self.boost != 'local' or not others:
+      return Boost(bodyVelocity(b, t), t, b.at(t))
+    def phi(x):
+      return sum((-1 if o.black else 1)*2*math.sqrt(2*o.GM*length(x - o.at(t))) for o in others)
+    def U(x):
+      return sum(self.restFlow(o, x - o.at(t)) for o in others)
+    return Boost(bodyVelocity(b, t), t, b.at(t), phi, U)
 
   def restFlow(self, b, x):
     """body b's one-body flow in its own rest frame, at x there (b at the origin)"""
@@ -128,33 +181,32 @@ class SplitFlowCalculator(Calculator):
 
   def rate(self, pos, v, t=0.0):
     """a clock's rate, dtau/dt, at pos moving at v"""
-    if self.boost == 'lorentz':
+    if self.boost != 'galilean':
       free = math.sqrt(max(1 - v @ v/C**2, 0.0))
       r = free
       for b in self.bodies:
         f = self.frame(b, t)
         x = f.event(t, pos)[1]
-        vb = f.velocity(v)
+        vb = f.velocity(v, pos)
         w = vb - self.restFlow(b, x)
-        r += f.time(v)*(math.sqrt(max(1 - w @ w/C**2, 0.0)) - math.sqrt(max(1 - vb @ vb/C**2, 0.0)))
+        r += f.time(v, pos)*(math.sqrt(max(1 - w @ w/C**2, 0.0)) - math.sqrt(max(1 - vb @ vb/C**2, 0.0)))
       return max(r, 0.0)
     q = self.interval(pos, v, t)
     return math.sqrt(q)/C if q > 0 else 0.0
 
   def lightSpeed(self, pos, n, t=0.0):
     """light's speed along the unit vector n at pos, by the light rule"""
-    if self.boost == 'lorentz':
+    if self.boost != 'galilean':
       slowness = 1/C
       for b in self.bodies:
         f = self.frame(b, t)
         x = f.event(t, pos)[1]
-        m = f.velocity(C*n)
+        m = f.velocity(C*n, pos)
         m = m/length(m)
         u = self.restFlow(b, x)
         a = u @ m
         s = a + math.sqrt(C*C - (u @ u - a*a))
-        D = f.gamma*(1 - f.V @ n/C)
-        slowness += D*D*(1/s - 1/C)
+        slowness += f.light(n)*(1/s - 1/C)
       return 1/slowness
     if self.light == 'static':
       sT, shift = C, 0.0
@@ -215,7 +267,7 @@ class SplitFlowCalculator(Calculator):
     at the step's middle, the particle moving there at it; then the whole step's change for each, applied one after the
     other
     """
-    if self.boost == 'lorentz':
+    if self.boost != 'galilean':
       return self.moveLorentz(p, dt)
     x, v, t = p.pos, p.v, p.t
     middle, end = t + dt/2, t + dt
@@ -260,10 +312,10 @@ class SplitFlowCalculator(Calculator):
       tm, xmb = f.event(middle, xm)
       h = tm - t0
       u0, um = self.restFlow(b, x0), self.restFlow(b, xmb)
-      vb = f.velocity(vm)
+      vb = f.velocity(vm, x)
       w = vb - u0
       wm = self.addSI(w, self.restFlow(b, x0 + u0*h) - um)
-      vm = f.back(vb + (wm - w) + (um - u0))
+      vm = f.back(vb + (wm - w) + (um - u0), x)
     x1 = x + vm*dt
     #the whole step, body by body, at the middle's velocity
     for b, f in zip(self.bodies, frames):
@@ -271,10 +323,10 @@ class SplitFlowCalculator(Calculator):
       xmb = f.event(middle, xm)[1]
       t1, x1b = f.event(end, x1)
       T = t1 - t0
-      wm = f.velocity(vm) - self.restFlow(b, xmb)
+      wm = f.velocity(vm, xm) - self.restFlow(b, xmb)
       dw = self.restFlow(b, xmb - wm*T/2) - self.restFlow(b, xmb + wm*T/2)
-      vb = f.velocity(v) + (self.addSI(wm, dw) - wm) + (self.restFlow(b, x1b) - self.restFlow(b, x0))
-      v = f.back(vb)
+      vb = f.velocity(v, x) + (self.addSI(wm, dw) - wm) + (self.restFlow(b, x1b) - self.restFlow(b, x0))
+      v = f.back(vb, x1)
     if getattr(p, 'light', False):
       n = v/length(v)
       v = self.lightSpeed(x1, n, end)*n
