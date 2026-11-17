@@ -1,0 +1,4 @@
+lunar laser ranging with the Moon's orbit, the split model against GR: two synodic months, a range every 2 h; GR's Moon fitted to the model's range (its start, and a constant); what is left
+  the Earth alone, moving at 29.8 km/s (the floor): rms 0.0516 m, largest 0.3210 m; cos D -0.0038, sin D -0.0000, cos 2D -0.0035, sin 2D +0.0046 m
+  the Sun, and the Earth on its orbit: rms 2.1777 m, largest 4.1075 m; cos D -0.2886, sin D +0.0743, cos 2D -1.4049, sin 2D -2.2727 m
+  lunar laser ranging: range residuals at the millimetre level; its fit to the synodic term, (2.8 +- 4.1) mm cos D

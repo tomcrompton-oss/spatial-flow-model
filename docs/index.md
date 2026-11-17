@@ -18,7 +18,7 @@ Press Play; choose "All environments" under Background to see every ring's flow.
 | | [1.2 Mechanics of spatial flow](part1/mechanics.md) | v = u + w, the step-by-step procedure, Newton's apple, and light crossing regions of moving space |
 | | [1.3 The four tests](part1/tests.md) | redshift, light bending, Mercury's precession and the Shapiro delay, against general relativity |
 | | [1.4 Conclusion](part1/conclusion.md) | for one body spatial flow is general relativity in Gullstrand–Painlevé coordinates; the model as it is now |
-| Part 2 – Placeholder | [Two bodies](two-bodies.md) | why the flow round two holes needs care, the eikonal flow with no curl, its seam, and an exact solution |
+| Part 2 – Placeholder | [Two bodies](two-bodies/index.md) | five ways to combine two bodies' flows, each tested in the simulation against GR and measurement, with a pass or fail |
 | | [Gravitational waves](waves.md) | a wave as a flow of space that changes with time: exact through the plane, approximate across it |
 | | [Many bodies](many-bodies.md) | how bodies' flows combine, clocks, moving bodies, beyond Newton, and carrying the flow: where the multi-body model is ruled out, and why |
 | Simulations | [Viewers](viewers.md) | the desktop viewer and the browser viewer that runs these pages |

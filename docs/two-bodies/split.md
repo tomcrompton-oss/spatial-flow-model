@@ -1,0 +1,129 @@
+# Each body separately
+
+**The rule:** no single flow at all. Each body keeps its own one-body flow, straight in at $\sqrt{2GM/d}$ in its own
+rest frame. A step works out what each body's flow alone would do to a particle, using the one-body model's own step,
+and applies the changes one after the other: the Sun's, then the Earth's. The particle moves once, at its velocity.
+
+**Verdict: ❌ fails, at the last test.** With Lorentz frames it passes every test of a fixed geometry – Newton's g,
+clocks, light past Jupiter, causality, a moving system – but with the Moon on its own orbit and the Earth going round
+the Sun, the lunar range has a 2.7 m term at half the Moon's synodic period, where lunar laser ranging measures
+millimetres.
+
+## Why it might make sense
+
+One body's flow is GR exactly, and to first order in G, GR's effects of several bodies simply add. So instead of
+looking for one flow that serves every body – which is where each earlier approach failed – use each body's exact
+one-body solution, and add their effects. Numerically it is operator splitting: the step for body A, then the step for
+body B.
+
+<figure markdown>
+<svg viewBox="0 0 660 250" width="100%" style="max-width:660px" role="img" aria-label="Each body's flow taken alone, its change to the particle applied in turn">
+  <defs>
+    <marker id="sg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1baf7a"/></marker>
+    <marker id="so" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e8590c"/></marker>
+    <marker id="sc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker>
+  </defs>
+  <text x="105" y="22" text-anchor="middle" fill="currentColor" font-size="14">the Sun's flow alone</text>
+  <circle cx="60" cy="140" r="22" fill="none" stroke="currentColor" stroke-width="2"/>
+  <g stroke="#1baf7a" stroke-width="1.8" fill="none" marker-end="url(#sg)">
+    <path d="M190,140 L88,140"/><path d="M170,60 L80,125"/><path d="M170,220 L80,155"/>
+  </g>
+  <circle cx="150" cy="105" r="4" fill="currentColor"/>
+  <line x1="150" y1="105" x2="120" y2="110" stroke="#e8590c" stroke-width="2.5" marker-end="url(#so)"/>
+  <text x="118" y="95" fill="#e8590c" font-size="13">Δv₁</text>
+  <text x="225" y="145" fill="currentColor" font-size="22">+</text>
+  <text x="345" y="22" text-anchor="middle" fill="currentColor" font-size="14">the Earth's flow alone</text>
+  <circle cx="400" cy="140" r="12" fill="none" stroke="currentColor" stroke-width="2"/>
+  <g stroke="#1baf7a" stroke-width="1.8" fill="none" marker-end="url(#sg)">
+    <path d="M270,140 L384,140"/><path d="M300,60 L390,128"/><path d="M300,220 L390,152"/>
+  </g>
+  <circle cx="300" cy="105" r="4" fill="currentColor"/>
+  <line x1="300" y1="105" x2="322" y2="118" stroke="#e8590c" stroke-width="2.5" marker-end="url(#so)"/>
+  <text x="318" y="98" fill="#e8590c" font-size="13">Δv₂</text>
+  <text x="450" y="145" fill="currentColor" font-size="22">→</text>
+  <text x="565" y="22" text-anchor="middle" fill="currentColor" font-size="14">the particle</text>
+  <circle cx="520" cy="105" r="4" fill="currentColor"/>
+  <line x1="520" y1="105" x2="600" y2="80" stroke="currentColor" stroke-width="2" marker-end="url(#sc)"/>
+  <text x="575" y="70" fill="currentColor" font-size="13">v</text>
+  <line x1="600" y1="80" x2="570" y2="85" stroke="#e8590c" stroke-width="2.5" marker-end="url(#so)"/>
+  <line x1="570" y1="85" x2="592" y2="98" stroke="#e8590c" stroke-width="2.5" marker-end="url(#so)"/>
+  <text x="490" y="160" fill="currentColor" font-size="13">v + Δv₁ + Δv₂,</text>
+  <text x="490" y="178" fill="currentColor" font-size="13">then it moves once</text>
+  <text x="20" y="242" fill="currentColor" font-size="13">each change is the one-body model's step, worked out in that body's own rest frame</text>
+</svg>
+<figcaption>Each body's flow is taken alone, as if the other weren't there. What it does to the particle in a step is added to the particle's velocity, one body at a time.</figcaption>
+</figure>
+
+**What else it needs.** With no single flow, clocks and light need rules of their own, and moving bodies need a rule
+for "the body's own frame". The ones that pass, after trying others:
+
+- **Clocks:** each body changes a clock's rate by what it would change it by alone.
+- **Light's speed:** each body changes light's slowness (1/speed) by what it would alone, Schwarzschild's change in that
+  body's static time, converted to the model's time. (The first rule tried, from a combined interval, left a cross
+  term between the bodies.)
+- **A moving body's frame:** a Lorentz boost of the particle's place, time and velocity, not a Galilean shift. (With a
+  Galilean shift, orbits round a moving body don't contract while light does, and radar to the Moon changes with
+  direction by $LV^2/2c^2$.)
+
+## Tests
+
+The Sun and the Earth, or the Sun and Jupiter (`engine/split.py`, `studies/split_bodies.py`, `split_checks.py`,
+`lunar_orbit.py`). The three versions: the first rules tried (Galilean frames, light from a combined interval), then
+light's rule fixed, then Lorentz frames as well.
+
+| Test | Expected | Galilean, interval light | Galilean, static light | Lorentz, static light |
+| --- | --- | --- | --- | --- |
+| One body alone | the one-body flow model (GR) | ✅ to rounding | ✅ | ✅ |
+| g at the Earth's surface and the Moon's distance; a moving Earth | Newton's | ✅ to 10⁻⁷ m/s² | ✅ | ✅ |
+| A term in the steps that would move the Moon against the Earth | none | ✅ none, to 7 × 10⁻¹³ m/s² | ✅ | ✅ |
+| Clocks on the equator and in GPS orbit; light pulses noon to dusk | GR's | ✅ to 2 × 10⁻¹⁶; 1.6 × 10⁻¹⁵ | ✅ | ✅ |
+| Light past Jupiter: both bodies less each alone | 0 (the eikonal flow: 408 µas) | ✅ 0.26 µas at 1 R_J | ✅ | ✅ |
+| Lunar range to a mirror held still: both bodies less each alone | 0 | ❌ 0.45 m | ✅ 0 | ✅ 6 × 10⁻⁷ m |
+| Particles at γ up to 10⁶: can matter outrun light? | never | ❌ by 3.6 × 10⁻⁹ c | ✅ never | ✅ never |
+| The whole system moving together: radar to the Moon | no change | ❌ 1.9 m at 29.8 km/s, 290 m at 370 km/s | – (light's rule needs bodies at rest) | ✅ 0.0000 m |
+| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.7 m at half the synodic period; 0.29 m at the synodic period |
+
+## In detail: lunar laser ranging with the Moon's own orbit
+
+Every other test holds the geometry still: a mirror placed at the Moon's distance, bodies at rest or moving together.
+The real test lets the Moon move. The Sun is at rest, the Earth goes round it on its orbit, and the Moon goes round
+the Earth, run in the model for two synodic months (59 days), with every pull and relativistic effect the model has.
+Every two hours, light goes from a station on the Earth's surface to the Moon and back, and the round trip, timed by
+the station's clock, gives the range.
+
+GR's prediction is run the same way, from the Einstein–Infeld–Hoffmann equations (GR's equations of motion to first
+post-Newtonian order) and Shapiro's delay for light. The two run in different coordinates, so GR's Moon starts where a
+fit puts it – its starting place and velocity, and a constant in the range – to match the model's range as closely as
+possible. That is what lunar laser ranging does with the real Moon. Whatever is left is what the model predicts and GR
+doesn't.
+
+Two checks show the test can see centimetres. With the Earth alone (moving at 29.8 km/s, no Sun) the model is GR
+exactly, and the fit leaves 5 cm rms, with every term at the Moon's synodic angle under 5 mm. The model's own step error
+goes as the step squared (4 m at 20 s steps), so its ranges are run at 10 s and 20 s steps and extrapolated to zero.
+
+With the Sun, the fit leaves 2.2 m rms, 4.1 m at most. Almost all of it is a term at twice the Moon's synodic angle D,
+2.67 m, with 0.29 m at D itself:
+
+| Residual after the fit | the Earth alone (the floor) | the Sun, and the Earth on its orbit | LLR's limit |
+| --- | --- | --- | --- |
+| rms | 0.05 m | 2.18 m | millimetres |
+| at the synodic angle D | 0.004 m | 0.29 m | (2.8 ± 4.1) mm |
+| at 2D | 0.006 m | 2.67 m | millimetres |
+
+<iframe src="../../viewer/index.html?run=../runs/lunarOrbit/lunarOrbit.full.json" width="100%" height="460" loading="lazy" title="Lunar range, the split model less GR"></iframe>
+
+*The lunar range in the split model less GR's, after the fit (m), over two synodic months (days): with the Sun, and
+with the Earth alone (the test's floor).* [Open full
+screen](../../viewer/index.html?run=../runs/lunarOrbit/lunarOrbit.full.json){ target=_blank }
+
+**Why.** The Earth moves at V = 29.8 km/s through the Sun's flow, which is 42 km/s at the Earth. The split model works
+out the Earth's effects in the Earth's frame and the Sun's in the Sun's, and nothing ties the Earth's frame to the
+Sun's space around it. Radar between two points moving with the Earth then picks up $(\mathbf n\cdot\mathbf V)
+(\mathbf n\cdot\mathbf u_{\text{Sun}})L/c^2$, where L is the Earth–Moon distance and n the direction to the Moon.
+With V across the Sun's flow, as on a circular orbit, that is a term at twice the Moon's angle, of amplitude
+$V u_{\text{Sun}} L/2c^2 = 2.6$ m. That figure comes from radar to a mirror held still, without the GR code, and the
+Moon's own orbit, with the Sun pulling on it, keeps it rather than cancelling it.
+
+In GR the Earth–Moon system falls freely in the Sun's field, and its local physics is the same as if the Sun weren't
+there, apart from the tide. Treating each body only in its own frame loses that: the Earth's frame needs to be set
+relative to the Sun's space, which means the flows are not separate after all.

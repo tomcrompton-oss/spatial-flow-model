@@ -67,4 +67,4 @@ We therefore have two parts to our hypothesis:
     spinning hole (see [References](../references.md)). For a single body the hypothesis reproduces general
     relativity exactly; Part 2 of the original reaches this, and the conclusion of Part 1 is a natural place to
     say it. Where the picture may part from general relativity is with more than one body — see
-    [Two bodies](../two-bodies.md).
+    [Two bodies](../two-bodies/index.md).

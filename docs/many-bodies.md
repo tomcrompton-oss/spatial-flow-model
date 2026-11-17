@@ -21,7 +21,7 @@ differs from GR measurably ([Where this leaves the model](#where-this-leaves-the
 ## 1. How the flows combine
 
 The simulation combines the bodies' flows by the **sum of their squares**, $|\mathbf u|^2 = \sum 2GM_i/d_i$, pointing
-down the eikonal flow ([Two bodies](two-bodies.md)).
+down the eikonal flow ([The eikonal flow](two-bodies/eikonal.md)).
 
 The choice is not free. Space falling at $\mathbf u$ accelerates at $(\mathbf u\cdot\nabla)\mathbf u =
 \nabla(u^2/2)$ when the flow has no curl, so the rule for $|\mathbf u|^2$ *is* the law of gravity. Because the

@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "twoBodyAlongG.prefs.json",
+  "config": "twoBodyAlongG.config.json"
+}

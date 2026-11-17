@@ -1,42 +1,46 @@
 # Two bodies
 
-With more than one body the flow's speed is still fixed, $|\mathbf u|^2 = \sum 2GM_i/d_i$, but its direction has to
-be chosen, and the obvious choice is wrong.
+With one body, spatial flow is general relativity exactly ([1.4](../part1/conclusion.md)): space falls into the body
+at $\sqrt{2GM/r}$, clocks tick by their speed through that space, and light crosses it at c. With two bodies, each has
+its own flow, and the model has to say how they combine. Nothing in the one-body model fixes that rule. These pages
+try each rule in turn, run it in the simulation, and check it against what is expected.
 
-## Along g: speed right, direction wrong
+## What a rule has to do
 
-Pointing the flow along the net gravity g gets the speed right everywhere, but space moving with that flow does not
-fall at g: off the line through the bodies its direction drifts 1–27° from the flow it arrives at. The flow along g
-has curl. `tests/test_flow_consistency.py` checks exactly this — start a piece of space at A with u(A), let it fall
-at g, and see whether it arrives at B moving at u(B) — and the flow along g fails it.
+**Expected** means general relativity's prediction, or the measurement where there is one. To first order in G, GR's
+effects of two bodies simply add: each body's pull, each body's slowing of clocks, each body's bending of light.
+Where they don't add, the difference is second order in G, far too small to matter in the solar system. So a rule
+passes a test when it gives that sum, to within the measurement.
 
-## The eikonal flow: no curl
+The tests, most of them with the Sun and the Earth:
 
-For space moving with the flow to fall at exactly g, the flow must be the gradient of something:
+| Test | Expected | How well it is measured |
+| --- | --- | --- |
+| **Newton's g**: particles let go near the Earth, the Sun 1 AU away | the sum of the two pulls | everyday mechanics |
+| **Falling space**: does space moving with the flow fall at g? | yes, if the flow has no curl | needed for the model to make sense |
+| **Clocks**: on the equator and in GPS orbit, over a day | GR's rates | GPS clocks agree to nanoseconds |
+| **Lunar laser ranging**: radar from the Earth to the Moon | the Sun adds only its tide | millimetres; the term at the Moon's synodic period to (2.8 ± 4.1) mm |
+| **Light past Jupiter**: the bending, both bodies less each alone | 0 | VLBI: positions to under 10 µas |
+| **Light past the Sun** | GR's bending | Cassini: to 0.01 mas at 2 solar radii |
+| **The system moving**: everything moving together at a steady speed | no change at all | lunar ranging, GPS, pulsars |
+| **Einstein's constraint**: is the flow empty space, in GR's terms? | 0 outside matter | |
 
-$$
-\mathbf u = -\nabla S, \qquad |\nabla S|^2 = \sum_i \frac{2GM_i}{d_i}
-$$
+Each page explains why the rule might work, shows it in a diagram, lists its tests with a clear **pass** or **fail**,
+and goes through one test in detail, with the simulation's runs in the viewer.
 
-the zero-energy Hamilton–Jacobi (eikonal) equation. Its flow lines are the paths of things falling from rest at
-infinity. No such flow can be smooth everywhere round two holes, so it has a **seam**: each body's region is filled
-by paths running straight out of it, a point belongs to the body whose S there is smallest, and the seam passes
-through the potential's saddle (where g = 0 between them). The flow jumps only across the seam (along it, and in
-size, it is the same on both sides), so the metric is continuous there, and a particle crossing it keeps its energy
-and its momentum along the seam, as the metric's own paths do: a slow particle keeps its velocity, and light is
-turned as by a change of frame.
+## The approaches
 
-Two versions, the default for two or more bodies:
+| Approach | The rule | Verdict |
+| --- | --- | --- |
+| [Vector addition](vectors.md) | add the bodies' flows as vectors, $\mathbf u = \sum \mathbf u_i$ | ❌ fails Newton's g by 37–74 m/s² at the Earth's surface |
+| [Along g](along-g.md) | speed from the potential, $|\mathbf u|^2 = \sum 2GM_i/d_i$, pointing along g | ❌ space doesn't fall at g: off the axes g is out by up to 174% |
+| [The eikonal flow](eikonal.md) | that speed, pointing down the paths of things falling from rest far away | ✅ Newton and clocks; ❌ lunar laser ranging (27σ) |
+| [Each body carrying its flow](turning.md) | the eikonal flow turning with the bodies, the Earth carrying its own | ✅ lunar ranging; ❌ light past the Sun (1000 × Cassini's limit) |
+| [Each body separately](split.md) | each body's own one-body flow, its effects on a particle applied one after the other | ✅ every test of a fixed geometry, with Lorentz frames; ❌ the Moon's own orbit: 2.7 m in the lunar range |
 
-- **`eikonal`** — tables of the paths, integrated out from each body; any number of bodies.
-- **`eikonal-exact`** — for exactly two bodies, the zero-energy paths separate in elliptic coordinates (Euler's
-  problem of two fixed centres), so each point's path is found from elliptic integrals and Jacobi functions with no
-  tables. Its acceleration matches g to about 2 × 10⁻⁹, against 10⁻⁴ for the tables.
+The first two fail at the level of Newton's gravity. The next two pass Newton's tests and fail the first
+relativistic one, each in a different place, because a single flow has to carry every body's space at once. The last
+drops the single flow and treats each body by its own exact solution, and fails only when the Moon is let move:
+the Earth's frame and the Sun's space then disagree.
 
-With either, the consistency test passes on every path that stays on one side of the seam, and the 33 two-body test
-paths (falls, orbits round one hole and both, flybys, escapes, light) match Newtonian gravity.
-
-<iframe src="../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json" width="100%" height="560" loading="lazy" title="Falls towards two holes"></iframe>
-
-*Thirty paths falling from 10 AU towards two 1-solar-mass holes 1 AU apart, with the eikonal flow behind them.*
-[Open full screen](../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json){ target=_blank }
+[Many bodies](../many-bodies.md) works through the eikonal and turning flows at more length.
