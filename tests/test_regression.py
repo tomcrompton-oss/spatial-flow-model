@@ -457,6 +457,39 @@ class Engine(unittest.TestCase):
     self.assertAlmostEqual(flat['photon'], 3, delta=1e-12)
     self.assertAlmostEqual(flat['isco'], 6, delta=1e-12)
 
+  def testSplitBodies(self):
+    #the bodies one at a time (engine/split.py): the flow model for one body; Newton's g for two; light past the Sun
+    #and Jupiter adding as each alone (studies/split_bodies.py)
+    from engine.split import SplitFlowCalculator
+    ends = []
+    for calc in (SpecialFlowCalculator([Body(ME)]), SplitFlowCalculator([Body(ME)])):
+      p = Particle()
+      p.pos = np.array([7e6, 0.0])
+      calc.initPV(p, np.array([0.0, 8000.0]))
+      for _ in range(2000):
+        calc.move(p, 0.5)
+      ends.append(p.pos)
+    self.assertLess(length(ends[0] - ends[1]), 1e-6)
+    bodies = [Body(MS, -AU, 0.0), Body(ME)]
+    calc = SplitFlowCalculator(bodies)
+    p = Particle()
+    p.pos = np.array([0.0, REARTH])
+    calc.initPV(p, np.array([0.0, 0.0]))
+    for _ in range(100):
+      calc.move(p, 1e-4)
+    self.assertLess(length(p.v/0.01 - NewtonianCalculator(bodies).gravity(np.array([0.0, REARTH]))), 1e-6)
+    def bend(bs):
+      calc = SplitFlowCalculator(bs, 'static')
+      p = Particle()
+      p.pos = np.array([7.785e11 + 10*7.1492e7, -AU])
+      calc.initLight(p, np.array([0.0, 1.0]))
+      while p.pos[1] < AU:
+        calc.move(p, calc.stepSize(p, 0.005, 0.01*AU/C))
+      return math.atan2(-p.v[0], p.v[1])
+    sun, jupiter = Body(MS), Body(1.898e27, 7.785e11, 0.0)
+    rest = bend([sun, jupiter]) - bend([sun]) - bend([jupiter])
+    self.assertLess(abs(rest), 1e-2*bend([jupiter]))   #0.1% with these coarse steps; the squares rule's is 24%
+
   def testCsvRowsWithAdaptiveSteps(self):
     """with uneven steps the csv rows come at the steps nearest each interval"""
     log = Log('regressionRows', False, True, scratch(self))
