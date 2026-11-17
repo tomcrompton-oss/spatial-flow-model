@@ -93,7 +93,7 @@ light's rule fixed, then Lorentz frames, then free-fall frames.
 | The binary's period (orbital decay) | shrinks only by gravitational waves: GR −2.5 × 10⁻¹⁰ s/s; Hulse–Taylor matches GR to 0.2% | – | – | ❌ −7.8 × 10⁻⁴ s/s | ❌ −1.4 × 10⁻³ s/s |
 | Light past a moving Jupiter: GR's (1 − v·k/c) in the bending | VLBI (2003), to about 20% | – | – | ✅ to 3 × 10⁻⁷ | ✅ (one body: the same) |
 | The Nordtvedt effect: a bound pair falling towards the Sun | falls as a single body; lunar laser ranging η < 10⁻⁴ | – | – | ❌ η = 1.00 | – (three bodies: see below) |
-| De Sitter precession of the Moon's orbit, over a year | GR's 19.2 mas a year; lunar laser ranging to 0.3% | – | – | – | ❓ not converged: −12 to −36 mas a year from GR's |
+| De Sitter precession of the Moon's orbit, over a year | GR's 19.2 mas a year; lunar laser ranging to 0.3% | – | – | – | ❓ not measurable yet: k between −3 and +0.6 (0 = GR, 1 = none) |
 
 ## In detail: lunar laser ranging with the Moon's own orbit
 
@@ -215,7 +215,15 @@ pulsars rule out.
   the split model leaves out. (With free-fall frames this test has three bodies, and the frame then adds the other
   bodies' moving spaces together, counting their orbital motion as flow: the pair falls 2.3% too fast, a fault of the
   frame rule, not a measurement.)
-- **De Sitter precession ❓.** A year of the Moon's orbit, model against GR from the same start, with GR turned at the
-  de Sitter rate as a check (it gives −18.6 mas a year, as it should). The model's perigee turns 12 to 36 mas a year
-  less than GR's, but the two step sizes don't converge, so this is not yet a result.
+- **De Sitter precession ❓.** The effect is 19.2 mas a year in a perigee the Sun's tide turns by 1.1 rad a year,
+  and a start 1 part in 10⁸ different (the size of the model's and GR's coordinate differences) moves the perigee's
+  rate by 15 to 34 mas a year. So comparing perigee rates from one start can't show it, nor can it with GR's start
+  fitted: the rate trades with the orbit's size and shape, and gave −12 to −329 mas a year depending on the start and
+  span. `studies/de_sitter.py` fits GR to the model's track with its start and a turning of k times the de Sitter rate
+  free (k = 0: the model has GR's precession; k = 1: none). The fit checks out (GR against turned GR gives k = 0.98),
+  and with c × 1000 the model gives k = 0.03. But over 90 days the model's own result is k = +0.6 from an eccentric
+  start and −3.2 from the lunar start. The model's step error is tens of metres at 10 and 20 s and its extrapolation
+  leaves metres, while below 5 s rounding takes over: the Moon's place relative to the Earth, worked out 1.5 × 10¹¹ m
+  from the Sun, loses about 3 × 10⁻⁵ m at each step. So this is not yet a result: it needs the model's steps worked
+  relative to the Earth (to take out the rounding) and a more accurate step.
 
