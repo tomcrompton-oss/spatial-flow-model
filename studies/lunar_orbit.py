@@ -72,18 +72,23 @@ class Setup:
   the Earth's path, the Sun at the origin or none: in the model's coordinates or GR's. radius: the Earth's orbit's;
   sense: +1 anticlockwise (as the Moon goes), -1 the other way; sunScale: GR's GM_Sun, times this, for the Moon;
   turn: GR's Moon run in a frame turning at this (rad/s, anticlockwise) about the Earth - its orbit then turns the other
-  way: to fit how far the model's turns from GR's
+  way: to fit how far the model's turns from GR's; earthMass: the Earth's (about 0 for a check with the Sun alone),
+  earthScale: GR's GM_Earth, times this (lunar laser ranging fits it); start: the Moon's place and velocity from the
+  Earth at first
   """
 
-  def __init__(self, sun, harmonic, radius=AU, sense=1, sunScale=1.0, turn=0.0):
+  def __init__(self, sun, harmonic, radius=AU, sense=1, sunScale=1.0, turn=0.0, earthMass=ME, earthScale=1.0,
+               start=START):
     self.sun, self.sense, self.sunScale, self.turn = sun, sense, sunScale, turn
+    self.earthMass, self.earthScale, self.start = earthMass, earthScale, start
     self.omega = sense*math.sqrt(G*MS/radius**3)
     self.orbit = radius
     self.radius = radius - (G*MS/C**2 if harmonic else 0.0)
     self.V = np.array([0.0, 29.8e3])
 
-  def scaled(self, k, turn=0.0):
-    return Setup(self.sun, self.radius != self.orbit, self.orbit, self.sense, k, turn)
+  def scaled(self, k, turn=0.0, earthScale=1.0):
+    return Setup(self.sun, self.radius != self.orbit, self.orbit, self.sense, k, turn, self.earthMass, earthScale,
+                 self.start)
 
   def deSitter(self):
     """GR's de Sitter precession of a frame falling round the Sun with the Earth, 3/2 V g/c^2 (rad/s)"""
@@ -109,7 +114,8 @@ class Setup:
     return -self.omega**2*self.earth(t) if self.sun else np.array([0.0, 0.0])
 
   def bodies(self):
-    earth = Body(ME, self.orbit, 0.0, circling=self.omega) if self.sun else Body(ME, AU, 0.0, velocity=self.V)
+    earth = (Body(self.earthMass, self.orbit, 0.0, circling=self.omega) if self.sun
+             else Body(self.earthMass, AU, 0.0, velocity=self.V))
     return ([Body(MS)] if self.sun else []) + [earth]
 
 
@@ -119,8 +125,8 @@ def modelRun(setup, dt, boost='lorentz'):
   calc = SplitFlowCalculator(setup.bodies(), 'static', boost)
   f = Boost(setup.earthV(0.0), 0.0, setup.earth(0.0))
   p = Particle()
-  p.pos = setup.earth(0.0) + START[0]
-  calc.initPV(p, f.back(START[1]))
+  p.pos = setup.earth(0.0) + setup.start[0]
+  calc.initPV(p, f.back(setup.start[1]))
   track = Track()
   track.add(p.t, p.pos, p.v)
   while p.t < SPAN + DAY:
@@ -148,7 +154,7 @@ def modelLeg(calc, a, b, t0, earthEnd, pieces=40):
 
 def grAccel(setup, t, x, v):
   """the Moon's acceleration by the EIH equations (first post-Newtonian, harmonic coordinates)"""
-  bodies = [(G*ME, setup.earth(t), setup.earthV(t), setup.earthA(t))]
+  bodies = [(G*setup.earthMass*setup.earthScale, setup.earth(t), setup.earthV(t), setup.earthA(t))]
   if setup.sun:
     bodies.append((G*MS*setup.sunScale, np.zeros(2), np.zeros(2), np.zeros(2)))
   c2 = C*C
@@ -192,14 +198,14 @@ def grLeg(setup, a, b, t0, t1, earthEnd):
   """light's time from a to b by Shapiro's delay, each body where it is when light is at the end nearer it"""
   R = np.linalg.norm(b - a)
   delay = 0.0
-  for gm, centre in [(G*ME, setup.earth(t0 if earthEnd == 'a' else t1))] + ([(G*MS, np.zeros(2))] if setup.sun else []):
+  for gm, centre in [(G*setup.earthMass, setup.earth(t0 if earthEnd == 'a' else t1))] + ([(G*MS, np.zeros(2))] if setup.sun else []):
     r1, r2 = np.linalg.norm(a - centre), np.linalg.norm(b - centre)
     delay += 2*gm/C**3*math.log((r1 + r2 + R)/(r1 + r2 - R))
   return R/C + delay
 
 
 def grRate(setup, x, t):
-  U = G*ME/REARTH + (G*MS/np.linalg.norm(x) if setup.sun else 0.0)
+  U = G*setup.earthMass/REARTH + (G*MS/np.linalg.norm(x) if setup.sun else 0.0)
   v = setup.earthV(t)
   return 1 - U/C**2 - (v @ v)/(2*C*C)
 
@@ -240,16 +246,17 @@ def grRanges(setup, start, times):
   return ranges(setup, moon, times, leg, lambda x, t: grRate(setup, x, t))
 
 
-def fit(setup, target, times, iterations=6, sun=False, turn=False):
+def fit(setup, target, times, iterations=6, sun=False, turn=False, earth=False):
   """
   GR's starting place and velocity (and a constant), by Gauss-Newton, to match target best; with sun, the Sun's GM
-  for the Moon as well; with turn, a turning of GR's Moon's frame (in units of the de Sitter precession) as well
+  for the Moon as well; with turn, a turning of GR's Moon's frame (in units of the de Sitter precession); with earth,
+  the Earth's GM
   """
-  params = np.concatenate([START[0], START[1], [1.0, 0.0]])
-  steps = np.array([1.0, 1.0, 1e-5, 1e-5, 1e-7, 0.1])
-  free = [0, 1, 2, 3] + ([4] if sun else []) + ([5] if turn else [])
+  params = np.concatenate([setup.start[0], setup.start[1], [1.0, 0.0, 1.0]])
+  steps = np.array([1.0, 1.0, 1e-5, 1e-5, 1e-7, 0.1, 1e-7])
+  free = [0, 1, 2, 3] + ([4] if sun else []) + ([5] if turn else []) + ([6] if earth else [])
   dS = setup.deSitter()
-  ranges = lambda q: grRanges(setup.scaled(q[4], q[5]*dS), (q[:2], q[2:4]), times)
+  ranges = lambda q: grRanges(setup.scaled(q[4], q[5]*dS, q[6]), (q[:2], q[2:4]), times)
   for _ in range(iterations):
     base = ranges(params)
     J = [np.ones_like(times)]
@@ -275,7 +282,9 @@ def describe(times, resid, setup):
           % (np.sqrt(np.mean(resid**2)), np.abs(resid).max(), *coef[1:]))
 
 
-CASES = {   #name: (title, the Sun, the Earth's orbit's radius, its sense, the boost)
+EPICYCLE = (np.array([-DMOON, 0.0]), np.array([0.0, 2*DMOON*math.sqrt(G*MS/AU**3)]))   #the Moon with no Earth to
+                                     #pull it: on an epicycle round the Earth's place, out to 2 D_moon along the orbit
+CASES = {   #name: (title, the Sun, the Earth's orbit's radius, its sense, the boost[, the Earth's mass, the Moon's start])
   'alone': ('the Earth alone, moving at 29.8 km/s (the floor)', False, AU, 1, 'lorentz'),
   'sun': ('the Sun, and the Earth on its orbit', True, AU, 1, 'lorentz'),
   'reverse': ('the Earth going round the Sun the other way', True, AU, -1, 'lorentz'),
@@ -286,14 +295,17 @@ CASES = {   #name: (title, the Sun, the Earth's orbit's radius, its sense, the b
                True, AU, 1, 'freefall'),
   'freefall-reverse': ('the same, the Earth going round the other way', True, AU, -1, 'freefall'),
   'freefall-far': ('the same, the Earth on an orbit of 2 AU', True, 2*AU, 1, 'freefall'),
+  'sunonly': ('the Sun alone (an Earth of 1 kg): the model is GR, so this checks the GR code\'s Sun', True, AU, 1,
+              'freefall', 1.0, EPICYCLE),
 }
 
 
 def run(name, folder, times, target=None, steps=(10.0, 20.0)):
   """one case: the model's ranges (or target, from an earlier run), and GR fitted to them with and without the Sun's
   GM free"""
-  title, sun, radius, sense, boost = CASES[name]
-  model = Setup(sun, False, radius, sense)
+  title, sun, radius, sense, boost, *more = CASES[name]
+  earthMass, start = more if more else (ME, START)
+  model = Setup(sun, False, radius, sense, earthMass=earthMass, start=start)
   if target is None:
     runs = {}
     for dt in steps:
@@ -301,12 +313,16 @@ def run(name, folder, times, target=None, steps=(10.0, 20.0)):
       runs[dt] = modelRanges(model, calc, moon, times)
     target = (4*runs[steps[0]] - runs[steps[1]])/3   #steps[1] = 2 steps[0]
   lines = []
-  for sunFree in ((False, True) if sun else (False,)):
-    resid, params = fit(Setup(sun, True, radius, sense), target, times, sun=sunFree)
-    lines.append('  %s%s: %s' % (title, ', the Sun\'s GM fitted too (by %+.2e)' % (params[4] - 1) if sunFree else '',
-                                 describe(times, resid, model)))
+  fits = [('', {})]
+  if sun and earthMass > 1.0:
+    fits += [('sunfit', {'sun': True}), ('earthfit', {'earth': True})]
+  for tag, free in fits:
+    resid, params = fit(Setup(sun, True, radius, sense, earthMass=earthMass, start=start), target, times, **free)
+    also = {'sunfit': ', the Sun\'s GM fitted too (by %+.2e)' % (params[4] - 1),
+            'earthfit': ', the Earth\'s GM fitted too (by %+.2e)' % (params[6] - 1)}.get(tag, '')
+    lines.append('  %s%s: %s' % (title, also, describe(times, resid, model)))
     print(lines[-1], flush=True)
-    with open(os.path.join(folder, 'residual_%s%s.csv' % (name, '_sunfit' if sunFree else '')), 'w', newline='') as f:
+    with open(os.path.join(folder, 'residual_%s%s.csv' % (name, '_' + tag if tag else '')), 'w', newline='') as f:
       w = csv.writer(f)
       w.writerow(['t_days', 'range_m', 'residual_m'])
       for t, r, e in zip(times, target, resid):

@@ -4,10 +4,11 @@
 rest frame. A step works out what each body's flow alone would do to a particle, using the one-body model's own step,
 and applies the changes one after the other: the Sun's, then the Earth's. The particle moves once, at its velocity.
 
-**Verdict: ❌ fails, at the last test, by less each time.** It passes every test of a fixed geometry – Newton's g,
-clocks, light past Jupiter, causality, a moving system. With the Moon on its own orbit and the Earth going round the
-Sun, Lorentz frames leave 2.2 m in the lunar range; taking each body's frame to be its free-fall frame in the other's
-space brings that to 0.15 m, with 3 cm at the Moon's synodic period. Lunar laser ranging measures millimetres.
+**Verdict: ❓ not settled.** It passes every test of a fixed geometry – Newton's g, clocks, light past Jupiter,
+causality, a moving system. With the Moon on its own orbit and the Earth going round the Sun, Lorentz frames fail
+lunar laser ranging by 2.2 m. Taking each body's frame to be its free-fall frame in the other's space brings that to
+0.15 m, twice what the test leaves where the model is exactly GR (8 cm with the Sun). Lunar laser ranging measures
+millimetres, so a finer test is needed to say whether this version passes.
 
 ## Why it might make sense
 
@@ -86,7 +87,7 @@ light's rule fixed, then Lorentz frames, then free-fall frames.
 | Lunar range to a mirror held still: both bodies less each alone | 0 | ❌ 0.45 m | ✅ 0 | ✅ 6 × 10⁻⁷ m | ✅ 0 |
 | Particles at γ up to 10⁶: can matter outrun light? | never | ❌ by 3.6 × 10⁻⁹ c | ✅ never | ✅ never | ✅ never |
 | The whole system moving together: radar to the Moon | no change | ❌ 1.9 m at 29.8 km/s, 290 m at 370 km/s | – (light's rule needs bodies at rest) | ✅ 0.0000 m | ✅ 0.0000 m |
-| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❌ 0.15 m rms; 9 cm at half the synodic period, 3 cm at it |
+| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❓ 0.15 m rms, against the test's 8 cm with the Sun; 8 cm at half the synodic period, 3 cm at it |
 
 ## In detail: lunar laser ranging with the Moon's own orbit
 
@@ -144,10 +145,20 @@ u_{\text{Sun}}$. That takes out almost all of the residual, 0.15 m left of 2.16 
 | The Sun's tide across the Earth–Moon system, which the frame leaves out | the two frame terms worked out with the Sun's flow's change along the path, put through the fit | under 6 mm |
 | GR's de Sitter precession of a frame falling round the Sun (19 mas a year) | a turning of GR's Moon's frame added to the fit | takes out 2% |
 
-None of them accounts for the 0.15 m. The terms that are left, 3 cm at the synodic period and 9 cm at twice it, are 8
-to 15 times the test's floor and 10 to 20 times lunar laser ranging's limits. The test's floor comes from the Earth
-alone, though, so it checks the GR code's Earth terms and not its Sun terms. At this level the remaining question is
-as much whether the test is right as whether the model is.
+None of them accounts for the 0.15 m. Two more checks are about the test itself:
+
+| Check | Result |
+| --- | --- |
+| The Earth's mass fitted as well (lunar laser ranging fits it) | moves by 3 × 10⁻⁸; the residual stays 0.15 m |
+| **The test's floor with the Sun**: the Earth given a mass of 1 kg, so the split model is exactly GR, and the Moon on an epicycle round the Earth's place | **0.077 m rms**, 5 cm at the synodic angle |
+
+The test's floor with the Earth alone was 5 cm; with the Sun it is 8 cm, from the GR side's Sun terms or the way the
+two codes are matched, even where the model is exactly GR. Against that, free-fall frames leave twice the floor. Their
+term at the synodic period (3 cm) is within it, and their term at half the synodic period (8 cm) is the only part
+clearly above it. Lorentz frames, at 2.2 m, fail by far more than the test's floor.
+
+So this test can't settle the free-fall version. Doing that would take a GR reference good to millimetres with the
+Sun, as lunar laser ranging's own ephemerides are.
 
 The free-fall frame also gives up part of the idea: each body's frame now depends on the other bodies' flow at its
 centre, so the flows are not wholly separate any more.
