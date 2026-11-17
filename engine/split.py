@@ -56,6 +56,8 @@ from engine.flow import Calculator, length
 
 def bodyVelocity(b, t):
   """body b's velocity at time t"""
+  if hasattr(b, 'velocityAt'):   #a body moving under the model's own steps (studies/binary_pulsar.py)
+    return b.velocityAt(t)
   if b.circling:
     x = b.at(t)
     return b.circling*np.array([-x[1], x[0]])
@@ -175,6 +177,7 @@ class SplitFlowCalculator(Calculator):
     if light == 'interval' and boost != 'galilean':
       raise ValueError("the '%s' boost has the 'static' light rule" % boost)
     self.light, self.boost = light, boost
+    self.skip = None   #a body whose own flow is left out: when the particle moved is that body
 
   def __repr__(self):
     return '<split.SplitFlowCalculator object>'
@@ -183,14 +186,19 @@ class SplitFlowCalculator(Calculator):
     """body b's own flow at pos, at time t: straight in at sqrt(2GM/d), carried at b's velocity"""
     return super().bodyFlow(b, pos, t) + bodyVelocity(b, t)
 
+  @property
+  def acting(self):
+    """the bodies whose flows act on the particle: all but self.skip"""
+    return [b for b in self.bodies if b is not self.skip]
+
   def flow(self, pos, region=None, t=0.0):
     """the sum of the bodies' own flows (for the particle's p.u; the steps take each alone)"""
-    return sum((self.bodyFlow(b, pos, t) for b in self.bodies), np.array([0.0, 0.0]))
+    return sum((self.bodyFlow(b, pos, t) for b in self.acting), np.array([0.0, 0.0]))
 
   def interval(self, pos, v, t=0.0):
     """(c dtau/dt)^2 at pos for velocity v: c^2 - v^2 less each body's own change"""
     q = C*C - v @ v
-    for b in self.bodies:
+    for b in self.acting:
       w, rest = v - self.bodyFlow(b, pos, t), v - bodyVelocity(b, t)
       q -= w @ w - rest @ rest
     return q
@@ -230,7 +238,7 @@ class SplitFlowCalculator(Calculator):
     if self.boost != 'galilean':
       free = math.sqrt(max(1 - v @ v/C**2, 0.0))
       r = free
-      for b in self.bodies:
+      for b in self.acting:
         f = self.frame(b, t)
         x = f.event(t, pos)[1]
         vb = f.velocity(v, pos)
@@ -244,7 +252,7 @@ class SplitFlowCalculator(Calculator):
     """light's speed along the unit vector n at pos, by the light rule"""
     if self.boost != 'galilean':
       slowness = 1/C
-      for b in self.bodies:
+      for b in self.acting:
         f = self.frame(b, t)
         x = f.event(t, pos)[1]
         m = f.velocity(C*n, pos)
@@ -256,7 +264,7 @@ class SplitFlowCalculator(Calculator):
       return 1/slowness
     if self.light == 'static':
       sT, shift = C, 0.0
-      for b in self.bodies:
+      for b in self.acting:
         u = self.bodyFlow(b, pos, t)
         beta = (u @ u)/C**2
         r = pos - b.at(t)
@@ -266,7 +274,7 @@ class SplitFlowCalculator(Calculator):
       return sT/(1 - sT*shift)
     #the root of interval(s n) = 0
     a, s2 = 0.0, 0.0
-    for b in self.bodies:
+    for b in self.acting:
       u, V = self.bodyFlow(b, pos, t), bodyVelocity(b, t)
       a += (u - V) @ n
       s2 += u @ u - V @ V
@@ -320,7 +328,7 @@ class SplitFlowCalculator(Calculator):
     xm = x + v*dt/2
     #half a step, body by body: what each flow alone does to the velocity by the middle
     vm = v.copy()
-    for b in self.bodies:
+    for b in self.acting:
       V = bodyVelocity(b, t)
       u0, um = self.bodyFlow(b, x, t) - V, self.bodyFlow(b, xm, middle) - V
       w = vm - V - u0
@@ -328,7 +336,7 @@ class SplitFlowCalculator(Calculator):
       vm = vm + (wm - w) + (um - u0)
     x1 = x + vm*dt
     #the whole step, body by body, at the middle's velocity
-    for b in self.bodies:
+    for b in self.acting:
       V = bodyVelocity(b, middle)
       wm = vm - self.bodyFlow(b, xm, middle)
       dw = self.bodyFlow(b, xm - wm*dt/2, middle) - self.bodyFlow(b, xm + wm*dt/2, middle)
@@ -350,10 +358,10 @@ class SplitFlowCalculator(Calculator):
     x, v, t = p.pos, p.v, p.t
     middle, end = t + dt/2, t + dt
     xm = x + v*dt/2
-    frames = [self.frame(b, middle) for b in self.bodies]   #at the middle, so the step stays symmetric
+    frames = [self.frame(b, middle) for b in self.acting]   #at the middle, so the step stays symmetric
     #half a step, body by body
     vm = v.copy()
-    for b, f in zip(self.bodies, frames):
+    for b, f in zip(self.acting, frames):
       t0, x0 = f.event(t, x)
       tm, xmb = f.event(middle, xm)
       h = tm - t0
@@ -364,7 +372,7 @@ class SplitFlowCalculator(Calculator):
       vm = f.back(vb + (wm - w) + (um - u0), x)
     x1 = x + vm*dt
     #the whole step, body by body, at the middle's velocity
-    for b, f in zip(self.bodies, frames):
+    for b, f in zip(self.acting, frames):
       t0, x0 = f.event(t, x)
       xmb = f.event(middle, xm)[1]
       t1, x1b = f.event(end, x1)
