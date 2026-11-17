@@ -104,7 +104,7 @@ def range_(bodies, V, direction, light, boost):
   calc = SplitFlowCalculator(bodies, light, boost)
   V = np.array(V, dtype=float)
   def place(r):
-    if boost == 'lorentz' and V.any():
+    if boost != 'galilean' and V.any():
       f = Boost(V, 0.0, [0.0, 0.0])
       along = (r @ f.n)*f.n
       r = r - along + along/f.gamma

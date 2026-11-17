@@ -44,8 +44,9 @@ the Moon's range is out by 240 m
 
 'freefall' sets each body's frame in the local free-fall frame of the other bodies' space: shifted (Galilean, the
 flow's time being its free-falling observers' own) to the others' flow at the body's centre, U0, then Lorentz-boosted
-by the body's velocity through that space, V - U0. the other bodies are taken at rest, and their flow uniform across
-the body's region (their tide left out)
+by the body's velocity through that space, V - U0 - all in the Lorentz frame of the other body pulling hardest, so that
+a system moving together is the same as one at rest. the others' flow is taken uniform across the body's region
+(their tide left out)
 """
 import math
 import numpy as np
@@ -119,6 +120,43 @@ class Boost:
     return D*D*(sF/C)/(1 + nF @ self.shift/sF)
 
 
+class Chain:
+  """frames one after another: the first from the lab, each next from the one before"""
+
+  def __init__(self, *stages):
+    self.stages = stages
+
+  def event(self, t, x):
+    for f in self.stages:
+      t, x = f.event(t, x)
+    return t, x
+
+  def velocity(self, v, x=None):
+    for f in self.stages:
+      v = f.velocity(v)
+    return v
+
+  def back(self, v, x=None):
+    for f in reversed(self.stages):
+      v = f.back(v)
+    return v
+
+  def time(self, v, x=None):
+    rate = 1.0
+    for f in self.stages:
+      rate *= f.time(v)
+      v = f.velocity(v)
+    return rate
+
+  def light(self, n):
+    factor = 1.0
+    for f in self.stages:
+      factor *= f.light(n)
+      n = f.velocity(C*n)
+      n = n/length(n)
+    return factor
+
+
 class SplitFlowCalculator(Calculator):
   """
   the flow model with each body's flow taken alone and its changes applied one at a time (see the module's note).
@@ -164,8 +202,16 @@ class SplitFlowCalculator(Calculator):
     """
     others = [o for o in self.bodies if o is not b]
     if self.boost == 'freefall' and others:
-      U0 = sum(self.restFlow(o, b.at(t) - o.at(t)) for o in others)
-      return Boost(bodyVelocity(b, t) - U0, t, b.at(t), shift=U0)
+      #into the frame of the other body pulling hardest, the others' space seen there, then b's free-fall frame in it
+      X = b.at(t)
+      main = max(others, key=lambda o: o.GM/length(X - o.at(t))**2)
+      base = Boost(bodyVelocity(main, t), t, X)
+      U0 = np.zeros(2)
+      for o in others:
+        own = Boost(bodyVelocity(o, t), t, o.at(t))
+        space = own.back(self.restFlow(o, own.event(t, X)[1]))   #o's space at b, in the lab
+        U0 = U0 + base.velocity(space)
+      return Chain(base, Boost(base.velocity(bodyVelocity(b, t)) - U0, 0.0, np.zeros(2), shift=U0))
     if self.boost != 'local' or not others:
       return Boost(bodyVelocity(b, t), t, b.at(t))
     def phi(x):
