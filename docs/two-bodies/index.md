@@ -36,12 +36,11 @@ and goes through one test in detail, with the simulation's runs in the viewer.
 | [Along g](along-g.md) | speed from the potential, $|\mathbf u|^2 = \sum 2GM_i/d_i$, pointing along g | ❌ space doesn't fall at g: off the axes g is out by up to 174% |
 | [The eikonal flow](eikonal.md) | that speed, pointing down the paths of things falling from rest far away | ✅ Newton and clocks; ❌ lunar laser ranging (27σ) |
 | [Each body carrying its flow](turning.md) | the eikonal flow turning with the bodies, the Earth carrying its own | ✅ lunar ranging; ❌ light past the Sun (1000 × Cassini's limit) |
-| [Each body separately](split.md) | each body's own one-body flow, its effects on a particle applied one after the other | ✅ every test of a fixed geometry; ❓ the Moon's own orbit: 0.15 m in the lunar range with free-fall frames, twice the test's 8 cm floor (❌ 2.2 m with Lorentz frames) |
+| [Each body separately](split.md) | each body's own one-body flow, its effects on a particle applied one after the other | ✅ every test with one body much heavier; ❌ a binary of comparable masses: the orbit turns 17% too slowly, and the pair accelerates by itself |
 
 The first two fail at the level of Newton's gravity. The next two pass Newton's tests and fail the first
 relativistic one, each in a different place, because a single flow has to carry every body's space at once. The last
-drops the single flow and treats each body by its own exact solution, and fails only when the Moon is let move:
-the Earth's frame has to be set in the Sun's space, and then what is left, 15 cm, is close to what
-the test itself can resolve.
+drops the single flow and treats each body by its own exact solution. It passes every test with one body much
+heavier than the other, but with comparable masses the bodies' fields have to act on each other, and they don't.
 
 [Many bodies](../many-bodies.md) works through the eikonal and turning flows at more length.

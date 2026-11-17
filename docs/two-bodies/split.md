@@ -4,11 +4,11 @@
 rest frame. A step works out what each body's flow alone would do to a particle, using the one-body model's own step,
 and applies the changes one after the other: the Sun's, then the Earth's. The particle moves once, at its velocity.
 
-**Verdict: ❓ not settled.** It passes every test of a fixed geometry – Newton's g, clocks, light past Jupiter,
-causality, a moving system. With the Moon on its own orbit and the Earth going round the Sun, Lorentz frames fail
-lunar laser ranging by 2.2 m. Taking each body's frame to be its free-fall frame in the other's space brings that to
-0.15 m, twice what the test leaves where the model is exactly GR (8 cm with the Sun). Lunar laser ranging measures
-millimetres, so a finer test is needed to say whether this version passes.
+**Verdict: ❌ fails, with two bodies of comparable mass.** It passes every test with one body much heavier than the
+other – Newton's g, clocks, light past Jupiter, causality, a moving system – and with free-fall frames comes within
+twice the lunar test's floor. But in a binary of comparable masses its orbit turns 17% too slowly at equal masses, and
+the pair's centre of mass accelerates by itself. Binary pulsars rule out both: the bodies' fields need to act on each
+other, and in this model they don't.
 
 ## Why it might make sense
 
@@ -88,6 +88,8 @@ light's rule fixed, then Lorentz frames, then free-fall frames.
 | Particles at γ up to 10⁶: can matter outrun light? | never | ❌ by 3.6 × 10⁻⁹ c | ✅ never | ✅ never | ✅ never |
 | The whole system moving together: radar to the Moon | no change | ❌ 1.9 m at 29.8 km/s, 290 m at 370 km/s | – (light's rule needs bodies at rest) | ✅ 0.0000 m | ✅ 0.0000 m |
 | **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❓ 0.15 m rms, against the test's 8 cm with the Sun; 8 cm at half the synodic period, 3 cm at it |
+| **A binary of comparable masses: the periastron advance** | GR's, for any mass ratio; the double pulsar to about 10⁻⁴ | – | – | ❌ 25% too much at equal masses | ❌ 17% too little at equal masses |
+| A binary of comparable masses: the centre of mass | stays put (momentum is conserved) | – | – | ❌ accelerates | ❌ accelerates, 0.17 m/s² at a mass ratio of 0.1 |
 
 ## In detail: lunar laser ranging with the Moon's own orbit
 
@@ -162,3 +164,33 @@ Sun, as lunar laser ranging's own ephemerides are.
 
 The free-fall frame also gives up part of the idea: each body's frame now depends on the other bodies' flow at its
 centre, so the flows are not wholly separate any more.
+
+## Comparable masses: a binary
+
+The tests above all have one body much heavier than the other. There the split model is close to the one-body flow,
+and the one-body flow is GR. The thing it leaves out by design is the bodies' fields acting on each other: in GR's
+equations of motion for two bodies (Einstein, Infeld and Hoffmann's) there are terms in $m_1 m_2$, largest when the
+masses are equal. Binary pulsars are such systems, and they measure the orbit's turning with the masses known from
+other effects.
+
+In `studies/binary_pulsar.py` each body moves in the other's flow by the model's own step, 2 solar masses in all,
+1 × 10⁸ m apart, eccentricity 0.3. GR's periastron advance at first post-Newtonian order is exact for any mass ratio:
+3(GMn)^(2/3)/(c²(1−e²)) per 2π, with M the total mass and n the orbit's frequency.
+
+| Mass ratio m₂/m₁ | η = m₁m₂/M² | Free-fall frames: model / GR | Lorentz frames: model / GR | Centre of mass (free-fall) |
+| --- | --- | --- | --- | --- |
+| 1 | 0.25 | 0.834 | 1.250 | still (by symmetry) |
+| 0.1 | 0.083 | 0.946 | 1.083 | accelerates at 0.17 m/s² |
+| 0.01 | 0.0098 | 0.994 | 1.011 | accelerates at 0.07 m/s² |
+
+With one body light the model is GR, as it must be. The gap grows with η: by −0.66 η with free-fall frames and +1.0 η
+with Lorentz frames, 17% and 25% at equal masses. The double pulsar, whose masses are nearly equal, checks GR's
+advance to about 10⁻⁴.
+
+The centre of mass shows the same thing another way. Each body's step uses only the other's flow, so the
+relativistic parts of the two pulls don't balance, and the pair accelerates by itself – 0.17 m/s² here, about 6 × 10⁻⁶
+of the pull between them, where the first-order relativistic forces are about 10⁻⁵ of it. It goes as 1/c²: with c
+a thousand times larger it falls to the scheme's own 0.002 m/s². In GR momentum is conserved and the centre of mass
+only swings, by metres here. A binary pulsar that accelerated like this would change its observed period, which the
+pulsars rule out.
+
