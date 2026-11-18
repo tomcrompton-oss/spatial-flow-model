@@ -88,6 +88,15 @@ class Boost:
     along = dx @ self.n
     return self.gamma*(dt - self.V @ dx/C**2), dx + (self.gamma - 1)*along*self.n - self.gamma*self.V*dt
 
+  def delta(self, t, x, dt, dx):
+    """event(t + dt, x + dx) less event(t, x), worked from dt and dx (so not rounded at the size of x)"""
+    if self.phi:
+      (a, b), (c, d) = self.event(t + dt, x + dx), self.event(t, x)
+      return a - c, b - d
+    dx = dx - self.shift*dt
+    along = dx @ self.n
+    return self.gamma*(dt - self.V @ dx/C**2), dx + (self.gamma - 1)*along*self.n - self.gamma*self.V*dt
+
   def velocity(self, v, x=None):
     """v (at x) seen in the frame"""
     if self.U:
@@ -103,6 +112,20 @@ class Boost:
     if self.U:
       v = v/(1 - v @ self.U(self.x0 if x is None else x)/C**2)
     return v
+
+  def backChange(self, u, d):
+    """
+    back(u + d) less back(u), worked from d: back(u) is num(u)/den(u), num linear in u and den = 1 + u . V/c^2, so the
+    change is (lin(d) den(u) - num(u) d . V/c^2)/(den(u + d) den(u)). taking the whole velocity there and back each
+    step instead loses a fixed part in 10^16 at each, which builds up step on step
+    """
+    if self.U:
+      return self.back(u + d) - self.back(u)
+    along = (u @ self.n)*self.n
+    num = along + self.V + (u - along)/self.gamma
+    den, dV = 1 + u @ self.V/C**2, d @ self.V/C**2
+    dAlong = (d @ self.n)*self.n
+    return ((dAlong + (d - dAlong)/self.gamma)*den - num*dV)/((den + dV)*den)
 
   def time(self, v, x=None):
     """dt'/dt along a path moving at v (at x)"""
@@ -133,6 +156,11 @@ class Chain:
       t, x = f.event(t, x)
     return t, x
 
+  def delta(self, t, x, dt, dx):
+    for f in self.stages:
+      (dt, dx), (t, x) = f.delta(t, x, dt, dx), f.event(t, x)
+    return dt, dx
+
   def velocity(self, v, x=None):
     for f in self.stages:
       v = f.velocity(v)
@@ -142,6 +170,11 @@ class Chain:
     for f in reversed(self.stages):
       v = f.back(v)
     return v
+
+  def backChange(self, u, d):
+    for f in reversed(self.stages):
+      u, d = f.back(u), f.backChange(u, d)
+    return d
 
   def time(self, v, x=None):
     rate = 1.0
@@ -232,6 +265,31 @@ class SplitFlowCalculator(Calculator):
     """body b's one-body flow in its own rest frame, at x there (b at the origin)"""
     d = length(x)
     return (-1 if b.black else 1)*math.sqrt(2*b.GM/d)*x/d
+
+  def restFlowChange(self, b, x, dx):
+    """
+    restFlow(b, x + dx) less restFlow(b, x), worked from dx: the flow is sqrt(2GM) x r^(-3/2), and its change is
+    sqrt(2GM) (dx r1^(-3/2) + x (r1^(-3/2) - r^(-3/2))), the last by r^3 - r1^3 = (r - r1)(r^2 + r r1 + r1^2) and
+    r - r1 = -(2 x . dx + dx . dx)/(r + r1) - so a small change is not lost in rounding the 42 km/s of the Sun's
+    flow at the Earth to 1e-11 m/s, which builds up step on step
+    """
+    r0, r1 = length(x), length(x + dx)
+    diff = -(2*(x @ dx) + dx @ dx)/(r0 + r1)                #r - r1
+    g0, g1 = r0**-1.5, r1**-1.5
+    dg = diff*(r0*r0 + r0*r1 + r1*r1)/(r0**1.5 + r1**1.5)*g0*g1   #r1^(-3/2) - r^(-3/2)
+    return (-1 if b.black else 1)*math.sqrt(2*b.GM)*(dx*g1 + x*dg)
+
+  def addSIChange(self, u, v):
+    """addSI(u, v) less u, worked so a small v is not lost in rounding u"""
+    u, v = u/C, v/C
+    vv = v @ v
+    if vv == 0:
+      return np.zeros(2)
+    vu = v @ u
+    upar = v*vu/vv
+    den = 1 + vu
+    L = math.sqrt(max(1 - vv, 0.0))
+    return ((v - upar*vu)/den + (u - upar)*(-vv/(1 + L) - vu)/den)*C
 
   def rate(self, pos, v, t=0.0):
     """a clock's rate, dtau/dt, at pos moving at v"""
@@ -359,28 +417,27 @@ class SplitFlowCalculator(Calculator):
     middle, end = t + dt/2, t + dt
     xm = x + v*dt/2
     frames = [self.frame(b, middle) for b in self.acting]   #at the middle, so the step stays symmetric
+    #(the changes are worked as changes - Boost.delta, restFlowChange, addSIChange, backChange - not as differences of
+    #places, flows and velocities, which a body far off or a fast frame makes large)
     #half a step, body by body
     vm = v.copy()
     for b, f in zip(self.acting, frames):
       t0, x0 = f.event(t, x)
-      tm, xmb = f.event(middle, xm)
-      h = tm - t0
-      u0, um = self.restFlow(b, x0), self.restFlow(b, xmb)
+      h, dm = f.delta(t, x, dt/2, xm - x)
+      u0 = self.restFlow(b, x0)
       vb = f.velocity(vm, x)
       w = vb - u0
-      wm = self.addSI(w, self.restFlow(b, x0 + u0*h) - um)
-      vm = f.back(vb + (wm - w) + (um - u0), x)
+      du = self.restFlowChange(b, x0, dm)
+      vm = vm + f.backChange(vb, self.addSIChange(w, self.restFlowChange(b, x0, u0*h) - du) + du)
     x1 = x + vm*dt
     #the whole step, body by body, at the middle's velocity
     for b, f in zip(self.acting, frames):
       t0, x0 = f.event(t, x)
-      xmb = f.event(middle, xm)[1]
-      t1, x1b = f.event(end, x1)
-      T = t1 - t0
+      xmb = x0 + f.delta(t, x, dt/2, xm - x)[1]
+      T, d1 = f.delta(t, x, dt, x1 - x)
       wm = f.velocity(vm, xm) - self.restFlow(b, xmb)
-      dw = self.restFlow(b, xmb - wm*T/2) - self.restFlow(b, xmb + wm*T/2)
-      vb = f.velocity(v, x) + (self.addSI(wm, dw) - wm) + (self.restFlow(b, x1b) - self.restFlow(b, x0))
-      v = f.back(vb, x1)
+      dw = self.restFlowChange(b, xmb, -wm*T/2) - self.restFlowChange(b, xmb, wm*T/2)
+      v = v + f.backChange(f.velocity(v, x), self.addSIChange(wm, dw) + self.restFlowChange(b, x0, d1))
     if getattr(p, 'light', False):
       n = v/length(v)
       v = self.lightSpeed(x1, n, end)*n

@@ -31,8 +31,8 @@ from engine.logger import LOG_DIR
 from engine.constants import *
 import lunar_orbit as lo
 
-DTS = (20.0, 10.0)                #the model's steps, the second half the first (below 5 s rounding takes over: the
-                                  #Moon's place from the Earth, 1.5e11 m from the Sun, to 3e-5 m at each step)
+DTS = (5.0, 2.5)                  #the model's steps, the second half the first (worked from the Earth, and each step's
+                                  #changes as changes: engine/split.py moveLorentz, studies/lunar_orbit.py Centred)
 SCALES = (1.0, 1e3)               #c, times
 GRDT = 60.0
 STARTS = {'eccentric': (np.array([0.0, -lo.DMOON]), np.array([1080.0, 0.0])),   #eccentricity about 0.12
@@ -58,7 +58,7 @@ def model(job):
   setC(scale)
   lo.SPAN = days*DAY - DAY
   setup = lo.Setup(True, False, start=STARTS[start])
-  _, track = lo.modelRun(setup, dt, 'freefall')
+  _, track = lo.modelRun(setup, dt, 'freefall', centred=True)
   return job, relative(track, setup, samples(days))
 
 

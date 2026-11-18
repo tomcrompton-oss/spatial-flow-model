@@ -121,17 +121,76 @@ class Setup:
 
 #the model
 
-def modelRun(setup, dt, boost='lorentz'):
-  calc = SplitFlowCalculator(setup.bodies(), 'static', boost)
+class Centred:
+  """
+  the Sun and the Earth (on its circle) placed from where the Earth is at time tm, which the run moves to each step's
+  middle: so the Moon's place from the Earth is worked in numbers the size of its orbit, not of the Earth's (1.5e11 m,
+  which rounds to 3e-5 m at each step). the Earth from there by cos a - cos b = -2 sin((a+b)/2) sin((a-b)/2) (and
+  the same for sin), so that is not rounded at the Earth's orbit's size either
+  """
+
+  def __init__(self, setup):
+    self.R, self.omega, self.tm = setup.radius, setup.omega, 0.0
+    self.sun, self.earth = CentredBody(self, MS, None), CentredBody(self, setup.earthMass, setup)
+
+  def earthFrom(self, t):
+    """the Earth at t less the Earth at tm"""
+    s, h = self.omega*(t + self.tm)/2, self.omega*(t - self.tm)/2
+    return 2*self.R*math.sin(h)*np.array([-math.sin(s), math.cos(s)])
+
+  def sunFrom(self):
+    a = self.omega*self.tm
+    return -self.R*np.array([math.cos(a), math.sin(a)])
+
+
+class CentredBody(Body):
+  def __init__(self, centre, mass, setup):
+    super().__init__(mass)
+    self.centre, self.setup = centre, setup
+
+  def at(self, t):
+    return self.centre.earthFrom(t) if self.setup else self.centre.sunFrom()
+
+  def velocityAt(self, t):
+    return self.setup.earthV(t) if self.setup else np.zeros(2)
+
+  @property
+  def pos(self):
+    return self.at(self.centre.tm)
+
+  @pos.setter
+  def pos(self, value):
+    pass
+
+  @property
+  def moving(self):
+    return self.setup is not None
+
+
+def modelRun(setup, dt, boost='lorentz', centred=False):
+  """the Moon in the model from setup.start; centred: worked from the Earth (Centred - with the Sun only; the calc
+  returned then has its bodies where the last step left them)"""
+  if centred:
+    centre = Centred(setup)
+    calc = SplitFlowCalculator([centre.sun, centre.earth], 'static', boost)
+  else:
+    calc = SplitFlowCalculator(setup.bodies(), 'static', boost)
   f = Boost(setup.earthV(0.0), 0.0, setup.earth(0.0))
   p = Particle()
-  p.pos = setup.earth(0.0) + setup.start[0]
+  p.pos = setup.start[0] if centred else setup.earth(0.0) + setup.start[0]
   calc.initPV(p, f.back(setup.start[1]))
   track = Track()
-  track.add(p.t, p.pos, p.v)
+  track.add(p.t, setup.earth(0.0) + setup.start[0], p.v)
   while p.t < SPAN + DAY:
-    calc.move(p, dt)
-    track.add(p.t, p.pos, p.v)
+    if centred:
+      rel = p.pos - centre.earthFrom(p.t)   #the Moon from the Earth
+      centre.tm = p.t + dt/2
+      p.pos = rel + centre.earthFrom(p.t)
+      calc.move(p, dt)
+      track.add(p.t, setup.earth(p.t) + (p.pos - centre.earthFrom(p.t)), p.v)
+    else:
+      calc.move(p, dt)
+      track.add(p.t, p.pos, p.v)
   return calc, track.done()
 
 
