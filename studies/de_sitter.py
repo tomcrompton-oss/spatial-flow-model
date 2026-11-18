@@ -18,7 +18,7 @@ a change in the Moon's mean motion both move it along its orbit; only the perige
 fits GR to GR run turning at the de Sitter rate, which must give k = 1
 
 run: python3 studies/de_sitter.py [days [start [boost]]]      (default 90 eccentric freefall; start eccentric or lunar
-     (studies/lunar_orbit.py's), boost freefall, carried or stronger (engine/split.py); prints, and writes
+     (studies/lunar_orbit.py's), boost freefall, carried or heavier (engine/split.py); prints, and writes
      logs/multiBody/deSitter_<days>d_<start>[_<boost>]_<datetime>/summary.log)
 """
 import math

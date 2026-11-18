@@ -47,7 +47,7 @@ def moonOrbit(V, light, boost, days=1.0, dt=10.0):
   rest = SplitFlowCalculator([Body(ME)], light, boost)
   moving = SplitFlowCalculator([Body(ME, velocity=V)], light, boost)
   p = Particle()
-  if boost == 'lorentz':
+  if boost != 'galilean':
     f, inverse = Boost(V, 0.0, [0.0, 0.0]), Boost(-V, 0.0, [0.0, 0.0])
     p.t, p.pos = inverse.event(0.0, r0)
     moving.initPV(p, f.back(v0))
@@ -56,7 +56,7 @@ def moonOrbit(V, light, boost, days=1.0, dt=10.0):
     moving.initPV(p, v0 + V)
   for _ in range(round(days*DAY/dt)):
     moving.move(p, dt)
-  if boost == 'lorentz':
+  if boost != 'galilean':
     T, x = f.event(p.t, p.pos)
   else:
     T, x = p.t, p.pos - V*p.t
@@ -136,7 +136,7 @@ def boost():
         along, across = np.array([1.0, 0.0]), np.array([0.0, 1.0])
         V = speed*along
         movingBodies = [Body(b.mass, b.x, b.y, velocity=V) if b.mass in moves else b for b in bodies]
-        if kind == 'lorentz':   #a body moving with the Earth keeps its place in the Earth's frame
+        if kind != 'galilean':   #a body moving with the Earth keeps its place in the Earth's frame
           for b in movingBodies:
             if b.mass in moves and b.mass != ME:
               b.pos = b.pos - (b.pos @ along)*along*(1 - 1/math.sqrt(1 - speed**2/C**2))

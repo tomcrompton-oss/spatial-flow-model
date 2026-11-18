@@ -357,6 +357,8 @@ CASES = {   #name: (title, the Sun, the Earth's orbit's radius, its sense, the b
                True, AU, 1, 'freefall'),
   'freefall-reverse': ('the same, the Earth going round the other way', True, AU, -1, 'freefall'),
   'freefall-far': ('the same, the Earth on an orbit of 2 AU', True, 2*AU, 1, 'freefall'),
+  'heavier': ('the Sun and the Earth, the Earth\'s flow carried by the Sun\'s space where the Moon is (boost'
+              ' \'heavier\')', True, AU, 1, 'heavier'),
   'sunonly': ('the Sun alone (an Earth of 1 kg): the model is GR, so this checks the GR code\'s Sun', True, AU, 1,
               'freefall', 1.0, EPICYCLE),
 }
