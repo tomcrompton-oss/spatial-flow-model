@@ -11,9 +11,11 @@ least squares over the run) with its start and k free, GR run in a frame turning
   k = 0     the model has GR's de Sitter precession
   k = 1     it has none (GR seen from a frame turning with the de Sitter rate, in its place)
 
-the model's track is extrapolated to zero step from DTS (Richardson, the step being second order), and k is found
-again with c a thousand times larger (Newton's then; any k there is the steps' or the fit's) and taken off. the
-calibration fits GR to GR run turning at the de Sitter rate, which must give k = 1
+the model's track is extrapolated to zero step from DTS (Richardson, the step being second order) and taken to GR's
+harmonic coordinates (harmonic: without it the two differ by metres), and k is found again with c a thousand times
+larger (Newton's then; any k there is the steps' or the fit's). k is also fitted with GM_Earth free (a turning and
+a change in the Moon's mean motion both move it along its orbit; only the perigee tells them apart). the calibration
+fits GR to GR run turning at the de Sitter rate, which must give k = 1
 
 run: python3 studies/de_sitter.py [days [start]]      (default 90 eccentric; start eccentric or lunar
      (studies/lunar_orbit.py's); prints, and writes logs/multiBody/deSitter_<days>d_<start>_<datetime>/summary.log)
@@ -53,7 +55,7 @@ def relative(track, setup, ts):
 
 
 def model(job):
-  """the model's Moon from the Earth at the samples"""
+  """the model's Moon from the Earth at the samples, in the model's coordinates"""
   days, dt, scale, start = job
   setC(scale)
   lo.SPAN = days*DAY - DAY
@@ -62,23 +64,42 @@ def model(job):
   return job, relative(track, setup, samples(days))
 
 
+def harmonic(T, rel, start):
+  """
+  the model's Moon (rel from the model's Earth at its times T) in GR's harmonic coordinates, from GR's Earth: the
+  model's lab is the Sun's flowing-space coordinates, areal r and the space's own time T (Gullstrand-Painleve), and
+  harmonic ones are r - GM/c^2 and t = T - (f(r) - f(AU)), f(r) = 2 sqrt(2 m r)/c, m = GM/c^2, to first order (the
+  constant f(AU) keeps the Earth's phase). left out, the two differ by metres (the Earth-Moon line by 1e-8 across,
+  and a time shift of u/c^2 per metre from the Earth), more than the test is after
+  """
+  model, gr = lo.Setup(True, False, start=STARTS[start]), lo.Setup(True, True, start=STARTS[start])
+  m = G*MS/lo.C**2
+  X = np.array([model.earth(t) for t in T]) + rel
+  r = np.linalg.norm(X, axis=1)
+  f = lambda r: 2*np.sqrt(2*m*r)/lo.C
+  t = T - (f(r) - f(model.orbit))
+  return t, X*(1 - m/r)[:, None] - np.array([gr.earth(x) for x in t])
+
+
 def fit(job):
-  """GR's start and k fitted to target: k, and the rms left (m)"""
-  days, scale, start, target = job
+  """GR's start and k (and with earth, GM_Earth) fitted to the model's Moon: k, GM_Earth's change, the rms left (m)"""
+  days, scale, start, rel, mapped, earth = job
   setC(scale)
-  lo.SPAN = days*DAY - DAY
   ts = samples(days)
-  steps = np.array([1.0, 1.0, 1e-6, 1e-6, 0.01])
+  ts, target = harmonic(ts, rel, start) if mapped else (ts, rel)
+  lo.SPAN = ts[-1] + DAY
+  n = 6 if earth else 5
+  steps = np.array([1.0, 1.0, 1e-6, 1e-6, 0.01, 1e-9][:n])
   def resid(p):
-    setup = lo.Setup(True, True, turn=p[4]*DESITTER, start=STARTS[start])
+    setup = lo.Setup(True, True, turn=p[4]*DESITTER, earthScale=1 + (p[5] if earth else 0.0), start=STARTS[start])
     return (relative(lo.grRun(setup, (p[:2], p[2:4]), GRDT), setup, ts) - target).ravel()
-  p = np.concatenate([STARTS[start][0], STARTS[start][1], [0.0]])
-  for _ in range(4):
+  p = np.concatenate([STARTS[start][0], STARTS[start][1], np.zeros(n - 4)])
+  for _ in range(5):
     r = resid(p)
-    J = np.array([(resid(p + np.eye(5)[k]*steps[k]) - r)/steps[k] for k in range(5)]).T
+    J = np.array([(resid(p + np.eye(n)[k]*steps[k]) - r)/steps[k] for k in range(n)]).T
     p = p - np.linalg.lstsq(J, r, rcond=None)[0]
   r = resid(p)
-  return p[4], math.sqrt(np.mean(r*r))
+  return p[4], (p[5] if earth else 0.0), math.sqrt(np.mean(r*r))
 
 
 def turned(job):
@@ -97,26 +118,26 @@ def main():
   with Pool(8) as pool:
     calTarget = pool.apply_async(turned, [(days, start)])
     runs = {job[1:3]: rel for job, rel in pool.map(model, [(days, dt, s, start) for dt in DTS for s in SCALES])}
-    jobs, names = [], []
-    for s in SCALES:
-      for dt in DTS:
-        jobs.append((days, s, start, runs[(dt, s)]))
-        names.append((s, dt))
-      jobs.append((days, s, start, (4*runs[(DTS[1], s)] - runs[(DTS[0], s)])/3))
-      names.append((s, 0.0))
-    jobs.append((days, 1.0, start, calTarget.get()))
-    names.append('calibration')
-    found = dict(zip(names, pool.map(fit, jobs)))
-  lines = ['de Sitter: the Moon (start %s) round the Earth on its orbit for %g days; GR fitted to the model\'s track,'
-           ' its start and k free, GR turning at k times the de Sitter rate (19.2 mas a year): k = 0 the model has GR\'s'
-           ' de Sitter precession, k = 1 none' % (start, days)]
-  for dt in DTS + (0.0,):
-    (a, ra), (b, rb) = found[(1.0, dt)], found[(1e3, dt)]
-    lines.append('  %-12s k %+.4f (fit rms %.3f m); with c x 1000 %+.4f (%.3f m); the difference %+.4f'
-                 % ('step %g s:' % dt if dt else 'extrapolated:', a, ra, b, rb, a - b))
-  k, rms = found['calibration']
-  lines.append('  calibration: GR fitted to GR turning at the de Sitter rate: k %+.4f (fit rms %.3f m), as it must be 1'
-               % (k, rms))
+    np.savez(os.path.join(folder, 'tracks.npz'), ts=samples(days),
+             **{'c%g_dt%g' % (s, dt): rel for (dt, s), rel in runs.items()})
+    zero = {s: (4*runs[(DTS[1], s)] - runs[(DTS[0], s)])/3 for s in SCALES}
+    cal = calTarget.get()
+    jobs = {('step %g s' % dt, 1.0, False): (days, 1.0, start, runs[(dt, 1.0)], True, False) for dt in DTS}
+    jobs.update({
+      ('extrapolated', 1.0, False): (days, 1.0, start, zero[1.0], True, False),
+      ('extrapolated', 1.0, True): (days, 1.0, start, zero[1.0], True, True),
+      ('extrapolated, not mapped', 1.0, False): (days, 1.0, start, zero[1.0], False, False),
+      ('extrapolated', 1e3, False): (days, 1e3, start, zero[1e3], True, False),
+      ('calibration', 1.0, False): (days, 1.0, start, cal, False, False),
+      ('calibration', 1.0, True): (days, 1.0, start, cal, False, True)})
+    found = dict(zip(jobs, pool.map(fit, list(jobs.values()))))
+  lines = ['de Sitter: the Moon (start %s) round the Earth on its orbit for %g days; GR fitted to the model\'s track'
+           ' (taken to harmonic coordinates), its start and k free, GR turning at k times the de Sitter rate (19.2 mas a'
+           ' year): k = 0 the model has GR\'s de Sitter precession, k = 1 none' % (start, days)]
+  for (name, scale, earth), (k, gm, rms) in found.items():
+    lines.append('  %-26s %-8s k %+.4f%s, fit rms %.3f m' % (name + ':', 'c x 1000' if scale > 1 else '', k,
+                 ', GM_Earth %+.2e' % gm if earth else '', rms))
+  lines.append('  (calibration: GR fitted to GR turning at the de Sitter rate, which must give k = 1)')
   print('\n'.join(lines))
   with open(os.path.join(folder, 'summary.log'), 'w') as f:
     f.write('\n'.join(lines))
