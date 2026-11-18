@@ -17,8 +17,9 @@ larger (Newton's then; any k there is the steps' or the fit's). k is also fitted
 a change in the Moon's mean motion both move it along its orbit; only the perigee tells them apart). the calibration
 fits GR to GR run turning at the de Sitter rate, which must give k = 1
 
-run: python3 studies/de_sitter.py [days [start]]      (default 90 eccentric; start eccentric or lunar
-     (studies/lunar_orbit.py's); prints, and writes logs/multiBody/deSitter_<days>d_<start>_<datetime>/summary.log)
+run: python3 studies/de_sitter.py [days [start [boost]]]      (default 90 eccentric freefall; start eccentric or lunar
+     (studies/lunar_orbit.py's), boost freefall, carried or stronger (engine/split.py); prints, and writes
+     logs/multiBody/deSitter_<days>d_<start>[_<boost>]_<datetime>/summary.log)
 """
 import math
 import os
@@ -56,11 +57,11 @@ def relative(track, setup, ts):
 
 def model(job):
   """the model's Moon from the Earth at the samples, in the model's coordinates"""
-  days, dt, scale, start = job
+  days, dt, scale, start, boost = job
   setC(scale)
   lo.SPAN = days*DAY - DAY
   setup = lo.Setup(True, False, start=STARTS[start])
-  _, track = lo.modelRun(setup, dt, 'freefall', centred=True)
+  _, track = lo.modelRun(setup, dt, boost, centred=True)
   return job, relative(track, setup, samples(days))
 
 
@@ -113,11 +114,13 @@ def turned(job):
 def main():
   days = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
   start = sys.argv[2] if len(sys.argv) > 2 else 'eccentric'
-  folder = os.path.join(LOG_DIR, 'multiBody', 'deSitter_%gd_%s_%s' % (days, start, datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
+  boost = sys.argv[3] if len(sys.argv) > 3 else 'freefall'
+  folder = os.path.join(LOG_DIR, 'multiBody', 'deSitter_%gd_%s%s_%s' % (days, start, '' if boost == 'freefall' else
+                        '_' + boost, datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
   os.makedirs(folder, exist_ok=True)
   with Pool(8) as pool:
     calTarget = pool.apply_async(turned, [(days, start)])
-    runs = {job[1:3]: rel for job, rel in pool.map(model, [(days, dt, s, start) for dt in DTS for s in SCALES])}
+    runs = {job[1:3]: rel for job, rel in pool.map(model, [(days, dt, s, start, boost) for dt in DTS for s in SCALES])}
     np.savez(os.path.join(folder, 'tracks.npz'), ts=samples(days),
              **{'c%g_dt%g' % (s, dt): rel for (dt, s), rel in runs.items()})
     zero = {s: (4*runs[(DTS[1], s)] - runs[(DTS[0], s)])/3 for s in SCALES}
@@ -131,9 +134,9 @@ def main():
       ('calibration', 1.0, False): (days, 1.0, start, cal, False, False),
       ('calibration', 1.0, True): (days, 1.0, start, cal, False, True)})
     found = dict(zip(jobs, pool.map(fit, list(jobs.values()))))
-  lines = ['de Sitter: the Moon (start %s) round the Earth on its orbit for %g days; GR fitted to the model\'s track'
+  lines = ['de Sitter (%s frames): the Moon (start %s) round the Earth on its orbit for %g days; GR fitted to the model\'s track'
            ' (taken to harmonic coordinates), its start and k free, GR turning at k times the de Sitter rate (19.2 mas a'
-           ' year): k = 0 the model has GR\'s de Sitter precession, k = 1 none' % (start, days)]
+           ' year): k = 0 the model has GR\'s de Sitter precession, k = 1 none' % (boost, start, days)]
   for (name, scale, earth), (k, gm, rms) in found.items():
     lines.append('  %-26s %-8s k %+.4f%s, fit rms %.3f m' % (name + ':', 'c x 1000' if scale > 1 else '', k,
                  ', GM_Earth %+.2e' % gm if earth else '', rms))

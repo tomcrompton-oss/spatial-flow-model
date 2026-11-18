@@ -46,7 +46,10 @@ the Moon's range is out by 240 m
 flow's time being its free-falling observers' own) to the others' flow at the body's centre, U0, then Lorentz-boosted
 by the body's velocity through that space, V - U0 - all in the Lorentz frame of the other body pulling hardest, so that
 a system moving together is the same as one at rest. the others' flow is taken uniform across the body's region
-(their tide left out)
+(their tide left out). 'carried' is 'freefall' with the others' space taken where the particle is, not at the body's
+centre: each body's flow carried by the space round the particle (the particle's own body, if it is one, left out).
+'stronger' takes only the space of the bodies pulling the particle harder than b where the particle is, the rest at
+b's centre
 """
 import math
 import numpy as np
@@ -203,8 +206,9 @@ class SplitFlowCalculator(Calculator):
     super().__init__(bodies, direction='g')
     if light not in ('interval', 'static'):
       raise ValueError("light is 'interval' or 'static', not %r" % (light,))
-    if boost not in ('galilean', 'lorentz', 'local', 'freefall'):
-      raise ValueError("boost is 'galilean', 'lorentz', 'local' or 'freefall', not %r" % (boost,))
+    if boost not in ('galilean', 'lorentz', 'local', 'freefall', 'carried', 'stronger'):
+      raise ValueError("boost is 'galilean', 'lorentz', 'local', 'freefall', 'carried' or 'stronger', not %r"
+                       % (boost,))
     if light == 'static' and self.moving and boost == 'galilean':
       raise ValueError("the 'static' light rule with Galilean boosts is for bodies at rest")
     if light == 'interval' and boost != 'galilean':
@@ -236,21 +240,29 @@ class SplitFlowCalculator(Calculator):
       q -= w @ w - rest @ rest
     return q
 
-  def frame(self, b, t):
+  def frame(self, b, t, at=None):
     """
     body b's rest frame at time t, b at its origin: with the 'local' boost, from the other bodies' static time (their
-    phi = -2 sqrt(2GM d) each, with u = grad phi their flow - as for bodies at rest)
+    phi = -2 sqrt(2GM d) each, with u = grad phi their flow - as for bodies at rest); with 'carried', the free-fall
+    frame of the others' space at the particle's place at (not at b's centre; the particle's own body left out)
     """
     others = [o for o in self.bodies if o is not b]
-    if self.boost == 'freefall' and others:
+    carried = self.boost in ('carried', 'stronger') and at is not None
+    if carried:
+      others = [o for o in others if o is not self.skip]
+    if self.boost in ('freefall', 'carried', 'stronger') and others:
       #into the frame of the other body pulling hardest, the others' space seen there, then b's free-fall frame in it
       X = b.at(t)
+      pull = lambda o, x: o.GM/length(x - o.at(t))**2
       main = max(others, key=lambda o: o.GM/length(X - o.at(t))**2)
       base = Boost(bodyVelocity(main, t), t, X)
       U0 = np.zeros(2)
       for o in others:
         own = Boost(bodyVelocity(o, t), t, o.at(t))
-        space = own.back(self.restFlow(o, own.event(t, X)[1]))   #o's space at b, in the lab
+        P = X
+        if carried and (self.boost == 'carried' or pull(o, at) > pull(b, at)):
+          P = at
+        space = own.back(self.restFlow(o, own.event(t, P)[1]))   #o's space at P, in the lab
         U0 = U0 + base.velocity(space)
       return Chain(base, Boost(base.velocity(bodyVelocity(b, t)) - U0, 0.0, np.zeros(2), shift=U0))
     if self.boost != 'local' or not others:
@@ -297,7 +309,7 @@ class SplitFlowCalculator(Calculator):
       free = math.sqrt(max(1 - v @ v/C**2, 0.0))
       r = free
       for b in self.acting:
-        f = self.frame(b, t)
+        f = self.frame(b, t, pos)
         x = f.event(t, pos)[1]
         vb = f.velocity(v, pos)
         w = vb - self.restFlow(b, x)
@@ -311,7 +323,7 @@ class SplitFlowCalculator(Calculator):
     if self.boost != 'galilean':
       slowness = 1/C
       for b in self.acting:
-        f = self.frame(b, t)
+        f = self.frame(b, t, pos)
         x = f.event(t, pos)[1]
         m = f.velocity(C*n, pos)
         m = m/length(m)
@@ -416,7 +428,7 @@ class SplitFlowCalculator(Calculator):
     x, v, t = p.pos, p.v, p.t
     middle, end = t + dt/2, t + dt
     xm = x + v*dt/2
-    frames = [self.frame(b, middle) for b in self.acting]   #at the middle, so the step stays symmetric
+    frames = [self.frame(b, middle, xm) for b in self.acting]   #at the middle, so the step stays symmetric
     #(the changes are worked as changes - Boost.delta, restFlowChange, addSIChange, backChange - not as differences of
     #places, flows and velocities, which a body far off or a fast frame makes large)
     #half a step, body by body

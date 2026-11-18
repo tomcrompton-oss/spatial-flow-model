@@ -212,7 +212,9 @@ def modelLeg(calc, a, b, t0, earthEnd, pieces=40):
 #GR
 
 def grAccel(setup, t, x, v):
-  """the Moon's acceleration by the EIH equations (first post-Newtonian, harmonic coordinates)"""
+  """the Moon's acceleration by the EIH equations (first post-Newtonian, harmonic coordinates); setup.terms, if set,
+  scales the cross terms (studies/cross_terms.py: F, S, C1, C2; 1 is GR's)"""
+  T = getattr(setup, 'terms', None) or {}
   bodies = [(G*setup.earthMass*setup.earthScale, setup.earth(t), setup.earthV(t), setup.earthA(t))]
   if setup.sun:
     bodies.append((G*MS*setup.sunScale, np.zeros(2), np.zeros(2), np.zeros(2)))
@@ -225,9 +227,10 @@ def grAccel(setup, t, x, v):
     r = np.linalg.norm(d)
     nBA = d/r
     nAB = -nBA
-    bracket = (1 - 4*pot/c2 - others/c2 + v @ v/c2 + 2*(vb @ vb)/c2 - 4*(v @ vb)/c2 - 1.5*(vb @ nAB)**2/c2
-               + 0.5*(d @ ab)/c2)
-    a += gm*nBA/r**2*bracket + gm/(c2*r*r)*(nAB @ (4*v - 3*vb))*(v - vb) + 3.5*gm*ab/(c2*r)
+    bracket = (1 - 4*(gm/r + T.get('F', 1.0)*(pot - gm/r))/c2 - T.get('S', 1.0)*others/c2 + v @ v/c2
+               + 2*(vb @ vb)/c2 - 4*(v @ vb)/c2 - 1.5*(vb @ nAB)**2/c2 + T.get('C1', 1.0)*0.5*(d @ ab)/c2)
+    a += (gm*nBA/r**2*bracket + gm/(c2*r*r)*(nAB @ (4*v - 3*vb))*(v - vb)
+          + T.get('C2', 1.0)*3.5*gm*ab/(c2*r))
   if setup.turn:
     w = v - setup.earthV(t)
     a += -2*setup.turn*np.array([-w[1], w[0]])   #Coriolis, in the frame turning at setup.turn
