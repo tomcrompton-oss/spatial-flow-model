@@ -4,10 +4,11 @@
 rest frame. A step works out what each body's flow alone would do to a particle, using the one-body model's own step,
 and applies the changes one after the other: the Sun's, then the Earth's. The particle moves once, at its velocity.
 
-**Verdict: ❌ fails, with two bodies of comparable mass.** It passes every test with one body much heavier than the
-other – Newton's g, clocks, light past Jupiter, causality, a moving system – and with free-fall frames comes within
-twice the lunar test's floor. But in a binary of comparable masses its orbit turns 17% too slowly at equal masses, and
-the pair's centre of mass accelerates by itself. Binary pulsars rule out both: the bodies' fields need to act on each
+**Verdict: ❌ fails.** With one body much heavier than the other it passes most tests – Newton's g, clocks, light
+past Jupiter, causality, a moving system – and with free-fall frames comes within twice the lunar range test's floor.
+But even with free-fall frames the Moon's orbit has only about half GR's de Sitter precession, which lunar laser
+ranging measures to under 1%. And in a binary of comparable masses its orbit turns 17% too slowly at equal masses, and
+the pair's centre of mass accelerates by itself, which binary pulsars rule out: the bodies' fields need to act on each
 other, and in this model they don't.
 
 ## Why it might make sense
@@ -149,7 +150,7 @@ u_{\text{Sun}}$. That takes out almost all of the residual, 0.15 m left of 2.16 
 | --- | --- | --- |
 | The test's own step error | the frames are taken at each step's middle, and the run repeated at half the step | 0.149 m and 0.150 m: converged. (An earlier version took the frames at each step's start, which gave 0.49 m) |
 | The Sun's tide across the Earth–Moon system, which the frame leaves out | the two frame terms worked out with the Sun's flow's change along the path, put through the fit | under 6 mm |
-| GR's de Sitter precession of a frame falling round the Sun (19 mas a year) | a turning of GR's Moon's frame added to the fit | takes out 2% |
+| GR's de Sitter precession of a frame falling round the Sun (19 mas a year) | a turning of GR's Moon's frame added to the fit | takes out 2% (the [de Sitter test](#four-more-tests) below finds the model has about half of GR's) |
 
 None of them accounts for the 0.15 m. Two more checks are about the test itself:
 
@@ -164,7 +165,9 @@ term at the synodic period (3 cm) is within it, and their term at half the synod
 clearly above it. Lorentz frames, at 2.2 m, fail by far more than the test's floor.
 
 So this test can't settle the free-fall version. Doing that would take a GR reference good to millimetres with the
-Sun, as lunar laser ranging's own ephemerides are.
+Sun, as lunar laser ranging's own ephemerides are. The [de Sitter test](#four-more-tests) below does settle it: fitting
+GR's orbit to the model's (rather than its range), in the same coordinates, the model's Moon has only about half GR's
+de Sitter precession. (These ranges were run before the step was changed to work each body's changes as changes.)
 
 The free-fall frame also gives up part of the idea: each body's frame now depends on the other bodies' flow at its
 centre, so the flows are not wholly separate any more.
