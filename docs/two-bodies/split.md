@@ -317,8 +317,9 @@ attempts to remove it didn't work:
   odd term came from the pair's acceleration across a simultaneity the Sun's flow shifts): no change at all.
 
 Taking the Sun's space at the body's centre instead ('heavier-centre') leaves it as it is (η = +104 in, −97 out). So
-the odd term comes with shifting a body's frame by the Sun's flow at all. It grows with the pair's speed round each
-other (8,000 km/s here): for the Moon, at 1 km/s round the Earth, it is the 4–5% of the de Sitter rate above.
+the odd term comes with shifting a body's frame by the Sun's flow at all. It looks to grow with how fast the bodies go
+round each other – 8,000 km/s for the pair, against 1 km/s for the Moon, whose odd part is the 4–5% of the de Sitter
+rate above – but two cases don't show that it does.
 
 So heavier-only frames fix the Moon: lunar ranging comes within the test's floor, and de Sitter precession agrees with
 GR. They don't fix the Nordtvedt effect, and they can't fix the binary of comparable masses, where what is missing is
