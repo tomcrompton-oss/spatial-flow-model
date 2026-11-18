@@ -50,7 +50,8 @@ a system moving together is the same as one at rest. the others' flow is taken u
 centre: each body's flow carried by the space round the particle (the particle's own body, if it is one, left out).
 'heavier' takes only the heavier bodies' space where the particle is, the lighter ones' at b's centre (so the Earth's
 flow is carried by the Sun's space round the Moon, the Sun's by the Earth's at the Sun); 'heavier-only' leaves the
-lighter ones out (the Sun's frame its own Lorentz frame)
+lighter ones out (the Sun's frame its own Lorentz frame); 'heavier-centre' leaves them out too, but takes the heavier
+ones' space at b's centre (free-fall frames in the heavier bodies' space alone)
 """
 import math
 import numpy as np
@@ -207,9 +208,10 @@ class SplitFlowCalculator(Calculator):
     super().__init__(bodies, direction='g')
     if light not in ('interval', 'static'):
       raise ValueError("light is 'interval' or 'static', not %r" % (light,))
-    if boost not in ('galilean', 'lorentz', 'local', 'freefall', 'carried', 'heavier', 'heavier-only'):
-      raise ValueError("boost is 'galilean', 'lorentz', 'local', 'freefall', 'carried', 'heavier' or 'heavier-only',"
-                       " not %r"
+    if boost not in ('galilean', 'lorentz', 'local', 'freefall', 'carried', 'heavier', 'heavier-only',
+                     'heavier-centre'):
+      raise ValueError("boost is 'galilean', 'lorentz', 'local', 'freefall', 'carried', 'heavier', 'heavier-only' or"
+                       " 'heavier-centre', not %r"
                        % (boost,))
     if light == 'static' and self.moving and boost == 'galilean':
       raise ValueError("the 'static' light rule with Galilean boosts is for bodies at rest")
@@ -252,9 +254,11 @@ class SplitFlowCalculator(Calculator):
     carried = self.boost in ('carried', 'heavier', 'heavier-only') and at is not None
     if carried:
       others = [o for o in others if o is not self.skip]
+    if self.boost == 'heavier-centre':
+      others = [o for o in others if o is not self.skip and o.GM > b.GM]
     if self.boost == 'heavier-only':
       others = [o for o in others if o.GM > b.GM]
-    if self.boost in ('freefall', 'carried', 'heavier', 'heavier-only') and others:
+    if self.boost in ('freefall', 'carried', 'heavier', 'heavier-only', 'heavier-centre') and others:
       #into the frame of the other body pulling hardest, the others' space seen there, then b's free-fall frame in it
       X = b.at(t)
       main = max(others, key=lambda o: o.GM/length(X - o.at(t))**2)
