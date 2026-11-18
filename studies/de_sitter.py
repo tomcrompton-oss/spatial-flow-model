@@ -17,7 +17,7 @@ larger (Newton's then; any k there is the steps' or the fit's). k is also fitted
 a change in the Moon's mean motion both move it along its orbit; only the perigee tells them apart). the calibration
 fits GR to GR run turning at the de Sitter rate, which must give k = 1
 
-run: python3 studies/de_sitter.py [days [start [boost]]]      (default 90 eccentric freefall; start eccentric or lunar
+run: DESITTER_ORBIT=near|reverse|far python3 studies/de_sitter.py [days [start [boost]]]      (default 90 eccentric freefall; start eccentric or lunar
      (studies/lunar_orbit.py's), boost freefall, carried or heavier (engine/split.py); prints, and writes
      logs/multiBody/deSitter_<days>d_<start>[_<boost>]_<datetime>/summary.log)
 """
@@ -40,7 +40,11 @@ SCALES = (1.0, 1e3)               #c, times
 GRDT = 60.0
 STARTS = {'eccentric': (np.array([0.0, -lo.DMOON]), np.array([1080.0, 0.0])),   #eccentricity about 0.12
           'lunar': lo.START}
-DESITTER = lo.Setup(True, True).deSitter()   #rad/s, at c: k's unit at either scale
+ORBIT = os.environ.get('DESITTER_ORBIT', 'near')   #the Earth's orbit: 'near' (1 AU, the Moon's sense), 'reverse' (the
+                                                  #other way round) or 'far' (2 AU); set from the command line
+RADIUS, SENSE = {'near': (AU, 1), 'reverse': (AU, -1), 'far': (2*AU, 1)}[ORBIT]
+DESITTER = SENSE*lo.Setup(True, True, RADIUS, SENSE).deSitter()   #rad/s, at c: k's unit at either scale (signed:
+                                                                 #the turning reverses with the orbit)
 
 
 def setC(scale):
@@ -60,7 +64,7 @@ def model(job):
   days, dt, scale, start, boost = job
   setC(scale)
   lo.SPAN = days*DAY - DAY
-  setup = lo.Setup(True, False, start=STARTS[start])
+  setup = lo.Setup(True, False, RADIUS, SENSE, start=STARTS[start])
   _, track = lo.modelRun(setup, dt, boost, centred=True)
   return job, relative(track, setup, samples(days))
 
@@ -73,7 +77,7 @@ def harmonic(T, rel, start):
   constant f(AU) keeps the Earth's phase). left out, the two differ by metres (the Earth-Moon line by 1e-8 across,
   and a time shift of u/c^2 per metre from the Earth), more than the test is after
   """
-  model, gr = lo.Setup(True, False, start=STARTS[start]), lo.Setup(True, True, start=STARTS[start])
+  model, gr = lo.Setup(True, False, RADIUS, SENSE, start=STARTS[start]), lo.Setup(True, True, RADIUS, SENSE, start=STARTS[start])
   m = G*MS/lo.C**2
   X = np.array([model.earth(t) for t in T]) + rel
   r = np.linalg.norm(X, axis=1)
@@ -92,7 +96,7 @@ def fit(job):
   n = 6 if earth else 5
   steps = np.array([1.0, 1.0, 1e-6, 1e-6, 0.01, 1e-9][:n])
   def resid(p):
-    setup = lo.Setup(True, True, turn=p[4]*DESITTER, earthScale=1 + (p[5] if earth else 0.0), start=STARTS[start])
+    setup = lo.Setup(True, True, RADIUS, SENSE, turn=p[4]*DESITTER, earthScale=1 + (p[5] if earth else 0.0), start=STARTS[start])
     return (relative(lo.grRun(setup, (p[:2], p[2:4]), GRDT), setup, ts) - target).ravel()
   p = np.concatenate([STARTS[start][0], STARTS[start][1], np.zeros(n - 4)])
   for _ in range(5):
@@ -107,7 +111,7 @@ def turned(job):
   """GR in a frame turning at the de Sitter rate"""
   days, start = job
   lo.SPAN = days*DAY - DAY
-  setup = lo.Setup(True, True, turn=DESITTER, start=STARTS[start])
+  setup = lo.Setup(True, True, RADIUS, SENSE, turn=DESITTER, start=STARTS[start])
   return relative(lo.grRun(setup, STARTS[start], GRDT), setup, samples(days))
 
 
@@ -115,8 +119,8 @@ def main():
   days = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
   start = sys.argv[2] if len(sys.argv) > 2 else 'eccentric'
   boost = sys.argv[3] if len(sys.argv) > 3 else 'freefall'
-  folder = os.path.join(LOG_DIR, 'multiBody', 'deSitter_%gd_%s%s_%s' % (days, start, '' if boost == 'freefall' else
-                        '_' + boost, datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
+  folder = os.path.join(LOG_DIR, 'multiBody', 'deSitter_%gd_%s%s%s_%s' % (days, start, '' if boost == 'freefall' else
+                        '_' + boost, '' if ORBIT == 'near' else '_' + ORBIT, datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
   os.makedirs(folder, exist_ok=True)
   with Pool(8) as pool:
     calTarget = pool.apply_async(turned, [(days, start)])
@@ -134,9 +138,9 @@ def main():
       ('calibration', 1.0, False): (days, 1.0, start, cal, False, False),
       ('calibration', 1.0, True): (days, 1.0, start, cal, False, True)})
     found = dict(zip(jobs, pool.map(fit, list(jobs.values()))))
-  lines = ['de Sitter (%s frames): the Moon (start %s) round the Earth on its orbit for %g days; GR fitted to the model\'s track'
+  lines = ['de Sitter (%s frames, the Earth\'s orbit %s): the Moon (start %s) round the Earth on its orbit for %g days; GR fitted to the model\'s track'
            ' (taken to harmonic coordinates), its start and k free, GR turning at k times the de Sitter rate (19.2 mas a'
-           ' year): k = 0 the model has GR\'s de Sitter precession, k = 1 none' % (boost, start, days)]
+           ' year): k = 0 the model has GR\'s de Sitter precession, k = 1 none' % (boost, ORBIT, start, days)]
   for (name, scale, earth), (k, gm, rms) in found.items():
     lines.append('  %-26s %-8s k %+.4f%s, fit rms %.3f m' % (name + ':', 'c x 1000' if scale > 1 else '', k,
                  ', GM_Earth %+.2e' % gm if earth else '', rms))

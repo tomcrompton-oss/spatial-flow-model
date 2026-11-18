@@ -36,7 +36,7 @@ import binary_pulsar as bp
 import lunar_orbit as lo
 from multi_body_pn import MJ, RJ, DJ
 
-MODEL = ('static', 'freefall')
+MODEL = ('static', os.environ.get('SPLIT_BOOST', 'freefall'))   #the frame rule: SPLIT_BOOST=heavier-only etc.
 
 
 def jupiter():
