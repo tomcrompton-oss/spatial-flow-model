@@ -281,11 +281,14 @@ harmonic coordinates):
 | free-fall: the others' space at the body's centre | +0.39 | +0.52 | 0.56 m, 0.43 m |
 | carried: every other body's space where the particle is | +0.25 | +21 | 5.7 m, 12.8 m |
 | heavier: the heavier bodies' space where the particle is, the lighter ones' at the body's centre | +0.23 | +0.36 | 0.17 m, 0.22 m |
+| heavier-centre: the heavier bodies' space at the body's centre, the lighter ones' left out | +0.19 | – | 0.37 m |
 | **heavier-only: the heavier bodies' space where the particle is, the lighter ones' left out** | **+0.010** | **+0.10** | **0.08 m, 0.21 m** |
 
 With heavier-only frames the Earth's flow is carried by the Sun's space round the Moon, and the Sun's flow is worked
 in the Sun's own Lorentz frame. The model then has GR's de Sitter precession: k = 0.01 from the eccentric start, whose
 calibration gives exactly 1. The lunar start's calibration is only 0.83, so its 0.10 is within its own error. 'Carried'
+Both parts count: leaving out the lighter bodies' space (the Sun's step no longer shifted by the Earth's space at the
+Sun) takes k from 0.39 to 0.19, and taking the Sun's space where the Moon is takes it to 0.01. 'Carried'
 also shifts the Sun's flow by the Earth's space round the Moon (1.4 km/s), and that is far too much: a term in
 $u_{\text{Earth}}\,u_{\text{Sun}}$, which goes as $\sqrt{M_{\text{Earth}} M_{\text{Sun}}}$, where GR's cross terms
 go as $M_{\text{Earth}} M_{\text{Sun}}$.
@@ -312,6 +315,10 @@ attempts to remove it didn't work:
   coordinates, so not the same space described two ways): de Sitter fails by 3.7–5 m;
 - building each body's frame where it is at the moment simultaneous, in its frame, with the particle (in case the
   odd term came from the pair's acceleration across a simultaneity the Sun's flow shifts): no change at all.
+
+Taking the Sun's space at the body's centre instead ('heavier-centre') leaves it as it is (η = +104 in, −97 out). So
+the odd term comes with shifting a body's frame by the Sun's flow at all. It grows with the pair's speed round each
+other (8,000 km/s here): for the Moon, at 1 km/s round the Earth, it is the 4–5% of the de Sitter rate above.
 
 So heavier-only frames fix the Moon: lunar ranging comes within the test's floor, and de Sitter precession agrees with
 GR. They don't fix the Nordtvedt effect, and they can't fix the binary of comparable masses, where what is missing is
