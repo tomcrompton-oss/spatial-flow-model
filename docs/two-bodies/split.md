@@ -5,11 +5,13 @@ rest frame. A step works out what each body's flow alone would do to a particle,
 and applies the changes one after the other: the Sun's, then the Earth's. The particle moves once, at its velocity.
 
 **Verdict: ❌ fails.** With one body much heavier than the other it passes most tests – Newton's g, clocks, light
-past Jupiter, causality, a moving system – and with free-fall frames comes within twice the lunar range test's floor.
-But even with free-fall frames the Moon's orbit has only about half GR's de Sitter precession, which lunar laser
-ranging measures to under 1%. And in a binary of comparable masses its orbit turns 17% too slowly at equal masses, and
-the pair's centre of mass accelerates by itself, which binary pulsars rule out: the bodies' fields need to act on each
-other, and in this model they don't.
+past Jupiter, causality, a moving system. With free-fall frames the Moon's orbit has only about half GR's de Sitter
+precession, which lunar laser ranging measures to under 1%. With [each body's flow carried by the heavier body's
+space where the particle is](#coupling-the-flows-carrying-a-bodys-flow-in-the-heavier-bodys-space), the Moon comes
+right: GR's de Sitter precession, and lunar ranging within the test's floor. But then a bound pair falling towards the
+Sun falls too slowly (the Nordtvedt effect, 10⁶ times what lunar ranging allows). And in a binary of comparable
+masses the orbit turns 17% too slowly at equal masses and the pair's centre of mass accelerates by itself, which
+binary pulsars rule out: the bodies' fields need to act on each other, and in this model they don't.
 
 ## Why it might make sense
 
@@ -88,13 +90,13 @@ light's rule fixed, then Lorentz frames, then free-fall frames.
 | Lunar range to a mirror held still: both bodies less each alone | 0 | ❌ 0.45 m | ✅ 0 | ✅ 6 × 10⁻⁷ m | ✅ 0 |
 | Particles at γ up to 10⁶: can matter outrun light? | never | ❌ by 3.6 × 10⁻⁹ c | ✅ never | ✅ never | ✅ never |
 | The whole system moving together: radar to the Moon | no change | ❌ 1.9 m at 29.8 km/s, 290 m at 370 km/s | – (light's rule needs bodies at rest) | ✅ 0.0000 m | ✅ 0.0000 m |
-| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❓ 0.15 m rms, against the test's 8 cm with the Sun; 8 cm at half the synodic period, 3 cm at it |
+| **The Moon's own orbit, the Earth going round the Sun: lunar laser ranging** | GR's range, to millimetres | – | – | ❌ 2.2 m rms; 2.7 m at half the synodic period | ❓ 0.15 m rms, against the test's 8 cm with the Sun; 8 cm at half the synodic period, 3 cm at it. ✅ 0.063 m, within the floor, with [heavier-only frames](#coupling-the-flows-carrying-a-bodys-flow-in-the-heavier-bodys-space) |
 | **A binary of comparable masses: the periastron advance** | GR's, for any mass ratio; the double pulsar to about 10⁻⁴ | – | – | ❌ 25% too much at equal masses | ❌ 17% too little at equal masses |
 | A binary of comparable masses: the centre of mass | stays put (momentum is conserved) | – | – | ❌ accelerates | ❌ accelerates, 0.17 m/s² at a mass ratio of 0.1 |
 | The binary's period (orbital decay) | shrinks only by gravitational waves: GR −2.5 × 10⁻¹⁰ s/s; Hulse–Taylor matches GR to 0.2% | – | – | ❌ −7.8 × 10⁻⁴ s/s | ❌ −1.4 × 10⁻³ s/s |
 | Light past a moving Jupiter: GR's (1 − v·k/c) in the bending | VLBI (2003), to about 20% | – | – | ✅ to 3 × 10⁻⁷ | ✅ (one body: the same) |
-| The Nordtvedt effect: a bound pair falling towards the Sun | falls as a single body; lunar laser ranging η < 10⁻⁴ | – | – | ❌ η = 1.00 | – (three bodies: see below) |
-| De Sitter precession of the Moon's orbit, over 90 days | GR's 19.2 mas a year; lunar laser ranging to under 1% | – | – | – | ❌ about half of it: k = 0.39 and 0.52 from two starts (0 = GR's, 1 = none) |
+| The Nordtvedt effect: a bound pair falling towards the Sun | falls as a single body; lunar laser ranging η < 10⁻⁴ | – | – | ❌ η = 1.00 | – (three bodies: see below); ❌ η = +99 with heavier-only frames |
+| De Sitter precession of the Moon's orbit, over 90 days | GR's 19.2 mas a year; lunar laser ranging to under 1% | – | – | – | ❌ about half of it: k = 0.39 and 0.52 from two starts (0 = GR's, 1 = none). ✅ k = 0.01 with [heavier-only frames](#coupling-the-flows-carrying-a-bodys-flow-in-the-heavier-bodys-space) |
 
 ## In detail: lunar laser ranging with the Moon's own orbit
 
@@ -247,3 +249,70 @@ pulsars rule out.
   0.4–0.6 m against the control's 1–2 cm: besides the turning, the model's orbit differs from GR's by half a metre over
   90 days, which a turning doesn't take out.
 
+
+## Coupling the flows: carrying a body's flow in the heavier body's space
+
+The split model gives each body its one-body flow and nothing else. GR's equations of motion for several bodies at
+first post-Newtonian order (Einstein, Infeld and Hoffmann's) also have cross terms, where one body's pull on another
+depends on a third body, or on the body pulled. `studies/cross_terms.py` runs GR with each kind switched off, to see
+which ones the model is missing:
+
+| GR with this left out | the binary's periastron advance (GR: no η in it) | de Sitter k for the Moon (0 = GR's) |
+| --- | --- | --- |
+| the place pulled sitting in a third body's potential (F) | – | +0.34 |
+| the source sitting in a third body's potential (S) | – | 0.00 |
+| the source sitting in the pulled body's potential (Sa) | +η/3 | – |
+| the source accelerating: the ½ (x_b − x_a)·a_b term (C1) | +η/6 | −0.02 |
+| the source accelerating: the 7/2 G m_b a_b/(c² r) term (C2) | +7η/6 | −0.49 |
+
+The model's binary errors (+1.0 η with Lorentz frames, −0.66 η with free-fall frames) match no combination of these.
+Its centre of mass accelerates at 0.17 m/s², four times as fast as GR with every cross term left out (0.046 m/s²). So
+the binary's errors are not simply missing terms: they come with the model's coordinates and frames. For the Moon, the
+place pulled sitting in the Sun's potential carries a third of GR's de Sitter precession (in harmonic coordinates: how
+terms split between kinds depends on the coordinates).
+
+In the model's own picture that term is the Sun's space not being the same at the Earth and at the Moon. Free-fall
+frames take the Sun's flow at the Earth's centre. So the frame rule was changed to take it where the particle is.
+Four versions were tried (`engine/split.py`'s boosts), with the de Sitter test as above (90 days, extrapolated, in
+harmonic coordinates):
+
+| Frame rule | de Sitter k, eccentric start | lunar start | GR's fit leaves |
+| --- | --- | --- | --- |
+| free-fall: the others' space at the body's centre | +0.39 | +0.52 | 0.56 m, 0.43 m |
+| carried: every other body's space where the particle is | +0.25 | +21 | 5.7 m, 12.8 m |
+| heavier: the heavier bodies' space where the particle is, the lighter ones' at the body's centre | +0.23 | +0.36 | 0.17 m, 0.22 m |
+| **heavier-only: the heavier bodies' space where the particle is, the lighter ones' left out** | **+0.010** | **+0.10** | **0.08 m, 0.21 m** |
+
+With heavier-only frames the Earth's flow is carried by the Sun's space round the Moon, and the Sun's flow is worked
+in the Sun's own Lorentz frame. The model then has GR's de Sitter precession: k = 0.01 from the eccentric start, whose
+calibration gives exactly 1. The lunar start's calibration is only 0.83, so its 0.10 is within its own error. 'Carried'
+also shifts the Sun's flow by the Earth's space round the Moon (1.4 km/s), and that is far too much: a term in
+$u_{\text{Earth}}\,u_{\text{Sun}}$, which goes as $\sqrt{M_{\text{Earth}} M_{\text{Sun}}}$, where GR's cross terms
+go as $M_{\text{Earth}} M_{\text{Sun}}$.
+
+The other checks, with heavier-only frames:
+
+| Check | Result |
+| --- | --- |
+| The Earth going round the Sun the other way | k = −0.006 (calibration 0.97); GR's fit leaves 0.06 m |
+| The Earth at 2 AU | GR's fit leaves 3.8 cm. (k can't be measured there: GR's rate is a fifth as large, and the calibration gives 0.19) |
+| Lunar laser ranging, the Moon's own orbit (test 1 above) | **0.063 m rms, within the test's floor (0.077 m)**; 0.2 mm at the synodic angle D, 3 cm at 2D. (Free-fall frames, rerun: 0.151 m) |
+| Newton's g, clocks, light past Jupiter, the system moving together, causality (`studies/frame_checks.py`) | the same as with free-fall frames |
+| Each body's flow running out instead of in (`studies/flow_sign.py`: the same space, so GR's predictions don't change) | the Sun's out: k = 0.09 (0.12 with GM_Earth free), GR's fit leaving 1–4 cm; the Earth's out: k = 0.002. The part odd in the Sun's flow is 0.04–0.05 of the de Sitter rate, in the Earth's 0.002 |
+| The binary of comparable masses | no change: with two bodies there is no third body's space, so heavier-only frames are Lorentz frames there (+1.0 η) |
+| **The Nordtvedt effect** (a bound pair falling towards the Sun) | **❌ η = +99** (Lorentz frames 1.00, free-fall −62,000; lunar laser ranging 10⁻⁴) |
+
+The Nordtvedt result shows what is still wrong. In GR a body's flow can as well run out of it as in: the same space,
+in other coordinates. So no prediction can depend on which way a flow runs. With the Sun's flow running out instead of
+in, the pair's η is −102 instead of +99: almost all of it reverses with the Sun's flow, so it comes from a term odd in
+$u_{\text{Sun}}$, which GR doesn't have. (Its even part, η ≈ −1.7, is about as wrong as Lorentz frames' 1.0.) Two
+attempts to remove it didn't work:
+
+- averaging each body's step over the Sun's space flowing in and out (only the frame, not the Sun's own step or the
+  coordinates, so not the same space described two ways): de Sitter fails by 3.7–5 m;
+- building each body's frame where it is at the moment simultaneous, in its frame, with the particle (in case the
+  odd term came from the pair's acceleration across a simultaneity the Sun's flow shifts): no change at all.
+
+So heavier-only frames fix the Moon: lunar ranging comes within the test's floor, and de Sitter precession agrees with
+GR. They don't fix the Nordtvedt effect, and they can't fix the binary of comparable masses, where what is missing is
+each body's field acting on its own source.
