@@ -37,6 +37,7 @@ nav:
           - The eikonal flow: two-bodies/eikonal.md
           - Each body carrying its flow: two-bodies/turning.md
           - Each body separately: two-bodies/split.md
+          - Two checks on every model: two-bodies/checks.md
       - Gravitational waves: waves.md
       - Many bodies: many-bodies.md
   - Simulations:

@@ -45,4 +45,9 @@ heavier than the other, and carrying each body's flow in the heavier body's spac
 ranging and de Sitter precession – but then a bound pair falls towards the Sun too slowly, and with comparable masses
 the bodies' fields have to act on each other, and they don't.
 
+[Two checks on every model](checks.md) scores each one on whether it keeps the energy and angular momentum its
+symmetries say it should, and whether its flow's change along itself is Newton's g. Every single flow keeps its
+conserved quantities (it is one spacetime), so the second check tells them apart; the split model passes the second
+by construction and fails the first, keeping no energy at the first relativistic order.
+
 [Many bodies](../many-bodies.md) works through the eikonal and turning flows at more length.

@@ -41,7 +41,8 @@ of that flow alongside to tell flat space from the model's step:
 
 So the light error is all flat space. For fast particles the model's step adds more: it takes
 $\dot{\mathbf w} = -(\mathbf w\cdot\nabla)\mathbf u$, which is the true geodesic only where the flow has no curl,
-and this flow has curl. A wave through the plane has neither problem.
+and this flow has curl. A wave through the plane has neither problem. (These runs used that step; the simulation's
+default is now the momentum step, the metric's own path, which leaves only the flat-space part.)
 
 <iframe src="../viewer/index.html?run=../runs/gravWaveAcross/gravWaveAcross.full.json" width="100%" height="560" loading="lazy" title="A wave sweeping across the plane"></iframe>
 

@@ -38,15 +38,19 @@ $$
 $$
 
 Its proper time runs at $\sqrt{1 - w^2/c^2}$, and light is anything with $|\mathbf w| = c$. Round one body the flow is
-$\sqrt{2GM/r}$, straight in. Each step goes half way the first-order way, then takes the whole step at the middle's
-rates (second order), with light kept at exactly $c$, and steps shrink close to a body.
+$\sqrt{2GM/r}$, straight in. The simulation takes these equations on the particle's momentum,
+$\mathbf p = \gamma\mathbf w$ – $d\mathbf x/dt = \mathbf u + \mathbf w$, $d\mathbf p/dt = -\nabla(\mathbf u\cdot
+\mathbf p)$ – by the midpoint rule (second order), and steps shrink close to a body.
 
 A rotating (Kerr) hole is the river model of Hamilton and Lisle (2008): the river flows straight in and also twists.
 In the equatorial plane, light bends as exact Kerr does to 2 × 10⁻⁵ at spins up to 0.99, with and against the spin,
 and orbits precess as exact Kerr to 2 × 10⁻⁴ (`studies/kerr_comparison.py`).
 
-Close to a hole, within about 10 Schwarzschild radii, the step is effectively first order and orbits decay. A step on
-the particle's momentum, $d\mathbf p/dt = -(\nabla\mathbf u)\cdot\mathbf p$, is the planned fix; it is also the
-geodesic step for flows with curl (1.2.5.1).
+The earlier step, on w (half a step the first-order way, then the whole step at the middle's rates), was effectively
+first order close to a hole, and was not the metric's path where the flow has curl (1.2.5.1). The momentum step fixes
+both: an orbit from 200 to 600 Schwarzschild radii keeps its energy and angular momentum to 10⁻⁷ where the old step
+left 3 × 10⁻⁵, the falls into black and white holes match GR to 10⁻⁷, and in a flow with curl it follows the
+metric's own path and keeps the energy to 3 × 10⁻⁹ (`studies/momentum_step.py`). Far from a hole both are second
+order, the new one's error about twice the old one's at the same step.
 
 The examples on these pages come from `studies/part1_examples.py`.

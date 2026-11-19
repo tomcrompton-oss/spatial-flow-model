@@ -110,8 +110,10 @@ At any time the apparent velocity and acceleration follow from $\mathbf v = \mat
     \frac{d\mathbf x}{dt} = \mathbf w + \mathbf u, \qquad \frac{d\mathbf w}{dt} = -(\mathbf w\cdot\nabla)\,\mathbf u
     $$
 
-    and the simulation now takes each step at second order (half a step the first-order way, then the whole step at
-    the middle's rates), with steps that shrink close to the body.
+    The simulation now takes the metric's own form of it, on the momentum $\mathbf p = \gamma\mathbf w$:
+    $d\mathbf x/dt = \mathbf u + \mathbf w$, $d\mathbf p/dt = -\nabla(\mathbf u\cdot\mathbf p)$, second order
+    by the midpoint rule, with steps that shrink close to the body. Round one body the two are the same; the momentum
+    form stays second order close to a hole, and is right where the flow has curl (below).
 
 !!! warning "Correction"
     The original's step 7 writes the change as $\mathbf u_3 - \mathbf u_2$. A particle that has moved into
@@ -220,7 +222,8 @@ $v = (c, -0.8c)$.* [Open full screen](../../viewer/index.html?run=../runs/part1/
     geodesic of the flowing-space metric $ds^2 = -c^2dt^2 + |d\mathbf x - \mathbf u\,dt|^2$; the geodesic rule acts
     on the momentum, $d\mathbf p/dt = -(\nabla\mathbf u)\cdot\mathbf p$. For the flow round a single body, which has no
     curl, the two are the same — which is why the four tests in 1.3 come out right. The difference does matter for
-    flows with curl, such as a gravitational wave crossing the plane ([Gravitational waves](../waves.md)).
+    flows with curl, such as a gravitational wave crossing the plane ([Gravitational waves](../waves.md)), and the
+    simulation now steps on the momentum by default.
 
 !!! tip "Suggestion"
     The Newtonian version keeps the photon's path straight only by letting its local speed exceed $c$ (to 1.28c
