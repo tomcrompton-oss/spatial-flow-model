@@ -39,10 +39,11 @@ START = 1.025*AU          #where the descents start
 RS = schwarzschildRadius(HOLE)
 STOP = 11816508000.0      #where the descent studies stop: just outside RS, which the white-hole descent only creeps towards
 MAX_STEPS = 1000000       #no test runs on for ever
+WHITE_FALLS = ((1, 0.1, 5e-4), (2, 0.25, 2e-4))   #order, dt, tolerance: the white-hole falls (testWhiteHoleFall)
 
 
 def fall(order, dt, black=True):
-  """the descent studies: freefall into a black hole (with the flow), or thrown into a white one (against it)"""
+  """the descent studies: freefall into a black hole (with the flow), or a fall from rest into a white one (against it)"""
   calc = SpecialFlowCalculator([Body(HOLE, black=black)], order=order)
   p = Particle()
   p.pos = np.array([0.0, START])
@@ -82,11 +83,22 @@ class Engine(unittest.TestCase):
         self.assertAlmostEqual(np.linalg.norm(p.w), 0.0)   #moving with the flow, so no time dilation
         self.assertAlmostEqual(p.pt, p.t, places=6)
 
-  def testWhiteHoleDescentUnchanged(self):
-    """the white-hole descent (astroDescend, first order, dt = 0.01 s) gives what it did before the refactoring"""
-    p = fall(1, 0.01, black=False)
-    self.assertAlmostEqual(p.t, 2227.2, places=6)
-    self.assertAlmostEqual(p.pt, 444.8164739365552, places=6)
+  def testWhiteHoleFall(self):
+    """
+    a fall from rest far away into a white hole (astroDescend) is the black-hole fall's path through spacetime: the
+    same proper time, (2/3)(a^1.5 - d^1.5)/sqrt(2GM); in the white hole's time it runs behind the black hole's by
+    twice GR's shift between the two, F(r) = (2 sqrt(2mr) + 2m ln|(sqrt r - sqrt 2m)/(sqrt r + sqrt 2m)|)/c
+    """
+    m = G*HOLE/C**2
+    shift = lambda r: (2*math.sqrt(2*m*r) + 2*m*math.log(abs((math.sqrt(r) - math.sqrt(2*m))/(math.sqrt(r)
+                                                                                                 + math.sqrt(2*m)))))/C
+    for order, dt, tolerance in WHITE_FALLS:
+      with self.subTest(order=order, dt=dt):
+        p = fall(order, dt, black=False)
+        d = np.linalg.norm(p.pos)
+        tau = fallTime(G*HOLE, START, d)
+        self.assertLess(abs(p.pt/tau - 1), tolerance)
+        self.assertLess(abs(p.t/(tau - 2*(shift(d) - shift(START))) - 1), tolerance)
 
   def testLightLeavingABlackHole(self):
     """light climbs at c - u: the flight time matches the exact integral, much more closely at second order"""

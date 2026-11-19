@@ -691,12 +691,16 @@ class SpecialFlowCalculator(Calculator):
 
   def initPAgainstFlow(self, p):
     """
-    thrown against the flow at twice its speed (v = -2u, w = v - u = -3u), as astroDescend falls into a white body
-    (NewSpecialWhiteFlowCalculator's initPFreefall)
+    falling in from rest far away, against a white body's outflow (astroDescend): an observer at rest moves in at |u|
+    through the outflowing space, and the particle passes them going in at |u| (a fall from rest far away, as they
+    see it), so relative to the space it moves at -u added to -u relativistically, w = -2u/(1 + u^2/c^2), and
+    v = w + u. its energy is its rest energy (conserved E = 0), as a fall into a black body with the flow, and it is
+    the same path through spacetime: the same proper time, but in the white body's time it only creeps towards the
+    horizon. (it was v = -2u, w = -3u, which is no fall from anywhere in particular)
     """
     p.u = self.flow(p.pos, None, p.t)
-    p.v = -2*p.u
-    p.w = p.v - p.u
+    p.w = self.addSI(-p.u, -p.u)
+    p.v = p.w + p.u
 
   def move(self, p, dt):
     self.seamStep(p, dt, self.moveFirstOrder if self.order == 1 else self.moveSecondOrder)
