@@ -2,7 +2,9 @@
 the lapse and curved space with the bodies moving: the turning flow (the Sun and the Earth going round each other,
 the eikonal flow turning with them, studies/turning_eikonal.py) along engine/metric.py's family - lambda of gravity
 in the clocks, space curved to match (kappa = lambda), and lambda of GR's moving-body terms (its vector potential and
-its lapse's psi), so that lambda = 1 is GR's first post-Newtonian metric of the same bodies:
+its lapse's psi), so that lambda = 1 is GR's first post-Newtonian metric of the same bodies; and with the clocks left
+alone (N = 1) and space curved across the flow, by 2 Phi/c^2 or by the flow's own |u|^2/c^2 (FlowSpacetime transverse
+True or 'flow'; the turning flow's |u|^2 is not 2 Phi, so the two differ):
 
   sun      light passing the Sun, 0.5 AU either side (inside the turning flow's Sun region, where its paths' energy
            J squeezes space): the bending at 2, 10 and 50 solar radii, less the same family's bending with the Sun
@@ -32,7 +34,12 @@ from engine.constants import *
 from turning_eikonal import bodies, OMEGA
 
 SHARES = (0.0, 0.5, 1.0)
-MODELS = ['turning, lambda %g' % s for s in SHARES] + ['turning, N = 1, transverse space', 'GR (first post-Newtonian)']
+MODELS = (['turning, lambda %g' % s for s in SHARES] + ['turning, N = 1, transverse space',
+          'turning, N = 1, space from u', 'GR (first post-Newtonian)'])
+
+
+def mode(model):
+  return 'flow' if 'space from u' in model else True
 
 
 def spacetime(model, alone=False):
@@ -41,14 +48,14 @@ def spacetime(model, alone=False):
     sun = [Body(MS, *bodies()[0].pos)]
     if model.startswith('GR'):
       return PostNewtonian(sun)
-    if 'transverse' in model:
-      return FlowSpacetime(SpecialFlowCalculator(sun, 2), transverse=True)
+    if 'N = 1' in model:
+      return FlowSpacetime(SpecialFlowCalculator(sun, 2), transverse=mode(model))
     share = float(model.split('lambda ')[1])
     return FlowSpacetime(SpecialFlowCalculator(sun, 2), share=share, curve=share)
   if model.startswith('GR'):
     return PostNewtonian(bodies())
-  if 'transverse' in model:
-    return FlowSpacetime(SpecialFlowCalculator(bodies(), 2, combine='turning'), transverse=True)
+  if 'N = 1' in model:
+    return FlowSpacetime(SpecialFlowCalculator(bodies(), 2, combine='turning'), transverse=mode(model))
   share = float(model.split('lambda ')[1])
   return FlowSpacetime(SpecialFlowCalculator(bodies(), 2, combine='turning'), share=share, curve=share)
 
@@ -83,7 +90,7 @@ def main():
            ' less the same family\'s with the Sun alone, against GR\'s the same way (Cassini: 2.3e-5 of the bending,'
            ' %.4f mas at 2 R_sun)' % (2.3e-5*found[(MODELS[-1], 2, True)]*mas)]
   for m in MODELS:
-    lines.append('  %-28s %s' % (m, '   '.join('%d R_sun: %+.4f mas (GR\'s %+.4f)' % (r, extra[(m, r)]*mas, gr[r]*mas)
+    lines.append('  %-32s %s' % (m, '   '.join('%d R_sun: %+.4f mas (GR\'s %+.4f)' % (r, extra[(m, r)]*mas, gr[r]*mas)
                                                 for r in radii)))
   print('\n'.join(lines), flush=True)
   with open(os.path.join(folder, 'summary.log'), 'w') as f:

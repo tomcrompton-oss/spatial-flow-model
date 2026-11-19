@@ -145,10 +145,50 @@ precession is 4/3). With two bodies it is not flat: the stretch across the flow 
 With the bodies at rest it is GR: both tests that ruled out the eikonal flow pass, and nothing has been put in the
 clocks. Space moves as the eikonal flow says, and is curved across that motion by the potential.
 
-For moving bodies it is not yet a model: the transverse space is GR only on GR's own free-fall flow, and the turning
-flow is not that – its single Jacobi constant gives the paths round the Sun the wrong energy, and curving space
-across them leaves the 9.6 mas past the Sun exactly as it was. What moving bodies need is the free fall of GR's
-moving-body metric: each body's flow carried at its velocity, with no single constant tying their regions together.
+## Space decided by the flow
+
+The eikonal flow is free fall from rest far away, so $|\mathbf u|^2 = 2\Phi$, and the curved space above can be
+written with the flow alone:
+
+$$\gamma = \delta + \frac{|\mathbf u|^2\,\delta - \mathbf u\,\mathbf u}{c^2}$$
+
+Space is stretched across its own motion by $u^2/c^2$: the flow's speed says how much, its direction which way, and
+nothing else goes in (`FlowSpacetime(..., transverse='flow')`, the flow slowed by $\sqrt{1 - u^2/2c^2}$). For the
+eikonal flow this is the same space. For any other flow it is a different one, so it can be tried on all of them:
+
+| Model | Lunar range, cos D | Light past Jupiter, both less each alone (1 / 10 / 100 R_J) | Light past the Sun, less the Sun alone (2 / 10 / 50 R_sun) |
+| --- | --- | --- | --- |
+| Vectors, flat | +1.084 m | −6418 / −1888 / −440 µas | |
+| Vectors, space from u | +1.087 m | −12941 / −3885 / −1003 µas | |
+| Along g, flat | −0.587 m | +759 / +1032 / −8 µas | |
+| **Along g, space from u** | **+0.0096 m** | −1129 / −788 / −1072 µas | |
+| **Eikonal, space from u** | **+0.0096 m** | **+0.35 / −0.04 / −0.09 µas** | |
+| Turning, flat | | | −9.60 / −9.59 / −9.25 mas |
+| Turning, space curved by 2Φ/c² | | | −9.60 / −9.59 / −9.25 mas |
+| **Turning, space from u** | | | **+0.0012 / +0.0019 / +0.014 mas** |
+| GR's first post-Newtonian metric | +0.0096 m | +0.25 / −0.01 / −0.08 µas | 0 |
+| Measured | (2.8 ± 4.1) mm | under 10 µas | Cassini: 0.02 mas at 2 R_sun |
+
+(The Sun results are the same at half and double the step.)
+
+What light sees shows why. With this space, light's round trips are set by
+$\gamma + \mathbf u\mathbf u/c^2 = (1 + u^2/c^2)\,\delta$ to first order: space looks the same in every direction,
+and only the flow's speed counts, not its direction. Its paths also feel the flow's curl, which a flow with none
+(a gradient) can't give.
+
+- **Round trips need only $|\mathbf u|^2 = 2\Phi$.** Along g has that speed, and its lunar range is GR's exactly,
+  wherever the flow points. The vectors' flow doesn't have it, so it fails.
+- **Bending also needs no curl.** Along g's flow has curl, and its light past Jupiter is off by about 1000 µas. A flow
+  with $|\mathbf u|^2 = 2\Phi$ and no curl is the gradient of an S with $|\nabla S|^2 = 2\Phi$: the eikonal
+  equation. So with the bodies at rest, the eikonal flow is the only flow this space makes into GR.
+- **Light doesn't mind a constant in $u^2$.** The turning flow's one Jacobi constant makes $|\mathbf u|^2 = 2\Phi$
+  less a constant across the Sun's region ($3 \times 10^{-8}c^2$, as large as the Sun's own potential 0.3 AU out).
+  In flat space that bent light by 9.6 mas. In this space it only changes the scale of the light-speed factor
+  $1 + u^2/c^2$ evenly, which bends nothing. What's left, 0.001 mas at 2 solar radii, is under Cassini's limit.
+  Space curved by 2Φ/c² instead of by $u^2$ doesn't take up the constant, and leaves all 9.6 mas.
+
+So with space decided by the flow, the turning flow – the moving-body model – passes the test that ruled it out, with
+N = 1 and no potential put in anywhere.
 
 ## What it means
 
@@ -158,12 +198,15 @@ What they show about the flow model:
 - One body doesn't mind how gravity is split: any share can go into the clocks, with space curved to match.
 - With two bodies, putting gravity into the clocks fixes the flow model's failures only in proportion – by taking
   gravity out of the flow, which ends at conventional GR.
-- Keeping the clocks as Part 1 has them (N = 1) and curving space across the flow by the potential fixes them
-  outright for bodies at rest. This is the first multi-body version that passes lunar ranging's synodic term and the
+- Keeping the clocks as Part 1 has them (N = 1) and curving space across the flow fixes them outright for bodies at
+  rest. This is the first multi-body version that passes lunar ranging's synodic term and the
   Jupiter bending while keeping "clocks tick by their speed through space". Part 1's hypothesis then changes from
   "space flows and is flat" to "space flows, and is stretched across its flow by the potential".
-- Still to do: a flow for moving bodies that is GR's free fall (so the transverse space can apply), and then the
-  moving-body tests – the Moon's own orbit, de Sitter precession, Nordtvedt and the binary pulsars.
+- Writing that space with the flow alone, stretched across its motion by $u^2/c^2$, makes the flow decide the
+  geometry as well as the motion. It keeps the eikonal flow's results, and it fixes the turning flow's light past the
+  Sun (9.6 mas to 0.001), because light then doesn't feel the turning flow's Jacobi constant.
+- Still to do: the moving-body tests for the turning flow with this space – the Moon's own orbit, de Sitter
+  precession, Nordtvedt and the binary pulsars – and its conserved quantities.
 
 ## Run it
 

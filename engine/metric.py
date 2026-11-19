@@ -178,6 +178,9 @@ class FlowSpacetime(Spacetime):
   """
 
   def __init__(self, calc, lapse=None, space=None, share=0.0, curve=0.0, transverse=False, slower=True):
+    """transverse: True, space stretched across the flow by 2 Phi/c^2 (GR's static metric sliced by free fall);
+    'flow', by the flow's own |u|^2/c^2 - the same for the eikonal flow, where |u|^2 = 2 Phi, and set by the flow
+    alone for any other"""
     self.calc = calc
     self.bodies = calc.bodies
     self.lapseFn, self.spaceFn = lapse, space
@@ -195,7 +198,10 @@ class FlowSpacetime(Spacetime):
       extra.append('lapse share %g' % self.share)
     if self.curve:
       extra.append('curved space %g' % self.curve)
-    if self.transverse:
+    if self.transverse == 'flow':
+      extra.append('space curved across the flow by its own speed, (|u|^2 delta - u u)/c^2'
+                   + (', the flow slowed by sqrt(1 - |u|^2/2c^2)' if self.slower else ''))
+    elif self.transverse:
       extra.append('space curved across the flow' + (', the flow slowed by sqrt(1 - Phi/c^2)' if self.slower else ''))
     if self.lapseFn:
       extra.append('its own lapse')
@@ -216,7 +222,9 @@ class FlowSpacetime(Spacetime):
 
   def flow(self, x, t, region=None):
     u = self.calc.flow(x, region, t)
-    if self.transverse and self.slower:
+    if self.transverse == 'flow' and self.slower:
+      u = u*math.sqrt(1 - (u @ u)/(2*C*C))   #the same, with the flow's own u^2/2 for Phi
+    elif self.transverse and self.slower:
       u = u*math.sqrt(1 - potential(self.bodies, x, t)/C**2)   #|u|^2 = 2 Phi (1 - Phi/c^2): g_tt's Phi^2, GR's beta
     if not self.share:
       return u
@@ -226,8 +234,11 @@ class FlowSpacetime(Spacetime):
     h = self.spaceFn(x, t) if self.spaceFn else None
     if self.transverse:
       u = self.calc.flow(x, self.calc.region(x, t) if region is None else region, t)
-      n = u/length(u)
-      k = 2*potential(self.bodies, x, t)/C**2*(np.eye(2) - np.outer(n, n))
+      if self.transverse == 'flow':
+        k = ((u @ u)*np.eye(2) - np.outer(u, u))/C**2   #decided by the flow alone: its speed, and its direction
+      else:
+        n = u/length(u)
+        k = 2*potential(self.bodies, x, t)/C**2*(np.eye(2) - np.outer(n, n))
       h = k if h is None else h + k
     if self.curve:
       k = 2*self.curve*potential(self.bodies, x, t)/C**2*np.eye(2)

@@ -38,8 +38,12 @@ the other pages, not computed numbers.
 | [Eikonal, λ = κ = 0.5](lapse-curved-space.md) | 9 | 4 | 10 | — | **5** | Half of gravity in the clocks and curved space; every failure halves. |
 | Turning, λ = κ = 0.5 | 9 | 4 | 10 | — | **4** | Light past the Sun 4.8 mas off. |
 | Eikonal or turning, λ = κ = 1 | 10 | 9 | 10 | — | **1** | No flow left: GR's first post-Newtonian metric, conventional GR. |
-| **[Eikonal, N = 1, space curved across the flow](lapse-curved-space.md#the-clocks-left-alone-space-curved-across-the-flow)** | 9 | **6** | 10 | 9 | **7** | Keeps parts 2–4; space is stretched across the flow by 2Φ/c² (part 1 gone). Passes lunar ranging and the Jupiter bending with the bodies at rest. |
-| Turning, N = 1, space curved across the flow | 9 | 4 | 10 | 4 | **6** | The turning flow's 9.6 mas past the Sun, unchanged. |
+| [Eikonal, N = 1, space curved by 2Φ/c²](lapse-curved-space.md#the-clocks-left-alone-space-curved-across-the-flow) | 9 | 6 | 10 | 9 | **6** | Keeps parts 2–4, but space is shaped by Newton's potential, put in from outside the flow. Passes lunar ranging and the Jupiter bending with the bodies at rest. |
+| Turning, N = 1, space curved by 2Φ/c² | 9 | 4 | 10 | 4 | **5** | The turning flow's 9.6 mas past the Sun, unchanged. |
+| Vectors, N = 1, [space from u](lapse-curved-space.md#space-decided-by-the-flow) | 1 | 1 | 10 | 1 | **8** | Space stretched across the flow by its own u²/c². The vectors' speed isn't 2Φ, so both tests fail. |
+| Along g, N = 1, space from u | 3 | 2 | 10 | 2 | **7** | Lunar ranging exactly GR's (round trips see only the flow's speed); light past Jupiter 1000 µas off (its flow has curl). |
+| **Eikonal, N = 1, space from u** | 9 | **6** | 10 | 9 | **7** | The same space as by 2Φ/c², now decided by the flow alone. The one flow it makes GR with the bodies at rest. |
+| **Turning, N = 1, space from u** | 9 | **6** | 10 | 4 | **6** | Light past the Sun 0.001 mas off (Cassini 0.02): light no longer feels the Jacobi constant. Moving-body tests still to run. |
 
 Notes:
 
@@ -47,16 +51,19 @@ Notes:
   (E and L to 3 × 10⁻⁸ in its checks). They have not been through the four-orbit study.
 - **Flow = g, for the λ models**: the flow carries only 1 − λ of g, and the clocks the rest. The check as defined
   doesn't apply, though Newton's g comes out right.
-- **N = 1 with space curved across the flow**: its GR score is provisional, as only bodies at rest have been tested; a
-  free-fall flow for moving bodies is still to build. If that passes light past the Sun, de Sitter and the Moon's own
-  orbit, it would score 8 or more on GR, and still 7 on the premise.
+- **Space curved across the flow**: every version keeps N = 1, so it loses one premise point for no longer being flat.
+  Curving it by Newton's potential loses another, because the potential comes from outside the flow; curving it by
+  u²/c² doesn't, because the flow decides it.
+- **The GR scores of 6 are provisional.** The eikonal version is tested only with the bodies at rest. The turning
+  version has passed light past the Sun, but not yet the Moon's own orbit, de Sitter, Nordtvedt or the binaries. If it
+  passes those it would score 8 or more on GR, and still 6 on the premise.
 
 ## What the scores show
 
 - **The trade-off.** Every gain on GR has cost on the premise: the split model reaches 6 by dropping the single flow,
   and the lapse family reaches 9 by dropping the flow altogether.
-- **The exception.** Space curved across the flow is the one model off that line, at 6 on GR and 7 on the premise. It
-  keeps "clocks tick by their speed through space", and changes "space is flat" to "space is stretched across its
-  flow by the potential".
+- **The exception.** Space curved across the flow, by the flow's own speed, is off that line: 6 on GR and 6–7 on the
+  premise, for both the bodies-at-rest flow and the moving-body flow. It keeps "clocks tick by their speed through
+  space", and changes "space is flat" to "space is stretched across its own motion by u²/c²".
 - **The two checks pull opposite ways.** Every single-flow model keeps its conserved quantities; every split model's
   flows give g exactly, and none keeps its energy.

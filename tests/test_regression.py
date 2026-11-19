@@ -187,6 +187,28 @@ class Engine(unittest.TestCase):
     extra = bend([sun, jup]) - bend([sun]) - bend([jup])
     self.assertLess(abs(extra)*180/math.pi*3600e6, 5)   #microarcseconds; Jupiter's own bending here is 1600
 
+  def testSpaceFromTheFlow(self):
+    """
+    space curved across the flow by the flow's own |u|^2/c^2 (FlowSpacetime transverse 'flow'), on the turning flow
+    (the Sun and the Earth going round each other): light 2 solar radii from the Sun bends as with the Sun alone, as
+    GR has it, within Cassini's 0.02 mas (flat space, or space curved by 2 Phi/c^2: 9.6 mas less)
+    """
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'studies'))
+    from engine.metric import MetricCalculator, FlowSpacetime
+    from turning_eikonal import bodies
+    def bend(bs, combine):
+      calc = MetricCalculator(FlowSpacetime(SpecialFlowCalculator(bs, 2, combine=combine), transverse='flow'))
+      centre = bs[0].at(0.0)
+      p = Particle()
+      p.pos = centre + np.array([2*RSUN, -0.5*AU])
+      calc.initLight(p, np.array([0.0, 1.0]))
+      while p.pos[1] < centre[1] + 0.5*AU:
+        calc.move(p, calc.stepSize(p, 0.002, 0.004*AU/C))
+      return math.atan2(-p.v[0], p.v[1])
+    both = bend(bodies(), 'turning')
+    alone = bend([Body(MS, *bodies()[0].pos)], 'squares')
+    self.assertLess(abs(both - alone)*180/math.pi*3600e3, 0.01)   #milliarcseconds; the bending itself is 870
+
   def testLightLeavingABlackHole(self):
     """light climbs at c - u: the flight time matches the exact integral, much more closely at second order"""
     exact = rayTime(RS, 4*RS, START)

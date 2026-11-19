@@ -12,7 +12,9 @@ eikonal flow with the bodies at rest (studies/multi_body_pn.py):
 
 each for the eikonal flow at lambda = 0 (the flow model), 0.5 and 1 (no flow left: all of gravity in the clocks and
 the curved space); the eikonal flow with the clocks left alone (N = 1) and space curved across it (FlowSpacetime
-transverse: GR's static metric sliced by free fall, to first order); and GR's first post-Newtonian metric of the
+transverse: GR's static metric sliced by free fall, to first order); the same with space decided by the flow alone,
+(|u|^2 delta - u u)/c^2 (transverse 'flow'), on the eikonal, vector and along-g flows, with the last two flat for
+comparison; and GR's first post-Newtonian metric of the
 bodies at rest (engine/metric.py PostNewtonian)
 
 run: python3 studies/lapse_two_bodies.py [test ...]     (default both; prints, and writes
@@ -33,13 +35,24 @@ from engine.constants import *
 from multi_body_pn import NODES, WEIGHTS, DMOON, MJ, RJ, DJ
 
 SHARES = (0.0, 0.5, 1.0)
-MODELS = ['eikonal, lambda %g' % s for s in SHARES] + ['eikonal, N = 1, transverse space', 'GR (first post-Newtonian)']
+MODELS = (['eikonal, lambda %g' % s for s in SHARES] + ['eikonal, N = 1, transverse space']
+          + ['%s, N = 1, space from u' % f for f in ('eikonal', 'vectors', 'along g')]
+          + ['vectors, flat', 'along g, flat', 'GR (first post-Newtonian)'])
+FLOWS = {'eikonal': {}, 'vectors': {'combine': 'vectors'}, 'along g': {'direction': 'g'}}
 
 
 def spacetime(model, bodies):
   if model.startswith('GR'):
     return PostNewtonian(bodies)
-  flow = SpecialFlowCalculator(bodies, 2, direction='eikonal-exact' if len(bodies) == 2 else None)
+  name = model.split(',')[0]
+  rule = dict(FLOWS[name])
+  if name == 'eikonal' and len(bodies) == 2:
+    rule['direction'] = 'eikonal-exact'
+  flow = SpecialFlowCalculator(bodies, 2, **rule)
+  if 'flat' in model:
+    return FlowSpacetime(flow)
+  if 'space from u' in model:
+    return FlowSpacetime(flow, transverse='flow')
   if 'transverse' in model:
     return FlowSpacetime(flow, transverse=True)
   share = float(model.split('lambda ')[1])
@@ -121,7 +134,7 @@ def main():
       lines.append('lunar: radar Earth -> Moon\'s distance -> Earth, the Sun 1 AU away, less the Earth alone, as a range:'
                    ' its cos D part (lunar laser ranging (2.8 +- 4.1) mm), mean and swing over the month')
       for model, r in pool.map(lunar, MODELS):
-        lines.append('  %-28s cos D %+.4f m   mean %+.4f m   swing %.4f m' % (model, r['cosD'], r['mean'], r['swing']))
+        lines.append('  %-34s cos D %+.4f m   mean %+.4f m   swing %.4f m' % (model, r['cosD'], r['mean'], r['swing']))
       print('\n'.join(lines), flush=True)
     if 'jupiter' in chosen:
       lines.append('jupiter: light past Jupiter, the Sun 5.2 AU away: the bending with both less each alone (GR: 0 to first'
@@ -129,7 +142,7 @@ def main():
       jobs = [(m, r) for m in MODELS for r in (1, 10, 100)]
       found = dict(pool.map(jupiter, jobs))
       for m in MODELS:
-        lines.append('  %-28s %s' % (m, '   '.join('%g R_J: %+.2f uas (of %.0f)' % (r, found[(m, r)][0]*uas,
+        lines.append('  %-34s %s' % (m, '   '.join('%g R_J: %+.2f uas (of %.0f)' % (r, found[(m, r)][0]*uas,
                                                                                 found[(m, r)][1]*uas)
                                                  for r in (1, 10, 100))))
       print('\n'.join(lines[-len(MODELS) - 1:]), flush=True)

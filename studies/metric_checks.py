@@ -280,8 +280,8 @@ def transverse():
            ' the close orbit\'s precession and light\'s bending (300 rs from 100 AU) against GR\'s']
   x, v = schwarzschildStart()
   period = 2*math.pi*math.sqrt(((RP + RA)/2)**3/(G*MS))
-  for slower in (True, False):
-    S = FlowSpacetime(SpecialFlowCalculator([Body(MS)]), transverse=True, slower=slower)
+  for mode, slower in ((True, True), (True, False), ('flow', True)):
+    S = FlowSpacetime(SpecialFlowCalculator([Body(MS)]), transverse=mode, slower=slower)
     calc = MetricCalculator(S)
     p = Particle()
     p.pos = x.copy()
@@ -300,7 +300,8 @@ def transverse():
       calc.move(q, dt)
     bend = math.atan2(-q.v[1], q.v[0])
     lines.append('  %-40s precession / GR\'s %.4f; bending / GR\'s %.4f; E kept to %.0e'
-                 % ('flow slowed by sqrt(1 - Phi/c^2):' if slower else 'flow as it is:', prec/grPrecessionExact(rp, ra, MS),
+                 % ('space from u itself, flow slowed:' if mode == 'flow' else
+                    'flow slowed by sqrt(1 - Phi/c^2):' if slower else 'flow as it is:', prec/grPrecessionExact(rp, ra, MS),
                     bend/grDeflectionExact(bGR), most['E']))
   return lines
 
