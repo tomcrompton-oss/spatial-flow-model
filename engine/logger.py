@@ -18,6 +18,8 @@ from engine.exact import grPrecessionExact, kerrPrecessionExact
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   #the project folder
 LOG_DIR = os.path.join(ROOT, 'logs')                #study logs
 TEST_LOG_DIR = os.path.join(ROOT, 'tests', 'logs')   #regression test logs, kept apart from the studies'
+CONSERVED = ('E', 'L', 'J', 'b')   #the conserved quantities' csv columns (engine/flow.py Calculator.conserved), empty
+                                   #when the run's symmetries don't keep that one
 
 
 def studyFolder(studyName):
@@ -158,7 +160,11 @@ class Log:
     if writeToCsv:
       self.csvFile = open(basename + '.csv', 'w', newline='')
       self.csvWriter = csv.writer(self.csvFile)
-      self.csvWriter.writerow(['t', 'pt', 'd', 'pos_x', 'pos_y', 'v_x', 'v_y'])
+      self.csvWriter.writerow(['t', 'pt', 'd', 'pos_x', 'pos_y', 'v_x', 'v_y'] + list(CONSERVED))
+    self.calc = None          #the run's calculator (start), for its conserved quantities
+    self.conserved0 = {}      #their values at the start
+    self.conservedNow = {}    #and after the last step
+    self.conservedRange = {}  #the least and most change from the start, by name
 
   def __getattr__(self, name):
     #the orbit statistics, as attributes of the log (only called for names the log itself doesn't have)
@@ -187,6 +193,9 @@ class Log:
       self.print('Starting estimated duration:', "{:.2f}".format(maxn/calc.runspeed), 'seconds (',
                  "{:.2}".format(maxn/(calc.runspeed*3600)), ') hours')
     self.print('calc: ', calc)
+    self.calc = calc
+    self.conserved0 = self.conservedNow = self.conservedOf(p)
+    self.conservedRange = {name: [0.0, 0.0] for name in self.conserved0}
     self.logSteps(config)
     self.logBodies(calc)
 
@@ -228,6 +237,7 @@ class Log:
     """
     self.t += dt
     d = self.stats.track(p, dt)
+    self.trackConserved(p)
     if not self.csvFile:
       return False
     if self.freq == 0:
@@ -242,8 +252,23 @@ class Log:
       self.nextRow += self.freq
     return True
 
+  def conservedOf(self, p):
+    """the calculator's conserved quantities for p (none for a calculator without them)"""
+    conserved = getattr(self.calc, 'conserved', None)
+    return conserved(p) if conserved else {}
+
+  def trackConserved(self, p):
+    """after each step: the conserved quantities now, and the range of their change since the start"""
+    if not self.conserved0:
+      return
+    self.conservedNow = self.conservedOf(p)
+    for name, value in self.conservedNow.items():
+      change, span = value - self.conserved0[name], self.conservedRange[name]
+      span[0], span[1] = min(span[0], change), max(span[1], change)
+
   def writeRow(self, p, d=None):
-    self.csvWriter.writerow([self.t, p.pt, length(p.pos) if d is None else d, p.pos[0], p.pos[1], p.v[0], p.v[1]])
+    self.csvWriter.writerow([self.t, p.pt, length(p.pos) if d is None else d, p.pos[0], p.pos[1], p.v[0], p.v[1]]
+                            + [self.conservedNow.get(name, '') for name in CONSERVED])
 
   def logOrbit(self):
     s = self.stats
@@ -269,6 +294,7 @@ class Log:
     self.print('Simulation complete: ', time.time() - self.starttime, 'seconds (', (time.time() - self.starttime)/3600, ' hours)')
     self.print('sim time:', self.t)
     self.print('closest distance:', s.closest, ' ', s.closest/AU, 'AU')
+    self.logConserved()
     self.print()
     if s.orbit == 0:
       self.print('No orbits completed')
@@ -304,6 +330,22 @@ class Log:
       label = 'GR exact precession for these apsides:'
     self.print(label, exact, '   periapsis accuracy=', accuracy(s.calcPPrecession, exact),
                '%   apoapsis accuracy=', accuracy(s.calcAPrecession, exact), '%')
+
+  def logConserved(self):
+    """
+    how far the conserved quantities moved: each one's start, end, change and largest change either way, and those
+    as fractions of its start (E and J per unit mass less the rest energy, so the orbit's binding energy)
+    """
+    if not self.conserved0:
+      return
+    self.print('conserved quantities (per unit mass, the calculator\'s own forms; E less the rest energy):')
+    for name, start in self.conserved0.items():
+      end = self.conservedNow[name]
+      low, high = self.conservedRange[name]
+      most = high if abs(high) >= abs(low) else low
+      scale = abs(start) or float('nan')
+      self.print('  %s: start %.12e  end %.12e  change %+.3e (%+.3e of start)  largest %+.3e (%+.3e)'
+                 % (name, start, end, end - start, (end - start)/scale, most, most/scale))
 
   def finishFlyby(self, p):
     """the end of a run with no whole orbits: the predicted bend for the closest approach, and the final angles"""

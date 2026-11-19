@@ -529,6 +529,47 @@ class Calculator:
     """
     return self.add(u/C, v/C)*C
 
+  def conserved(self, p):
+    """
+    the particle's conserved quantities in the flow model's forms, per unit mass, as {name: value} - only those the
+    bodies' symmetries keep. a path in ds^2 = -c^2 dt^2 + |dx - u dt|^2 has momenta p = gamma w and
+    -p_t = gamma (c^2 + u . w) (gamma = 1/sqrt(1 - w^2/c^2)); the first is kept when the flow is steady, the angle
+    part of the second when the flow looks the same turned about a point:
+      'E'  energy less the rest energy, gamma (c^2 + u . w) - c^2: with the bodies at rest (and no wave)
+      'L'  angular momentum about the body, the angle part of gamma w (angularMomentum): with one body at rest
+      'J'  E - Omega L about the origin (L as for one body): for bodies turning together (combine 'turning'), whose
+           flow is steady in the turning frame
+    light has no mass to take these per, only their ratio:
+      'b'  c L/(E + c^2), the ray's impact parameter (its distance from the body, far away): with one body at rest
+    a step that follows the paths of that metric keeps them, which the flow step does where the flow has no curl
+    (dw/dt = -(w . grad) u is the path there); they are worked from the particle's u and w, so they cost no extra
+    flow. gamma - 1 is worked from w^2/c^2, so E isn't lost in rounding c^2
+    """
+    if self.wave is not None or not self.bodies:
+      return {}
+    turning = self.combine == 'turning'
+    if self.moving and not turning:
+      return {}
+    w, u = p.w, p.u
+    ww = (w @ w)/C**2
+    one = len(self.bodies) == 1
+    if abs(ww - 1) < 1e-9:   #light
+      if not one:
+        return {}
+      return {'b': C*self.angularMomentum(p.pos - self.bodies[0].pos, w, u)/(C*C + u @ w)}
+    s = math.sqrt(1 - ww)
+    gamma = 1/s
+    E = C*C*ww/(s*(1 + s)) + gamma*(u @ w)
+    if turning:
+      return {'J': E - self.omega*gamma*self.angularMomentum(p.pos, w, u)}
+    if one:
+      return {'E': E, 'L': gamma*self.angularMomentum(p.pos - self.bodies[0].pos, w, u)}
+    return {'E': E}
+
+  def angularMomentum(self, x, w, u):
+    """the angle part of the momentum, per gamma, at x from the centre: x cross w (KerrFlowCalculator adds the twist)"""
+    return x[0]*w[1] - x[1]*w[0]
+
   def move(self, p, dt):
     raise NotImplementedError('Calculator only gives the flow and gravity; use a calculator that moves particles')
 
@@ -594,6 +635,14 @@ class NewtonianCalculator(Calculator):
     p.pos = p.pos + p.v*dt
     p.pt += dt
     p.t += dt
+
+  def conserved(self, p):
+    """Newton's energy per unit mass, v^2/2 less the potential, and with one body the angular momentum about it"""
+    E = (p.v @ p.v)/2 - sum(b.GM/length(p.pos - b.pos) for b in self.bodies)
+    if len(self.bodies) != 1:
+      return {'E': E}
+    x = p.pos - self.bodies[0].pos
+    return {'E': E, 'L': x[0]*p.v[1] - x[1]*p.v[0]}
 
 
 class SpecialFlowCalculator(Calculator):

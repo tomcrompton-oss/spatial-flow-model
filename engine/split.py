@@ -244,6 +244,31 @@ class SplitFlowCalculator(Calculator):
       q -= w @ w - rest @ rest
     return q
 
+  def conserved(self, p):
+    """
+    the conserved quantities (engine/flow.py Calculator.conserved) as the split model builds everything, body by
+    body: with one body the flow model's; with more, at rest, the energy each body's flow alone gives the particle,
+    added up, less the free particle's for each body after the first -
+      E = sum_k e(v - u_k, u_k) - (N - 1) e(v, 0),   e(w, u) = gamma(w) (c^2 + u . w) - c^2
+    which is Newton's v^2/2 - sum GM/d for slow particles. none with the bodies moving (each in its own frame)
+    """
+    if self.skip is not None:   #the particle is one of the bodies (studies/binary_pulsar.py)
+      return {}
+    if len(self.bodies) == 1:
+      return super().conserved(p)
+    if self.moving or getattr(p, 'light', False):
+      return {}
+    def energy(w, u):
+      ww = (w @ w)/C**2
+      s = math.sqrt(1 - ww)
+      return C*C*ww/(s*(1 + s)) + (u @ w)/s
+    v = p.v
+    E = -(len(self.bodies) - 1)*energy(v, np.zeros(2))
+    for b in self.bodies:
+      u = self.bodyFlow(b, p.pos, p.t)
+      E += energy(v - u, u)
+    return {'E': E}
+
   def frame(self, b, t, at=None):
     """
     body b's rest frame at time t, b at its origin: with the 'local' boost, from the other bodies' static time (their

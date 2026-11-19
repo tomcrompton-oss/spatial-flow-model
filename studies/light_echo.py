@@ -24,7 +24,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   #the project folder, for engine/
 import numpy as np
 from engine.flow import Body, Particle, SpecialFlowCalculator
-from engine.logger import Log, LOG_DIR
+from engine.logger import Log, LOG_DIR, CONSERVED
 from engine.constants import *
 from engine.exact import fallTime, rayTime
 
@@ -47,7 +47,7 @@ def niceBelow(value):
 
 def firstRow(log, p, t):
   """the starting row, which updatePosition (writing after each step) leaves out"""
-  log.csvWriter.writerow([t, p.pt, np.linalg.norm(p.pos), p.pos[0], p.pos[1], p.v[0], p.v[1]])
+  log.csvWriter.writerow([t, p.pt, np.linalg.norm(p.pos), p.pos[0], p.pos[1], p.v[0], p.v[1]] + ['']*len(CONSERVED))
 
 
 def logDir(stamp):

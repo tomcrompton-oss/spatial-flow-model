@@ -106,6 +106,14 @@ class KerrFlowCalculator(SpecialFlowCalculator):
     R2 = rel[0]**2 + rel[1]**2
     return np.array([self.a*rel[1]/R2, -self.a*rel[0]/R2])
 
+  def angularMomentum(self, x, w, u):
+    """
+    the angle part of the momentum, per gamma: in ds^2 = -c^2 dt^2 + |dx - u (dt + alpha.dx/c)|^2 the momentum is
+    gamma (w - alpha (u . w)/c), and x cross alpha = -a, so x cross w + a (u . w)/c (-p_t is gamma (c^2 + u . w) as
+    without spin)
+    """
+    return x[0]*w[1] - x[1]*w[0] + self.a*(u @ w)/C
+
   def velocity(self, pos, u, w):
     """the motion through the background of something at w relative to the river: v = w + u (1 + alpha.w/c)"""
     return w + u*(1 + np.dot(self.alpha(pos), w)/C)

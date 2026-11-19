@@ -132,7 +132,7 @@ class Engine(unittest.TestCase):
     self.assertIn('orbit 2: t ', text)
     self.assertIn('GR exact precession for these apsides', text)
     rows = list(csv.reader(read(log.csvFile.name).splitlines()))
-    self.assertEqual(rows[0], ['t', 'pt', 'd', 'pos_x', 'pos_y', 'v_x', 'v_y'])
+    self.assertEqual(rows[0], ['t', 'pt', 'd', 'pos_x', 'pos_y', 'v_x', 'v_y', 'E', 'L', 'J', 'b'])
     self.assertAlmostEqual(float(rows[1][0]), 0.0)      #the start
     self.assertAlmostEqual(float(rows[2][0]), 3600.0)
 

@@ -32,6 +32,13 @@ All quantities are SI: metres, seconds, kilograms, m/s.
 | `v_x`, `v_y` | velocity through the background, m/s |
 | `w_x`, `w_y` | velocity relative to space, m/s |
 | `u_x`, `u_y` | the flow of space at the particle, m/s |
+| `E` | energy per unit mass, less the rest energy, J/kg, in the calculator's own form (the flow model's $\gamma(c^2 + \mathbf u\cdot\mathbf w) - c^2$); written only when the bodies are at rest |
+| `L` | angular momentum per unit mass about the body, m²/s ($\gamma\,\mathbf x\times\mathbf w$); with one body at rest |
+| `J` | the Jacobi constant $E - \Omega L$, J/kg; for bodies turning together (`combine='turning'`) |
+| `b` | for light, its impact parameter $cL/(E + c^2)$, m; with one body at rest |
+
+- `E`, `L`, `J` and `b` are the quantities the bodies' symmetries keep (engine/flow.py `Calculator.conserved`). They are
+  empty when the run doesn't keep that one, so a run's drift can be plotted against `t`.
 
 - Pairs are found by name: a column with `x` as its own token (`pos_x`, `x`, `earth.x`) or ending `X` (`posX`)
   pairs with the same name with `y`. The pair's label is the name without the `x` (`pos_x` -> `pos`); styles in a
@@ -48,6 +55,7 @@ Plain text, one statement per line. A viewer reads these lines; it ignores the r
 | `flow direction: <words>` | the flow's direction; starting `down zero-energy paths` it is the eikonal flow, and `exact two-body solution` in it means the exact version |
 | `gravitational wave: <words>` | a wave's flow is added (engine/waves.py) |
 | `background frames: <file>` | the run's flow changes with time; its frames are in `<file>`, next to the log |
+| `  E: start ...  end ...  change ...  largest ...` | under `conserved quantities`, at the end of a run: each conserved quantity's start and end values, its change, and its largest change either way, each also as a fraction of its start |
 
 ## Background frames csv
 
