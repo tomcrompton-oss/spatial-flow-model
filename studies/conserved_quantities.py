@@ -23,7 +23,11 @@ both as fractions of its start, and in '1PN units': that fraction over eps = the
 sum GM/dc^2 at the start - GR's first corrections to the energy are about eps of it, so a quantity that isn't kept at
 that order swings by about 1 of these, and one that is kept by far less
 
-run: python3 studies/conserved_quantities.py [case ...]     (default all; prints, and writes
+the flow models take the momentum step (engine/flow.py's default); 'along g (velocity step)' is the old one, which
+isn't the metric's path where the flow has curl
+
+run: python3 studies/conserved_quantities.py [case ...]     (default all; CQ_MODELS='a,b' runs just those models;
+     prints, and writes
      logs/modelChecks/conserved_<datetime>/summary.log)
 """
 import io
@@ -52,6 +56,7 @@ MODELS = {
   'Newton': lambda bodies: NewtonianCalculator(bodies),
   'vectors': lambda bodies: SpecialFlowCalculator(bodies, 2, combine='vectors'),
   'along g': lambda bodies: SpecialFlowCalculator(bodies, 2, direction='g'),
+  'along g (velocity step)': lambda bodies: SpecialFlowCalculator(bodies, 2, direction='g', step='velocity'),
   'eikonal': lambda bodies: SpecialFlowCalculator(bodies, 2, direction='eikonal-exact'),
   'split galilean': lambda bodies: SplitFlowCalculator(bodies, 'interval', 'galilean'),
 }
@@ -177,6 +182,9 @@ def main():
   cases = sys.argv[1:] or list(CASES)
   folder = os.path.join(LOG_DIR, 'modelChecks', 'conserved_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder, exist_ok=True)
+  only = [m for m in os.environ.get('CQ_MODELS', '').split(',') if m]   #CQ_MODELS='one body,eikonal': just those
+  if only:
+    CASES.update({case: (CASES[case][0], [m for m in CASES[case][1] if m in only]) for case in cases})
   jobs = [(case, model, f) for case in cases for model in CASES[case][1] for f in FRACTIONS]
   jobs.sort(key=lambda j: (not j[1].startswith('split'), j[2]))   #the slowest first
   results = {}

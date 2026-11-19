@@ -74,6 +74,19 @@ class MaxDistanceAndBelow(Condition):
     return not (length(p.pos) > self.limit and p.pos[1] < 0)
 
 
+def momentum(p):
+  """
+  the particle's momentum per unit mass, p = gamma w (for light, w itself), and whether it is light: as the momentum
+  step left them (p.q) while nothing has changed w since, else from w - light if |w| is c to 1 part in 10^9. close to
+  c, gamma from w is lost in rounding (a fall from rest into a white hole reaches |w| within 10^-9 of c at the
+  horizon), so the step keeps p
+  """
+  if getattr(p, 'qW', None) is not None and np.array_equal(p.qW, p.w):
+    return p.q, p.qLight
+  light = abs(length(p.w) - C) < 1e-9*C
+  return (p.w if light else p.w/math.sqrt(1 - (p.w @ p.w)/C**2)), light
+
+
 class Particle:
   def __init__(self):
     self.pos = np.array([0.0, 0.0])
@@ -551,23 +564,23 @@ class Calculator:
     if self.moving and not turning:
       return {}
     w, u = p.w, p.u
-    ww = (w @ w)/C**2
     one = len(self.bodies) == 1
-    if abs(ww - 1) < 1e-9:   #light
+    q, light = momentum(p)
+    if light:
       if not one:
         return {}
       return {'b': C*self.angularMomentum(p.pos - self.bodies[0].pos, w, u)/(C*C + u @ w)}
-    s = math.sqrt(1 - ww)
-    gamma = 1/s
-    E = C*C*ww/(s*(1 + s)) + gamma*(u @ w)
+    #gamma (c^2 + u . w) - c^2 = c sqrt(c^2 + q^2) - c^2 + u . q, q = gamma w
+    E = C*(q @ q)/(math.sqrt(C*C + q @ q) + C) + u @ q
     if turning:
-      return {'J': E - self.omega*gamma*self.angularMomentum(p.pos, w, u)}
+      return {'J': E - self.omega*self.angularMomentum(p.pos, q, u)}
     if one:
-      return {'E': E, 'L': gamma*self.angularMomentum(p.pos - self.bodies[0].pos, w, u)}
+      return {'E': E, 'L': self.angularMomentum(p.pos - self.bodies[0].pos, q, u)}
     return {'E': E}
 
   def angularMomentum(self, x, w, u):
-    """the angle part of the momentum, per gamma, at x from the centre: x cross w (KerrFlowCalculator adds the twist)"""
+    """the angle part of the momentum at x from the centre, for momentum gamma w (or w, per gamma): x cross w
+    (KerrFlowCalculator adds the twist)"""
     return x[0]*w[1] - x[1]*w[0]
 
   def move(self, p, dt):
@@ -659,16 +672,31 @@ class SpecialFlowCalculator(Calculator):
   order=2: each step goes half way the first-order way, then takes the whole step at the middle's rates
            (SecondOrderSpecialFlowCalculator) - an error of order dt^2, for 5 flow evaluations a step to 2;
            light (|w| = c) is kept at exactly c. see studies/compare_second_order.py
+  both go wrong close to a hole, where they are only first order (the energy's drift halves with the step), and
+  where the flow has curl dw/dt = -(w . grad) u is not the metric's path. so:
+  step='momentum' (the default, unless order=1 asks for the first-order velocity step; step='velocity' for order 2's):
+           the metric's own paths by Hamilton's equations, on the momentum p = gamma w (for light, any
+           length along w):
+             dx/dt = u + w,   dp/dt = -grad(u . p) (p held fixed)
+           by the midpoint rule: second order everywhere, with curl or without (engine/geodesic.py takes the same
+           equations by fourth-order steps). grad(u . p) is a centred difference, so 10 flow evaluations a step to
+           order 2's 5. see studies/momentum_step.py
   """
 
-  def __init__(self, bodies=None, order=2, direction=None, wave=None, combine='squares', carried=False):
+  def __init__(self, bodies=None, order=2, direction=None, wave=None, combine='squares', carried=False, step=None):
     super().__init__(bodies, direction, wave, combine, carried)
     if order not in (1, 2):
       raise ValueError('order is 1 or 2, not %r' % order)
-    self.order = order
-    self.runspeed = 60000 if order == 1 else 25000
+    if step is None:   #the default: the momentum step, unless the first-order velocity step is asked for
+      step = 'velocity' if order == 1 else 'momentum'
+    if step not in ('velocity', 'momentum'):
+      raise ValueError("step is 'velocity' or 'momentum', not %r" % (step,))
+    self.order, self.step = order, step
+    self.runspeed = 12000 if step == 'momentum' else 60000 if order == 1 else 25000
 
   def __repr__(self):
+    if self.step == 'momentum':
+      return '<flow.SpecialFlowCalculator object, momentum step>'
     return '<flow.SpecialFlowCalculator object, order %d>' % self.order
 
   def initPV(self, p, v):
@@ -703,7 +731,43 @@ class SpecialFlowCalculator(Calculator):
     p.v = p.w + p.u
 
   def move(self, p, dt):
-    self.seamStep(p, dt, self.moveFirstOrder if self.order == 1 else self.moveSecondOrder)
+    if self.step == 'momentum':
+      self.seamStep(p, dt, self.moveMomentum)
+    else:
+      self.seamStep(p, dt, self.moveFirstOrder if self.order == 1 else self.moveSecondOrder)
+
+  def flowForce(self, x, t, q, side):
+    """-grad(u . q) at x, time t, q held fixed: dq/dt, by centred differences 10^-5 of the distance to the nearest
+    body across (or of x's size, with no bodies)"""
+    h = 1e-5*(self.nearest(x, t) if self.bodies else max(1.0, float(np.max(np.abs(x)))))
+    ex, ey = np.array([h, 0.0]), np.array([0.0, h])
+    return -np.array([(self.flow(x + ex, side, t) - self.flow(x - ex, side, t)) @ q,
+                      (self.flow(x + ey, side, t) - self.flow(x - ey, side, t)) @ q])/(2*h)
+
+  def moveMomentum(self, p, dt):
+    """
+    the midpoint step on Hamilton's equations (see the class notes): their rates at the start take x and p half a
+    step on, and the rates there take the whole step - all from the side of any seam the step starts on
+    """
+    q, light = momentum(p)
+    speed = (lambda q: C*q/length(q)) if light else (lambda q: C*q/math.sqrt(C*C + q @ q))
+    side = self.sideOf(p)
+    x, t = p.pos, p.t
+    middle, end = t + dt/2, t + dt
+    xm = x + (p.u + p.w)*dt/2
+    qm = q + self.flowForce(x, t, q, side)*dt/2
+    wm = speed(qm)
+    vm = self.flow(xm, side, middle) + wm
+    q = q + self.flowForce(xm, middle, qm, side)*dt
+    p.pos = x + vm*dt
+    p.d += length(vm*dt)
+    p.w = speed(q)
+    p.q, p.qLight, p.qW = q, light, p.w   #kept, as w loses p close to c (see momentum)
+    p.u = self.flow(p.pos, side, end)
+    p.v = p.w + p.u
+    p.t = end
+    if not light:
+      p.pt += dt*C/math.sqrt(C*C + qm @ qm)   #1/gamma at the middle
 
   def moveFirstOrder(self, p, dt):
     #the flow where space moves to, and where the particle moves to - from the side of any seam the step starts on,
@@ -755,8 +819,9 @@ class SpecialFlowCalculator(Calculator):
 
 #calculators by name, for studies/run_study.py and the viewer's Sim tab: name -> (class, keyword arguments)
 CALCULATORS = {
-  'SpecialFlowCalculator, second order': (SpecialFlowCalculator, {'order': 2}),
+  'SpecialFlowCalculator, second order': (SpecialFlowCalculator, {'order': 2, 'step': 'velocity'}),
   'SpecialFlowCalculator, first order': (SpecialFlowCalculator, {'order': 1}),
+  'SpecialFlowCalculator, momentum step': (SpecialFlowCalculator, {'step': 'momentum'}),
   'NewtonianCalculator': (NewtonianCalculator, {}),
 }
 #names used before flow2.py became flow.py, in older logs and sim configs
@@ -775,6 +840,8 @@ def calculatorName(text):
   for old, name in OLD_NAMES.items():
     if old in text:
       return name
+  if 'SpecialFlowCalculator' in text and 'momentum step' in text:
+    return 'SpecialFlowCalculator, momentum step'
   for kind in ('KerrFlowCalculator', 'SpecialFlowCalculator'):
     if kind in text:
       return kind + (', first order' if 'order 1' in text else ', second order')

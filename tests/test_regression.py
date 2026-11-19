@@ -39,7 +39,8 @@ START = 1.025*AU          #where the descents start
 RS = schwarzschildRadius(HOLE)
 STOP = 11816508000.0      #where the descent studies stop: just outside RS, which the white-hole descent only creeps towards
 MAX_STEPS = 1000000       #no test runs on for ever
-WHITE_FALLS = ((1, 0.1, 5e-4), (2, 0.25, 2e-4))   #order, dt, tolerance: the white-hole falls (testWhiteHoleFall)
+WHITE_FALLS = ((1, 0.1, 5e-4), (2, 0.25, 1e-6))   #order, dt, tolerance: the white-hole falls (testWhiteHoleFall;
+                                                  #order 2 is the momentum step)
 
 
 def fall(order, dt, black=True):
@@ -99,6 +100,21 @@ class Engine(unittest.TestCase):
         tau = fallTime(G*HOLE, START, d)
         self.assertLess(abs(p.pt/tau - 1), tolerance)
         self.assertLess(abs(p.t/(tau - 2*(shift(d) - shift(START))) - 1), tolerance)
+
+  def testMomentumStep(self):
+    """
+    the momentum step is second order where the velocity step is first (an orbit from 200 to 600 Schwarzschild
+    radii: E's change falls 4 times as the step halves), and follows the metric's own path where the flow has curl
+    (the flow along g round two bodies, against engine/geodesic.py's fourth-order steps)
+    """
+    from studies.momentum_step import close, curl
+    a, b = close('momentum', 1e-3), close('momentum', 5e-4)
+    self.assertAlmostEqual(a/b, 4, delta=0.2)
+    self.assertLess(b, 5e-7)
+    (x1, e1), (x2, e2) = curl('momentum', 1200.0), curl('momentum', 600.0)
+    self.assertAlmostEqual(x1/x2, 4, delta=0.3)
+    self.assertLess(x2, 1e4)
+    self.assertLess(abs(e2), 1e-7)
 
   def testLightLeavingABlackHole(self):
     """light climbs at c - u: the flight time matches the exact integral, much more closely at second order"""
@@ -204,13 +220,13 @@ class Engine(unittest.TestCase):
     self.assertAlmostEqual(kerrPrecessionExact(rp, ra, MS, 0)/grPrecessionExact(rp, ra), 1, delta=1e-9)
 
   def testKerrRiver(self):
-    """the rotating-hole river: at spin 0 it is SpecialFlowCalculator; at spin 0.9 light passing with and against the
+    """the rotating-hole river: at spin 0 it is SpecialFlowCalculator (its velocity step); at spin 0.9 light passing with and against the
     spin bends, and an orbit with the spin precesses, as exact Kerr says"""
     from engine.kerr import KerrFlowCalculator
     from engine.exact import kerrDeflectionExact, kerrPrecessionExact
     from studies.kerr_comparison import lightBend, orbitPrecession, MASS
     runs = []
-    for calc in (SpecialFlowCalculator([Body(MS)]), KerrFlowCalculator([Body(MS)])):
+    for calc in (SpecialFlowCalculator([Body(MS)], step='velocity'), KerrFlowCalculator([Body(MS)])):   #the same step
       p = Particle()
       p.pos = np.array([0.0, MERCURY_MAX/1e5])
       calc.initPV(p, np.array([MERCURY_SPEED_AT_MAX*math.sqrt(1e5), 0.0]))
@@ -470,11 +486,12 @@ class Engine(unittest.TestCase):
     self.assertAlmostEqual(flat['isco'], 6, delta=1e-12)
 
   def testSplitBodies(self):
-    #the bodies one at a time (engine/split.py): the flow model for one body; Newton's g for two; light past the Sun
+    #the bodies one at a time (engine/split.py): the flow model for one body (its velocity step, which each body's
+    #part of the split step is); Newton's g for two; light past the Sun
     #and Jupiter adding as each alone (studies/split_bodies.py)
     from engine.split import SplitFlowCalculator
     ends = []
-    for calc in (SpecialFlowCalculator([Body(ME)]), SplitFlowCalculator([Body(ME)])):
+    for calc in (SpecialFlowCalculator([Body(ME)], step='velocity'), SplitFlowCalculator([Body(ME)])):   #the same step
       p = Particle()
       p.pos = np.array([7e6, 0.0])
       calc.initPV(p, np.array([0.0, 8000.0]))

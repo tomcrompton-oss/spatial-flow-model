@@ -38,7 +38,7 @@ class KerrFlowCalculator(SpecialFlowCalculator):
   """
 
   def __init__(self, bodies=None, order=2, twist=1.0):
-    super().__init__(bodies, order)
+    super().__init__(bodies, order, step='velocity')   #its own step, with the twist (moveFirstOrder, moveSecondOrder)
     if len(self.bodies) != 1 or not self.bodies[0].black:
       raise ValueError('KerrFlowCalculator is for one black hole')
     hole = self.bodies[0]
