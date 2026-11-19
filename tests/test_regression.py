@@ -166,6 +166,27 @@ class Engine(unittest.TestCase):
     newton = sum(b.GM*(xb - x)/length(xb - x)**3 for b, xb in zip(bodies, xs))
     self.assertLess(length(a - ref)/length(ref - newton), 1e-2)
 
+  def testTransverseSpace(self):
+    """
+    the eikonal flow with the clocks left alone (N = 1) and space curved across it (FlowSpacetime transverse): light
+    past Jupiter, the Sun 5.2 AU off, bends as both alone, as GR has it (the flow model's bodies-at-rest flow: 400 uas
+    more)
+    """
+    from engine.metric import MetricCalculator, FlowSpacetime
+    MJ, RJ, DJ = 1.898e27, 7.1492e7, 7.785e11   #Jupiter: mass, radius, distance from the Sun (as multi_body_pn.py)
+    def bend(bodies):
+      flow = SpecialFlowCalculator(bodies, 2, direction='eikonal-exact' if len(bodies) == 2 else None)
+      calc = MetricCalculator(FlowSpacetime(flow, transverse=True))
+      p = Particle()
+      p.pos = np.array([DJ + 10*RJ, -3*AU])
+      calc.initLight(p, np.array([0.0, 1.0]))
+      while p.pos[1] < 3*AU:
+        calc.move(p, calc.stepSize(p, 0.004, 0.02*AU/C))
+      return math.atan2(-p.v[0], p.v[1])
+    sun, jup = Body(MS), Body(MJ, DJ, 0.0)
+    extra = bend([sun, jup]) - bend([sun]) - bend([jup])
+    self.assertLess(abs(extra)*180/math.pi*3600e6, 5)   #microarcseconds; Jupiter's own bending here is 1600
+
   def testLightLeavingABlackHole(self):
     """light climbs at c - u: the flight time matches the exact integral, much more closely at second order"""
     exact = rayTime(RS, 4*RS, START)

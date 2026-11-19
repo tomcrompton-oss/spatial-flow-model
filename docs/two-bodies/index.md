@@ -52,4 +52,6 @@ by construction and fails the first, keeping no energy at the first relativistic
 
 [Many bodies](../many-bodies.md) works through the eikonal and turning flows at more length.
 [Lapse and curved space](../lapse-curved-space.md) relaxes the flow model's two assumptions: clocks that tick by more
-than their speed through space, and space that is curved as well as flowing.
+than their speed through space, and space that is curved as well as flowing. Keeping the clocks as they are and
+curving space across the eikonal flow by the potential passes lunar ranging's synodic term and the Jupiter bending with
+the bodies at rest; moving bodies are still to do.

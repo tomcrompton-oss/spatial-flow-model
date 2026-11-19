@@ -99,19 +99,71 @@ Both failures fall exactly as 1 − λ: they are all in the share of gravity the
 have to carry under about 3% of gravity. At λ = 1 there is no flow left, every flow rule becomes the same spacetime,
 and it is GR's first post-Newtonian metric for bodies at rest.
 
+## Moving bodies along the family
+
+With the bodies moving, λ also brings in λ of GR's moving-body terms – its vector potential $4U_j/c^2$ in the flow and
+the velocity, acceleration and cross terms of its lapse – so that λ = κ = 1 is GR's first post-Newtonian metric of the
+moving bodies exactly. The turning flow (the Sun and the Earth going round each other, each carrying its flow) failed
+on light passing the Sun, where its single Jacobi constant squeezes the Sun's space
+([studies/lapse_moving.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/lapse_moving.py);
+each model's bending less its own with the Sun alone, so the flow's part of light's direction at the ends drops out):
+
+| Model | Bending past the Sun, less GR's (2 / 10 / 50 solar radii) |
+| --- | --- |
+| Turning flow, λ = 0 | −9.60 / −9.59 / −9.25 mas |
+| Turning flow, λ = κ = 0.5 | −4.80 / −4.80 / −4.62 mas |
+| Turning flow, λ = κ = 1 | 0.0000 |
+| Cassini | 0.02 mas at 2 solar radii |
+
+The same 1 − λ. (Radar to a mirror held at a fixed distance in the turning frame is not a fair test across the family:
+in GR's coordinates such a mirror is Lorentz-contracted by the Earth's 30 km/s, a 0.93 m cos 2D term, where the
+turning flow carries the Earth's space with it. Lunar ranging with moving bodies needs the Moon's own orbit.)
+
+## The clocks left alone, space curved across the flow
+
+The one version of curved space that keeps Part 1's mechanism – N = 1, so every clock is slowed only by its speed
+through space – can be derived rather than guessed. Take GR's static metric of bodies at rest, and slice it by the
+proper time of observers falling from rest far away, $T = t + S(\mathbf x)/c^2$. To first post-Newtonian order this
+gives
+
+$$ds^2 = -c^2dT^2 + \gamma_{ij}(dx^i - u^i dT)(dx^j - u^j dT),\qquad
+\gamma = \Big(1 + \frac{2\Phi}{c^2}\Big)\delta - \frac{2\Phi}{c^2}\,\hat{\mathbf n}\hat{\mathbf n},\qquad
+|\mathbf u|^2 = 2\Phi\Big(1 - \frac{\Phi}{c^2}\Big)$$
+
+with $\hat{\mathbf n}$ along the flow: the lapse exactly 1, the flow the eikonal flow (the paths of things falling
+from rest far away), slowed by $\sqrt{1 - \Phi/c^2}$ (GR's β), and space stretched across the flow by $2\Phi/c^2$
+but not along it. For one body that is flat space in other coordinates – the flow model itself, relabelled – and it
+checks so: precession 0.9951 of GR's and bending 0.9997 at 200 and 300 Schwarzschild radii (without the slowing the
+precession is 4/3). With two bodies it is not flat: the stretch across the flow is where the bodies' cross terms go.
+
+| Model | Lunar range, cos D | Light past Jupiter, both less each alone (1 / 10 / 100 Jupiter radii) |
+| --- | --- | --- |
+| Eikonal flow, flat space (the flow model) | −0.111 m | +408 / +397 / +312 µas |
+| **Eikonal flow, N = 1, space curved across it** | **+0.0096 m** | **+0.35 / −0.04 / −0.09 µas** |
+| GR's first post-Newtonian metric | +0.0096 m | +0.25 / −0.01 / −0.08 µas |
+
+With the bodies at rest it is GR: both tests that ruled out the eikonal flow pass, and nothing has been put in the
+clocks. Space moves as the eikonal flow says, and is curved across that motion by the potential.
+
+For moving bodies it is not yet a model: the transverse space is GR only on GR's own free-fall flow, and the turning
+flow is not that – its single Jacobi constant gives the paths round the Sun the wrong energy, and curving space
+across them leaves the 9.6 mas past the Sun exactly as it was. What moving bodies need is the free fall of GR's
+moving-body metric: each body's flow carried at its velocity, with no single constant tying their regions together.
+
 ## What it means
 
-The lapse and curved space are now in the engine for every model, and the engine reproduces GR in any of its
-coordinates. What they show about the flow model:
+The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
+What they show about the flow model:
 
-- One body doesn't mind: any share of gravity can go into the clocks, with space curved to match.
-- With two bodies at rest, the eikonal flow's failures are proportional to the share in the flow. Relaxing the
-  hypothesis fixes them only by taking gravity out of the flow – which ends at conventional GR.
-- Curved space with the clocks left alone (N = 1) is not this family: as a potential it overshoots light's bending. A
-  curved space built for the two-body cross terms, keeping N = 1, is still to try.
-- Moving bodies at λ = 1 need GR's vector potential (the post-Newtonian metric has it; a scaled-away flow doesn't), so
-  the turning flow and the split model's moving-body tests (lunar ranging with the Moon's own orbit, de Sitter,
-  Nordtvedt) are still to run along the family.
+- One body doesn't mind how gravity is split: any share can go into the clocks, with space curved to match.
+- With two bodies, putting gravity into the clocks fixes the flow model's failures only in proportion – by taking
+  gravity out of the flow, which ends at conventional GR.
+- Keeping the clocks as Part 1 has them (N = 1) and curving space across the flow by the potential fixes them
+  outright for bodies at rest. This is the first multi-body version that passes lunar ranging's synodic term and the
+  Jupiter bending while keeping "clocks tick by their speed through space". Part 1's hypothesis then changes from
+  "space flows and is flat" to "space flows, and is stretched across its flow by the potential".
+- Still to do: a flow for moving bodies that is GR's free fall (so the transverse space can apply), and then the
+  moving-body tests – the Moon's own orbit, de Sitter precession, Nordtvedt and the binary pulsars.
 
 ## Run it
 
@@ -121,4 +173,8 @@ python3 studies/metric_checks.py
 
 ```bash
 python3 studies/lapse_two_bodies.py
+```
+
+```bash
+python3 studies/lapse_moving.py
 ```

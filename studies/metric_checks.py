@@ -273,7 +273,39 @@ def pnOrbit():
 
 
 SHARES = ((0, 0), (1, 0), (1, 1), (0, 1), (0.5, 0.5), (0.5, 0))
-CHECKS = {'river': river, 'isotropic': isotropic, 'pn': pn, 'shares': shares}
+def transverse():
+  """the one-body flow with N = 1 and space curved across the flow (FlowSpacetime transverse), with and without the
+  flow slowed by sqrt(1 - Phi/c^2)"""
+  lines = ['transverse: the one-body flow, the clocks left alone (N = 1), space curved across the flow by 2 Phi/c^2;'
+           ' the close orbit\'s precession and light\'s bending (300 rs from 100 AU) against GR\'s']
+  x, v = schwarzschildStart()
+  period = 2*math.pi*math.sqrt(((RP + RA)/2)**3/(G*MS))
+  for slower in (True, False):
+    S = FlowSpacetime(SpecialFlowCalculator([Body(MS)]), transverse=True, slower=slower)
+    calc = MetricCalculator(S)
+    p = Particle()
+    p.pos = x.copy()
+    calc.initPV(p, v)
+    track, most = run(calc, p, 4*period)
+    peri, rp, ra = apsides(track, lambda y: length(y))
+    prec = float(np.mean(np.diff(peri))) - 2*math.pi
+    q = Particle()
+    D, b = 100*AU, 300*RS
+    q.pos = np.array([-D, b])
+    calc.initLight(q, np.array([1.0, 0.0]))
+    bGR = abs(calc.conserved(q)['b'])
+    config = Config()
+    config.dt, config.stepFraction = 2*D/C, 3e-4
+    for dt in calc.steps(q, config, 2*D/C):
+      calc.move(q, dt)
+    bend = math.atan2(-q.v[1], q.v[0])
+    lines.append('  %-40s precession / GR\'s %.4f; bending / GR\'s %.4f; E kept to %.0e'
+                 % ('flow slowed by sqrt(1 - Phi/c^2):' if slower else 'flow as it is:', prec/grPrecessionExact(rp, ra, MS),
+                    bend/grDeflectionExact(bGR), most['E']))
+  return lines
+
+
+CHECKS = {'river': river, 'isotropic': isotropic, 'pn': pn, 'shares': shares, 'transverse': transverse}
 
 
 def main():

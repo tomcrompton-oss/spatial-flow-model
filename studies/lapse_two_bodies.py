@@ -11,7 +11,9 @@ eikonal flow with the bodies at rest (studies/multi_body_pn.py):
            and Jupiter's alone (GR: 0 to first order in G), against VLBI's 10 microarcseconds
 
 each for the eikonal flow at lambda = 0 (the flow model), 0.5 and 1 (no flow left: all of gravity in the clocks and
-the curved space), and GR's first post-Newtonian metric of the bodies at rest (engine/metric.py PostNewtonian)
+the curved space); the eikonal flow with the clocks left alone (N = 1) and space curved across it (FlowSpacetime
+transverse: GR's static metric sliced by free fall, to first order); and GR's first post-Newtonian metric of the
+bodies at rest (engine/metric.py PostNewtonian)
 
 run: python3 studies/lapse_two_bodies.py [test ...]     (default both; prints, and writes
      logs/modelChecks/lapseTwoBodies_<datetime>/summary.log)
@@ -31,14 +33,16 @@ from engine.constants import *
 from multi_body_pn import NODES, WEIGHTS, DMOON, MJ, RJ, DJ
 
 SHARES = (0.0, 0.5, 1.0)
-MODELS = ['eikonal, lambda %g' % s for s in SHARES] + ['GR (first post-Newtonian)']
+MODELS = ['eikonal, lambda %g' % s for s in SHARES] + ['eikonal, N = 1, transverse space', 'GR (first post-Newtonian)']
 
 
 def spacetime(model, bodies):
   if model.startswith('GR'):
     return PostNewtonian(bodies)
-  share = float(model.split('lambda ')[1])
   flow = SpecialFlowCalculator(bodies, 2, direction='eikonal-exact' if len(bodies) == 2 else None)
+  if 'transverse' in model:
+    return FlowSpacetime(flow, transverse=True)
+  share = float(model.split('lambda ')[1])
   return FlowSpacetime(flow, share=share, curve=share)
 
 

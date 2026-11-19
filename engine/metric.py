@@ -28,9 +28,17 @@ the spacetimes:
   PostNewtonian        GR's first post-Newtonian metric of bodies moving on given paths (harmonic coordinates): the
                        reference the multi-body models are measured against
 
+FlowSpacetime's transverse space, for any flow, keeping N = 1 (the clocks still slowed only by their speed through
+space): GR's static metric sliced by the proper time of observers falling from rest far away has, to first order,
+N = 1, a flow along their way u, and space curved across it - gamma = (1 + 2 Phi/c^2) delta - (2 Phi/c^2) n n, n along
+u - with |u|^2 = 2 Phi (1 - Phi/c^2) for g_tt's Phi^2 (slower; GR's beta). for one body that is flat space in other
+coordinates; with more, it holds the bodies' cross terms
+
 FlowSpacetime's shares, for any flow (Phi = sum GM/d, the bodies where they are at t):
-  lapse    lambda: N^2 = 1 - 2 lambda Phi/c^2, the flow scaled by sqrt(1 - lambda) - so -g_tt = N^2 c^2 - |u|^2 is the
-           same for any lambda (Newton's g is kept for the squares rule), and lambda of gravity is in the clocks
+  lapse    lambda: N^2 = 1 - 2 lambda Phi/c^2 + (a Phi^2 term, GR's beta), the flow scaled by sqrt(1 - lambda) - so
+           -g_tt = N^2 c^2 - |u|^2 is the same for any lambda (Newton's g is kept for the squares rule), and lambda of
+           gravity is in the clocks. with it come lambda of GR's moving-body and cross terms (PostNewtonian's psi in
+           the lapse, its vector potential 4 U_j/c^2 in the flow), so lambda = kappa = 1 is GR's 1PN metric exactly
   curve    kappa: gamma = (1 + 2 kappa Phi/c^2) delta, space curved as GR's harmonic coordinates have it at kappa = 1
 """
 import math
@@ -61,8 +69,8 @@ class Spacetime:
   def flow(self, x, t, region=None):
     return ZERO
 
-  def space(self, x, t):
-    """gamma - delta (a 2 x 2 array), or None for flat space"""
+  def space(self, x, t, region=None):
+    """gamma - delta (a 2 x 2 array), or None for flat space (region: the side of any seam, as for the flow)"""
     return None
 
   def region(self, x, t):
@@ -79,7 +87,7 @@ class Spacetime:
 
   def parts(self, x, t, region):
     """N - 1, u, and gamma's inverse less delta (None for flat)"""
-    a, u, h = self.lapseOffset(x, t), self.flow(x, t, region), self.space(x, t)
+    a, u, h = self.lapseOffset(x, t), self.flow(x, t, region), self.space(x, t, region)
     if h is None:
       return a, u, None
     return a, u, np.linalg.inv(np.eye(2) + h) - np.eye(2)
@@ -143,7 +151,7 @@ class Spacetime:
     """
     a, u, _ = self.parts(x, t, region)
     w = v - u
-    h = self.space(x, t)
+    h = self.space(x, t, region)
     gw = w if h is None else w + h @ w
     W = w @ gw
     N = 1 + a
@@ -152,7 +160,7 @@ class Spacetime:
   def lightMomentum(self, x, n, t, region):
     """light going the way of the unit vector n (its coordinate velocity), and its velocity: |v - u|_gamma = N c"""
     a, u, _ = self.parts(x, t, region)
-    h = self.space(x, t)
+    h = self.space(x, t, region)
     g = np.eye(2) if h is None else np.eye(2) + h
     N = 1 + a
     #|s n - u|^2_gamma = N^2 c^2:  s^2 (n g n) - 2 s (n g u) + (u g u) - N^2 c^2 = 0, the root ahead
@@ -169,12 +177,14 @@ class FlowSpacetime(Spacetime):
   notes set them from Newton's potential. with neither it is the flow model itself
   """
 
-  def __init__(self, calc, lapse=None, space=None, share=0.0, curve=0.0):
+  def __init__(self, calc, lapse=None, space=None, share=0.0, curve=0.0, transverse=False, slower=True):
     self.calc = calc
     self.bodies = calc.bodies
     self.lapseFn, self.spaceFn = lapse, space
     self.share, self.curve = share, curve
+    self.transverse, self.slower = transverse, slower   #the clocks left alone, space curved across the flow
     self.flowScale = math.sqrt(1 - share)
+    self.pn = PostNewtonian(self.bodies) if share else None   #GR's moving-body and cross terms, lambda of them
     self.omega = getattr(calc, 'omega', None) if calc.combine == 'turning' else None
     self.static = not calc.moving and calc.wave is None
     self.centre = self.bodies[0].pos if len(self.bodies) == 1 and self.static else None
@@ -185,6 +195,8 @@ class FlowSpacetime(Spacetime):
       extra.append('lapse share %g' % self.share)
     if self.curve:
       extra.append('curved space %g' % self.curve)
+    if self.transverse:
+      extra.append('space curved across the flow' + (', the flow slowed by sqrt(1 - Phi/c^2)' if self.slower else ''))
     if self.lapseFn:
       extra.append('its own lapse')
     if self.spaceFn:
@@ -194,18 +206,29 @@ class FlowSpacetime(Spacetime):
   def lapseOffset(self, x, t):
     a = self.lapseFn(x, t) if self.lapseFn else 0.0
     if self.share:
-      U = potential(self.bodies, x, t)/C**2
-      #N^2 = 1 - s; the U^2 term makes g_tt's own 2 lambda U^2 once |u|^2_gamma's U^2 part (from curved space) is in
-      s = 2*self.share*U - 2*(self.share + 2*self.curve*(1 - self.share))*U*U
+      U, _, psi = self.pn.terms(x, t)
+      U /= C**2
+      #N^2 = 1 - s; the U^2 term makes g_tt's own 2 lambda U^2 once |u|^2_gamma's U^2 part (from curved space) is in;
+      #psi is GR's lapse's moving-body and cross terms (PostNewtonian), so that lambda = kappa = 1 is its metric
+      s = 2*self.share*U - 2*(self.share + 2*self.curve*(1 - self.share))*U*U + 2*self.share*psi/C**4
       a += -s/(1 + math.sqrt(1 - s))   #sqrt(1 - s) - 1
     return a
 
   def flow(self, x, t, region=None):
     u = self.calc.flow(x, region, t)
-    return u*self.flowScale if self.share else u
+    if self.transverse and self.slower:
+      u = u*math.sqrt(1 - potential(self.bodies, x, t)/C**2)   #|u|^2 = 2 Phi (1 - Phi/c^2): g_tt's Phi^2, GR's beta
+    if not self.share:
+      return u
+    return u*self.flowScale + self.share*self.pn.flow(x, t)   #and lambda of GR's vector potential, 4 U_j/c^2
 
-  def space(self, x, t):
+  def space(self, x, t, region=None):
     h = self.spaceFn(x, t) if self.spaceFn else None
+    if self.transverse:
+      u = self.calc.flow(x, self.calc.region(x, t) if region is None else region, t)
+      n = u/length(u)
+      k = 2*potential(self.bodies, x, t)/C**2*(np.eye(2) - np.outer(n, n))
+      h = k if h is None else h + k
     if self.curve:
       k = 2*self.curve*potential(self.bodies, x, t)/C**2*np.eye(2)
       h = k if h is None else h + k
@@ -230,7 +253,7 @@ class IsotropicSchwarzschild(Spacetime):
     q = self.m/(2*length(x - self.bodies[0].pos))
     return -2*q/(1 + q)   #(1 - q)/(1 + q) - 1
 
-  def space(self, x, t):
+  def space(self, x, t, region=None):
     q = self.m/(2*length(x - self.bodies[0].pos))
     return ((1 + q)**4 - 1)*np.eye(2)
 
@@ -297,7 +320,7 @@ class PostNewtonian(Spacetime):
     U, Uj, _ = self.terms(x, t)
     return 4*Uj/C**2/(1 + 2*U/C**2)
 
-  def space(self, x, t):
+  def space(self, x, t, region=None):
     U = sum(b.GM/length(x - b.at(t)) for b in self.bodies)
     return 2*U/C**2*np.eye(2)
 
