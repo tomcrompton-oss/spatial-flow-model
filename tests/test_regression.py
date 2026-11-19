@@ -116,6 +116,56 @@ class Engine(unittest.TestCase):
     self.assertLess(x2, 1e4)
     self.assertLess(abs(e2), 1e-7)
 
+  def testMetricEngine(self):
+    """
+    engine/metric.py: the one-body flow through it is the flow model's momentum step; the same spacetime in isotropic
+    coordinates (no flow) bends light as exact GR; GR's first post-Newtonian metric gives a test particle EIH's
+    acceleration near the Earth
+    """
+    from engine.metric import MetricCalculator, FlowSpacetime, IsotropicSchwarzschild, PostNewtonian, bodyVelocityAt
+    from engine.metric import bodyAcceleration
+    from engine.exact import grDeflectionExact
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'studies'))
+    from studies.cross_terms import eih, ALL   #(it imports its fellow studies by name)
+    rs = schwarzschildRadius(MS)
+    ends = []
+    for calc in (SpecialFlowCalculator([Body(MS)]), MetricCalculator(FlowSpacetime(SpecialFlowCalculator([Body(MS)])))):
+      p = Particle()
+      p.pos = np.array([200*rs, 0.0])
+      calc.initPV(p, np.array([0.0, 0.06*C]))
+      for _ in range(300):
+        calc.move(p, 1e-5)
+      ends.append(p.pos)
+    self.assertLess(length(ends[0] - ends[1])/length(ends[0]), 1e-11)
+    calc = MetricCalculator(IsotropicSchwarzschild(Body(MS)))
+    p = Particle()
+    p.pos = np.array([-10*AU, 300*rs])
+    calc.initLight(p, np.array([1.0, 0.0]))
+    b = abs(calc.conserved(p)['b'])
+    config = Config()
+    config.dt, config.stepFraction = 20*AU/C, 1e-3
+    for dt in calc.steps(p, config, 20*AU/C):
+      calc.move(p, dt)
+    exact = grDeflectionExact(b)
+    self.assertLess(abs(math.atan2(-p.v[1], p.v[0])/exact - 1), 2e-3)   #10 AU either side: the rest beyond
+    omega = math.sqrt(G*(MS + ME)/AU**3)
+    mu = ME/(MS + ME)
+    bodies = [Body(MS, -mu*AU, 0.0, circling=omega), Body(ME, (1 - mu)*AU, 0.0, circling=omega)]
+    calc = MetricCalculator(PostNewtonian(bodies))
+    x, v = bodies[1].at(0.0) + np.array([0.0, 4e7]), bodyVelocityAt(bodies[1], 0.0) + np.array([5e3, 2e3])
+    vel = []
+    for h in (-0.1, 0.1):
+      p = Particle()
+      p.pos = x.copy()
+      calc.initPV(p, v)
+      calc.move(p, h)
+      vel.append(p.v)
+    a = (vel[1] - vel[0])/0.2
+    xs, vs = [b.at(0.0) for b in bodies] + [x], [bodyVelocityAt(b, 0.0) for b in bodies] + [v]
+    ref = eih([b.GM for b in bodies] + [0.0], xs, vs, ALL, [bodyAcceleration(b, 0.0) for b in bodies] + [np.zeros(2)])[2]
+    newton = sum(b.GM*(xb - x)/length(xb - x)**3 for b, xb in zip(bodies, xs))
+    self.assertLess(length(a - ref)/length(ref - newton), 1e-2)
+
   def testLightLeavingABlackHole(self):
     """light climbs at c - u: the flight time matches the exact integral, much more closely at second order"""
     exact = rayTime(RS, 4*RS, START)
