@@ -318,9 +318,33 @@ attempts to remove it didn't work:
 
 Taking the Sun's space at the body's centre instead ('heavier-centre') leaves it as it is (η = +104 in, −97 out). So
 the odd term comes with shifting a body's frame by the Sun's flow at all. It looks to grow with how fast the bodies go
-round each other – 8,000 km/s for the pair, against 1 km/s for the Moon, whose odd part is the 4–5% of the de Sitter
+round each other – 258 km/s for each of the pair, against 1 km/s for the Moon, whose odd part is the 4–5% of the de Sitter
 rate above – but two cases don't show that it does.
 
 So heavier-only frames fix the Moon: lunar ranging comes within the test's floor, and de Sitter precession agrees with
 GR. They don't fix the Nordtvedt effect, and they can't fix the binary of comparable masses, where what is missing is
 each body's field acting on its own source.
+
+## Frames without a flow: is there an even rule?
+
+The odd term comes from carrying a flow by a river's velocity. A river running out is a different set of observers
+(escaping, not falling), so "carried by the Sun's space" means something different for each, and every rule that
+shifts a frame by a flow has a part odd in it. A frame built from even quantities can't have one. The test is the
+Nordtvedt effect with the Sun's flow running in and then out (`studies/split_more.py`):
+
+| Frame rule | η, the Sun's flow in | η, out | Odd part |
+| --- | --- | --- | --- |
+| Lorentz (no shift) | +0.997 | +1.029 | 0.016 |
+| heavier-only | +99 | −102 | 100 |
+| **'potential'**: each body's Lorentz frame in the local frame of the others' potential Φ at the particle – clocks at 1 − Φ/c², rulers 1 + Φ/c² shorter, as in GR's harmonic coordinates | +16.02 | +16.04 | 0.01 |
+| the same, the clocks at the mean of Φ at the particle and at the source (GR's coefficients for a pulled body and a source in a third body's potential, exactly) | +14.01 | +14.04 | 0.015 |
+| that, plus GR's terms in the source's own acceleration (EIH's ½(x_b − x_a)·a_b and 7Gm_b a_b/2c²r, put in by hand) | −1.007 | −0.980 | 0.013 |
+
+So the odd term goes as soon as no flow is in the frame: confirmed. But no even rule gets η to GR's 0. Even with every
+cross term of GR's equations of motion put in, it sits at −1, and the last version fails the Moon badly: the de Sitter
+test's GR fit leaves 4.5 m (heavier-only 0.08 m), and k doesn't settle as the step is halved.
+
+That last failure is the clue. GR's cross terms are written for one spacetime in one set of coordinates (harmonic
+ones). The split model's one-body flows are each in their own river coordinates, and the difference between the two is
+as large as the cross terms themselves. Cross terms between the bodies only make sense once the bodies share one
+spacetime, solved together – the binary's lesson again. No frame rule placed on separate one-body flows gives that.

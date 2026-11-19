@@ -52,11 +52,21 @@ centre: each body's flow carried by the space round the particle (the particle's
 flow is carried by the Sun's space round the Moon, the Sun's by the Earth's at the Sun); 'heavier-only' leaves the
 lighter ones out (the Sun's frame its own Lorentz frame); 'heavier-centre' leaves them out too, but takes the heavier
 ones' space at b's centre (free-fall frames in the heavier bodies' space alone)
+
+'potential' has no flow in its frames, so nothing in it changes sign with a flow's direction: each body's frame is its
+Lorentz frame in the local frame of the other bodies' Newtonian potential phi where the particle is (the particle's own
+body left out) - clocks there at 1 - phi/c^2, rulers 1 + phi/c^2 shorter, as in GR's harmonic coordinates (Scale).
+for slow bodies that scales b's pull by 1 - 5 phi/c^2, where GR's pulled body and source in a third body's potential
+give 1 - (4 phi(particle) + phi(b))/c^2; it leaves out GR's terms in the source's acceleration
 """
 import math
 import numpy as np
 from engine.constants import C
 from engine.flow import Calculator, length
+import os
+
+POTENTIAL = os.environ.get('SPLIT_POTENTIAL', 'particle')   #the 'potential' rule's trial variants (studies only):
+                                                           #'particle', 'eih', 'eih-source'
 
 
 def bodyVelocity(b, t):
@@ -150,6 +160,40 @@ class Boost:
     return D*D*(sF/C)/(1 + nF @ self.shift/sF)
 
 
+class Scale:
+  """
+  the local frame of a potential phi (> 0, the bodies' sum GM/d) at rest in the lab, its origin the event (t0, x0):
+  clocks there tick at a = 1 - phi/c^2 and rulers are b = 1 + phi/c^2 times shorter, as in GR's harmonic coordinates
+  to first order - t' = a (t - t0), x' = b (x - x0)
+  """
+
+  def __init__(self, phi, t0, x0, clock=None):
+    self.a, self.b = 1 - (phi if clock is None else clock)/C**2, 1 + phi/C**2   #clock: its own phi for the clocks
+    self.t0, self.x0 = t0, np.array(x0, dtype=float)
+
+  def event(self, t, x):
+    return self.a*(t - self.t0), self.b*(x - self.x0)
+
+  def delta(self, t, x, dt, dx):
+    return self.a*dt, self.b*dx
+
+  def velocity(self, v, x=None):
+    return v*self.b/self.a
+
+  def back(self, v, x=None):
+    return v*self.a/self.b
+
+  def backChange(self, u, d):
+    return d*self.a/self.b
+
+  def time(self, v, x=None):
+    return self.a
+
+  def light(self, n):
+    #a change in light's slowness dt'/dl' there is a/b times the lab's dt/dl, so it carries back times b/a
+    return self.b/self.a
+
+
 class Chain:
   """frames one after another: the first from the lab, each next from the one before"""
 
@@ -209,9 +253,9 @@ class SplitFlowCalculator(Calculator):
     if light not in ('interval', 'static'):
       raise ValueError("light is 'interval' or 'static', not %r" % (light,))
     if boost not in ('galilean', 'lorentz', 'local', 'freefall', 'carried', 'heavier', 'heavier-only',
-                     'heavier-centre'):
-      raise ValueError("boost is 'galilean', 'lorentz', 'local', 'freefall', 'carried', 'heavier', 'heavier-only' or"
-                       " 'heavier-centre', not %r"
+                     'heavier-centre', 'potential'):
+      raise ValueError("boost is 'galilean', 'lorentz', 'local', 'freefall', 'carried', 'heavier', 'heavier-only',"
+                       " 'heavier-centre' or 'potential', not %r"
                        % (boost,))
     if light == 'static' and self.moving and boost == 'galilean':
       raise ValueError("the 'static' light rule with Galilean boosts is for bodies at rest")
@@ -297,6 +341,20 @@ class SplitFlowCalculator(Calculator):
         space = own.back(self.restFlow(o, own.event(t, P)[1]))   #o's space at P, in the lab
         U0 = U0 + base.velocity(space)
       return Chain(base, Boost(base.velocity(bodyVelocity(b, t)) - U0, 0.0, np.zeros(2), shift=U0))
+    if self.boost == 'potential':
+      #the local frame of the others' potential where the particle is (its own body left out), then b's Lorentz frame
+      #in it - no flow in it, so nothing odd in any body's flow
+      X = b.at(t)
+      P = X if at is None else at
+      phi = sum(o.GM/length(P - o.at(t)) for o in others if o is not self.skip)
+      clock = None
+      if POTENTIAL in ('eih', 'eih-source'):
+        #clocks at the mean of the others' potential at the particle and at b (the particle's own body included
+        #there): 3 phi_rulers + 2 phi_clocks = 4 phi(particle) + phi(b), GR's pulled body and source in it
+        atB = sum(o.GM/length(X - o.at(t)) for o in self.bodies if o is not b)
+        clock = (phi + atB)/2
+      local = Scale(phi, t, X, clock)
+      return Chain(local, Boost(local.velocity(bodyVelocity(b, t)), 0.0, np.zeros(2)))
     if self.boost != 'local' or not others:
       return Boost(bodyVelocity(b, t), t, b.at(t))
     def phi(x):
@@ -304,6 +362,21 @@ class SplitFlowCalculator(Calculator):
     def U(x):
       return sum(self.restFlow(o, x - o.at(t)) for o in others)
     return Boost(bodyVelocity(b, t), t, b.at(t), phi, U)
+
+  def sourceKick(self, x, t):
+    """
+    GR's (EIH's) terms in each acting body's own acceleration a_b (Newton's, from all the others, the particle's body
+    among them): (G m_b (x_b - x)/r^3) (x_b - x) . a_b/2c^2 + 7 G m_b a_b/2c^2 r - a trial (SPLIT_POTENTIAL
+    'eih-source'): no frame at the particle gives them
+    """
+    kick = np.zeros(2)
+    for b in self.acting:
+      X = b.at(t)
+      a = sum((o.GM*(o.at(t) - X)/length(o.at(t) - X)**3 for o in self.bodies if o is not b), np.zeros(2))
+      d = X - x
+      r = length(d)
+      kick += b.GM*d/r**3*(d @ a)/(2*C*C) + 3.5*b.GM*a/(C*C*r)
+    return kick
 
   def restFlow(self, b, x):
     """body b's one-body flow in its own rest frame, at x there (b at the origin)"""
@@ -482,6 +555,8 @@ class SplitFlowCalculator(Calculator):
       wm = f.velocity(vm, xm) - self.restFlow(b, xmb)
       dw = self.restFlowChange(b, xmb, -wm*T/2) - self.restFlowChange(b, xmb, wm*T/2)
       v = v + f.backChange(f.velocity(v, x), self.addSIChange(wm, dw) + self.restFlowChange(b, x0, d1))
+    if self.boost == 'potential' and POTENTIAL == 'eih-source':
+      v = v + self.sourceKick(xm, middle)*dt
     if getattr(p, 'light', False):
       n = v/length(v)
       v = self.lightSpeed(x1, n, end)*n
