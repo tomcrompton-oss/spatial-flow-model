@@ -51,3 +51,5 @@ conserved quantities (it is one spacetime), so the second check tells them apart
 by construction and fails the first, keeping no energy at the first relativistic order.
 
 [Many bodies](../many-bodies.md) works through the eikonal and turning flows at more length.
+[Lapse and curved space](../lapse-curved-space.md) relaxes the flow model's two assumptions: clocks that tick by more
+than their speed through space, and space that is curved as well as flowing.

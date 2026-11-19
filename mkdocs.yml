@@ -40,6 +40,7 @@ nav:
           - Two checks on every model: two-bodies/checks.md
       - Gravitational waves: waves.md
       - Many bodies: many-bodies.md
+      - Lapse and curved space: lapse-curved-space.md
   - Simulations:
       - Viewers: viewers.md
       - Results: results.md
