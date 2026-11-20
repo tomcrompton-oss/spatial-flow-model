@@ -189,7 +189,8 @@ class Engine(unittest.TestCase):
 
   def testSpaceFromTheFlow(self):
     """
-    space curved across the flow by the flow's own |u|^2/c^2 (FlowSpacetime transverse 'flow'), on the turning flow
+    space curved across the flow by its own |u|^2/c^2, u relative to its body (FlowSpacetime transverse 'source'), on
+    the turning flow
     (the Sun and the Earth going round each other): light 2 solar radii from the Sun bends as with the Sun alone, as
     GR has it, within Cassini's 0.02 mas (flat space, or space curved by 2 Phi/c^2: 9.6 mas less)
     """
@@ -197,7 +198,7 @@ class Engine(unittest.TestCase):
     from engine.metric import MetricCalculator, FlowSpacetime
     from turning_eikonal import bodies
     def bend(bs, combine):
-      calc = MetricCalculator(FlowSpacetime(SpecialFlowCalculator(bs, 2, combine=combine), transverse='flow'))
+      calc = MetricCalculator(FlowSpacetime(SpecialFlowCalculator(bs, 2, combine=combine), transverse='source'))
       centre = bs[0].at(0.0)
       p = Particle()
       p.pos = centre + np.array([2*RSUN, -0.5*AU])

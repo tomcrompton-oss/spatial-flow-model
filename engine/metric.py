@@ -180,7 +180,8 @@ class FlowSpacetime(Spacetime):
   def __init__(self, calc, lapse=None, space=None, share=0.0, curve=0.0, transverse=False, slower=True):
     """transverse: True, space stretched across the flow by 2 Phi/c^2 (GR's static metric sliced by free fall);
     'flow', by the flow's own |u|^2/c^2 - the same for the eikonal flow, where |u|^2 = 2 Phi, and set by the flow
-    alone for any other"""
+    alone for any other; 'source', by the flow relative to the body whose flow it is (u - that body's velocity), which
+    a uniform change of frame leaves alone, where 'flow' does not"""
     self.calc = calc
     self.bodies = calc.bodies
     self.lapseFn, self.spaceFn = lapse, space
@@ -198,7 +199,9 @@ class FlowSpacetime(Spacetime):
       extra.append('lapse share %g' % self.share)
     if self.curve:
       extra.append('curved space %g' % self.curve)
-    if self.transverse == 'flow':
+    if self.transverse == 'source':
+      extra.append('space curved across the flow by its speed relative to its body')
+    elif self.transverse == 'flow':
       extra.append('space curved across the flow by its own speed, (|u|^2 delta - u u)/c^2'
                    + (', the flow slowed by sqrt(1 - |u|^2/2c^2)' if self.slower else ''))
     elif self.transverse:
@@ -222,8 +225,9 @@ class FlowSpacetime(Spacetime):
 
   def flow(self, x, t, region=None):
     u = self.calc.flow(x, region, t)
-    if self.transverse == 'flow' and self.slower:
-      u = u*math.sqrt(1 - (u @ u)/(2*C*C))   #the same, with the flow's own u^2/2 for Phi
+    if self.transverse in ('flow', 'source') and self.slower:
+      s = u - self.sourceVelocity(x, t, region) if self.transverse == 'source' else u
+      u = u - s*(1 - math.sqrt(1 - (s @ s)/(2*C*C)))   #the same, with the flow's own u^2/2 for Phi
     elif self.transverse and self.slower:
       u = u*math.sqrt(1 - potential(self.bodies, x, t)/C**2)   #|u|^2 = 2 Phi (1 - Phi/c^2): g_tt's Phi^2, GR's beta
     if not self.share:
@@ -234,7 +238,9 @@ class FlowSpacetime(Spacetime):
     h = self.spaceFn(x, t) if self.spaceFn else None
     if self.transverse:
       u = self.calc.flow(x, self.calc.region(x, t) if region is None else region, t)
-      if self.transverse == 'flow':
+      if self.transverse == 'source':
+        u = u - self.sourceVelocity(x, t, self.calc.region(x, t) if region is None else region)
+      if self.transverse in ('flow', 'source'):
         k = ((u @ u)*np.eye(2) - np.outer(u, u))/C**2   #decided by the flow alone: its speed, and its direction
       else:
         n = u/length(u)
@@ -250,6 +256,12 @@ class FlowSpacetime(Spacetime):
 
   def seamVelocity(self, x):
     return self.calc.seamVelocity(x)
+
+  def sourceVelocity(self, x, t, region):
+    """the velocity of the body whose flow x is in (its region; else the nearest body)"""
+    if region is None:
+      region = int(np.argmin([length(x - b.at(t)) for b in self.bodies]))
+    return bodyVelocityAt(self.bodies[region], t)
 
 
 class IsotropicSchwarzschild(Spacetime):

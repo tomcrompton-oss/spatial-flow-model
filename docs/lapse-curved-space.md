@@ -190,6 +190,48 @@ and only the flow's speed counts, not its direction. Its paths also feel the flo
 So with space decided by the flow, the turning flow – the moving-body model – passes the test that ruled it out, with
 N = 1 and no potential put in anywhere.
 
+### Which frame's u
+
+Round the Earth the turning flow is the Earth's own river carried at the Earth's 30 km/s. Space built from that u
+picks up the 30 km/s: a stretch $V^2/c^2$ across the Earth's motion, and a cross term $2\mathbf V\cdot\mathbf u/c^2$
+that couples the Moon's motion to the Earth's. GR has nothing like it, and it depends on the frame the flow is
+measured in, where flat flowing space doesn't (adding a uniform V to the flow is only a change of coordinates). Built
+instead from the flow relative to the body whose flow it is, $\mathbf u - \mathbf V_{\rm body}$
+(`transverse='source'`), it is the same in every frame, and is the same as before wherever the bodies are slow: past
+the Sun, which moves at 9 cm/s, it gives the same +0.0012 mas.
+
+### The Moon's own orbit and de Sitter
+
+[studies/lapse_moon.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/lapse_moon.py), as
+[studies/de_sitter.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/de_sitter.py) does for
+the split model: the Moon (eccentricity 0.12) round the Earth for 90 days, the Sun and the Earth going round each
+other, run at 60 and 30 s steps and taken to zero step; taken to GR's harmonic coordinates (GR's time at the Moon is
+the flow's T plus $\int\mathbf u\cdot d\mathbf x/c^2$ from the Earth); then GR's Moon (EIH, the Earth falling freely
+on its circle) fitted to it, with its start, k (GR's track turned by −k times the de Sitter rate, 19.2 mas a year: 0
+has GR's precession, 1 none) and the coordinates' stretch along and across the Earth's motion free:
+
+| Model | k | rms left by the fit |
+| --- | --- | --- |
+| GR's first post-Newtonian metric, through the same engine (the floor) | +0.03 | 0.033 m |
+| Turning flow, flat space | −17 | 15.6 m |
+| Turning flow, space from u (the lab's) | −188 | 135 m |
+| **Turning flow, space from u relative to its body** | −17 | **15.6 m** |
+| Turning flow, flat space, c × 1000 (Newton's) | | 23 m |
+| Lunar laser ranging | | about 0.01 m |
+
+- **Space from the lab's u fails** by 135 m: the cross term with the Earth's 30 km/s. Taken relative to the Earth, the
+  curved space changes the Moon's orbit by under 3 m and the fit not at all.
+- **The turning flow fails the Moon's orbit on its own**, by 15.6 m, and by 23 m with c a thousand times larger: its
+  failure is Newton's, not relativity's. The flow round the Earth carries the Sun's tide only approximately (the flow
+  against g, [Two checks](two-bodies/checks.md): off by up to 10⁻⁵ of the pulls near the bodies), and the Moon's orbit
+  sums that over three months. With metres left over, k – a 0.2 m effect – can't be read.
+- **Nordtvedt and the binary pulsars can't be run on it.** Both need the bodies to move by the model's own field (a
+  self-gravitating pair falling towards the Sun; an eccentric binary of comparable masses), and the turning flow puts
+  its bodies on fixed circles at one angular speed.
+
+(A first fit held GR's Earth at 1 AU, off its free-fall circle by GM/c² = 1.5 km, and the Moon drifting from it
+left 200 m in every model; the GR row, whose metric holds the Earth at 1 AU, is fitted that way too.)
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -202,11 +244,14 @@ What they show about the flow model:
   rest. This is the first multi-body version that passes lunar ranging's synodic term and the
   Jupiter bending while keeping "clocks tick by their speed through space". Part 1's hypothesis then changes from
   "space flows and is flat" to "space flows, and is stretched across its flow by the potential".
-- Writing that space with the flow alone, stretched across its motion by $u^2/c^2$, makes the flow decide the
-  geometry as well as the motion. It keeps the eikonal flow's results, and it fixes the turning flow's light past the
-  Sun (9.6 mas to 0.001), because light then doesn't feel the turning flow's Jacobi constant.
-- Still to do: the moving-body tests for the turning flow with this space – the Moon's own orbit, de Sitter
-  precession, Nordtvedt and the binary pulsars – and its conserved quantities.
+- Writing that space with the flow alone, stretched across its motion by $u^2/c^2$ (u relative to its body, so that
+  it is the same in every frame), makes the flow decide the geometry as well as the motion. It keeps the eikonal
+  flow's results, and it fixes the turning flow's light past the Sun (9.6 mas to 0.001), because light then doesn't
+  feel the turning flow's Jacobi constant.
+- The turning flow still fails the Moon's own orbit, by 16 m, at Newton's order: its flow carries the Sun's tide round
+  the Earth only approximately. And it can't be put through Nordtvedt or the binaries, as its bodies are held on
+  circles. What the moving bodies need next is a flow that is Newton's exactly round each of them – the eikonal
+  flow's paths with the bodies moving – and the bodies moved by it.
 
 ## Run it
 

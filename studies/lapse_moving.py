@@ -35,11 +35,11 @@ from turning_eikonal import bodies, OMEGA
 
 SHARES = (0.0, 0.5, 1.0)
 MODELS = (['turning, lambda %g' % s for s in SHARES] + ['turning, N = 1, transverse space',
-          'turning, N = 1, space from u', 'GR (first post-Newtonian)'])
+          'turning, N = 1, space from u', 'turning, N = 1, from its body', 'GR (first post-Newtonian)'])
 
 
 def mode(model):
-  return 'flow' if 'space from u' in model else True
+  return 'source' if 'from its body' in model else 'flow' if 'space from u' in model else True
 
 
 def spacetime(model, alone=False):
