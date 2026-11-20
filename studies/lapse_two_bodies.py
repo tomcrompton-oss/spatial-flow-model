@@ -37,13 +37,16 @@ from multi_body_pn import NODES, WEIGHTS, DMOON, MJ, RJ, DJ
 SHARES = (0.0, 0.5, 1.0)
 MODELS = (['eikonal, lambda %g' % s for s in SHARES] + ['eikonal, N = 1, transverse space']
           + ['%s, N = 1, space from u' % f for f in ('eikonal', 'vectors', 'along g')]
-          + ['vectors, flat', 'along g, flat', 'GR (first post-Newtonian)'])
+          + ['vectors, flat', 'along g, flat', 'carried, flat', 'carried, N = 1, space from u', 'GR (first post-Newtonian)'])
 FLOWS = {'eikonal': {}, 'vectors': {'combine': 'vectors'}, 'along g': {'direction': 'g'}}
 
 
 def spacetime(model, bodies):
   if model.startswith('GR'):
     return PostNewtonian(bodies)
+  if model.startswith('carried'):
+    from engine.carried import CarriedSpacetime
+    return CarriedSpacetime(bodies, transverse='space from u' in model)
   name = model.split(',')[0]
   rule = dict(FLOWS[name])
   if name == 'eikonal' and len(bodies) == 2:

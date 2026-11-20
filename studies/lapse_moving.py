@@ -4,7 +4,8 @@ the eikonal flow turning with them, studies/turning_eikonal.py) along engine/met
 in the clocks, space curved to match (kappa = lambda), and lambda of GR's moving-body terms (its vector potential and
 its lapse's psi), so that lambda = 1 is GR's first post-Newtonian metric of the same bodies; and with the clocks left
 alone (N = 1) and space curved across the flow, by 2 Phi/c^2 or by the flow's own |u|^2/c^2 (FlowSpacetime transverse
-True or 'flow'; the turning flow's |u|^2 is not 2 Phi, so the two differ):
+True or 'flow'; the turning flow's |u|^2 is not 2 Phi, so the two differ); and the carried flow (engine/carried.py:
+each body's river carried at its velocity, with the other's tide), flat and with space curved across it:
 
   sun      light passing the Sun, 0.5 AU either side (inside the turning flow's Sun region, where its paths' energy
            J squeezes space): the bending at 2, 10 and 50 solar radii, less the same family's bending with the Sun
@@ -35,7 +36,8 @@ from turning_eikonal import bodies, OMEGA
 
 SHARES = (0.0, 0.5, 1.0)
 MODELS = (['turning, lambda %g' % s for s in SHARES] + ['turning, N = 1, transverse space',
-          'turning, N = 1, space from u', 'turning, N = 1, from its body', 'GR (first post-Newtonian)'])
+          'turning, N = 1, space from u', 'turning, N = 1, from its body', 'carried, flat', 'carried, N = 1, from its body',
+          'GR (first post-Newtonian)'])
 
 
 def mode(model):
@@ -44,6 +46,10 @@ def mode(model):
 
 def spacetime(model, alone=False):
   """the model's spacetime, or (alone) the same family's with the Sun alone, at rest where it is at t = 0"""
+  if model.startswith('carried'):
+    from engine.carried import CarriedSpacetime
+    return CarriedSpacetime([Body(MS, *bodies()[0].pos)] if alone else bodies(),
+                            transverse='from its body' in model)
   if alone:
     sun = [Body(MS, *bodies()[0].pos)]
     if model.startswith('GR'):

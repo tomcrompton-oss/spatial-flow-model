@@ -24,7 +24,7 @@ the other pages, not computed numbers.
 | [Vector addition](two-bodies/vectors.md) | 1 | 1 | 10 | 1 | **9** | The premise taken most simply. Adding the escape velocities as vectors gets g wrong by several times g. |
 | [Along g](two-bodies/along-g.md) | 3 | 1 | 10 | 2 | **8** | One flat flow, N = 1. Its direction is forced along g, and it has curl, so space doesn't fall at g. |
 | [Eikonal flow](two-bodies/eikonal.md) | 9 | 3 | 10 | 9 | **8** | One flow, from the paths of free fall. It has a seam, and the bodies are at rest. Fails lunar ranging. |
-| [Turning](two-bodies/turning.md) (each body carries its flow) | 7 | 4 | 10 | 4 | **7** | One flow, but only in a turning frame with one Jacobi constant, and 56% of the plane has none. Light past the Sun is 9.6 mas off; the Moon's own orbit 16 m off over 90 days, 23 m in Newton's limit. |
+| [Turning](two-bodies/turning.md) (each body carries its flow) | 7 | 4 | 10 | 4 | **7** | One flow, but only in a turning frame with one Jacobi constant, and 56% of the plane has none. Light past the Sun is 9.6 mas off; the Moon's own orbit 16 m off over 90 days, 23 m in Newton's limit; with Newton's error taken out, half of de Sitter's precession. |
 | [Split](two-bodies/split.md), Galilean frames, interval light | 10 | 2 | 2 | 10 | **5** | Each body's own Painlevé flow, applied one at a time. There is no single space (part 3 gone). |
 | Split, Galilean frames, static light | 10 | 4 | 2 | 10 | **5** | As above. GR with the bodies at rest; fails once the system moves. |
 | Split, Lorentz frames | 10 | 5 | 2 | 10 | **5** | As above, the frames set by the bodies' velocities. Lunar ranging 2.2 m, Nordtvedt η = 1. |
@@ -44,7 +44,9 @@ the other pages, not computed numbers.
 | Along g, N = 1, space from u | 3 | 2 | 10 | 2 | **7** | Lunar ranging exactly GR's (round trips see only the flow's speed); light past Jupiter 1000 µas off (its flow has curl). |
 | **Eikonal, N = 1, space from u** | 9 | **6** | 10 | 9 | **7** | The same space as by 2Φ/c², now decided by the flow alone. The one flow it makes GR with the bodies at rest. |
 | Turning, N = 1, space from the lab's u | 7 | 3 | 10 | 4 | **6** | Light past the Sun passes, but the Earth's 30 km/s gets into the space round it: the Moon's orbit 135 m off. Depends on the frame. |
-| **Turning, N = 1, [space from u relative to its body](lapse-curved-space.md#which-frames-u)** | 7 | **5** | 10 | 4 | **6** | Light past the Sun 0.001 mas off (Cassini 0.02). The Moon's orbit 16 m off, the turning flow's own Newtonian error. Nordtvedt and the binaries can't run: its bodies are held on circles. |
+| **Turning, N = 1, [space from u relative to its body](lapse-curved-space.md#which-frames-u)** | 7 | **4** | 10 | 4 | **6** | Light past the Sun 0.001 mas off (Cassini 0.02). The Moon's orbit 16 m off (Newton's error); with that taken out, half of de Sitter's precession and 0.25 m left. Nordtvedt and the binaries can't run: its bodies are held on circles. |
+| [Carried flow](lapse-curved-space.md#the-carried-flow-bodies-that-move-by-it), flat | 5 | 4 | 3 | 5 | **7** | Each body's river carried at its velocity, with the others' tides; the bodies moved by it. Light past the Sun passes; the Moon: half of de Sitter, 0.26 m; binary advance +17% (equal masses), centre of mass accelerates; Nordtvedt η −0.77. |
+| Carried flow, space from u relative to its body | 5 | 3 | 3 | 5 | **6** | The same, light the same; the bodies' errors doubled: advance +33%, η −1.5. |
 
 Notes:
 
@@ -59,16 +61,21 @@ Notes:
   measured in; relative to the body whose flow it is, it doesn't. For bodies at rest the two are the same.
 - **The eikonal version's GR score of 6 is provisional**: it is tested only with the bodies at rest. The turning
   version passes light past the Sun but fails the Moon's own orbit at Newton's order (so its Newton score drops from 9
-  to 7, on every turning row), and Nordtvedt and the binaries can't be run on it. A moving-body flow that is Newton's
-  exactly round each body, with this space, is what could score 8 or more.
+  to 7, on every turning row), and with that taken out still has only half of de Sitter's precession.
+- **The carried flow** is the moving-body flow with the bodies moved by it. Its Newton score is 5: the tides round each
+  body are right only to a few % (fine for the binary, where each body sees only the other's river). Conserved 3: no
+  particle quantity is kept with the bodies moving, and the binary's centre of mass accelerates. It passes light, and
+  fails the Moon, the binary and Nordtvedt as the split model does.
 
 ## What the scores show
 
 - **The trade-off.** Every gain on GR has cost on the premise: the split model reaches 6 by dropping the single flow,
   and the lapse family reaches 9 by dropping the flow altogether.
-- **The exception.** Space curved across the flow, by the flow's own speed, is off that line: 5–6 on GR and 6–7 on
-  the premise. It fixes the light tests for both the bodies-at-rest flow and the moving-body flow; what holds the
-  moving-body flow back now is its Newtonian tide, not relativity. It keeps "clocks tick by their speed through
+- **The exception, and its limit.** Space curved across the flow, by the flow's own speed, is off that line for
+  bodies at rest: 6 on GR and 7 on the premise. With the bodies moving, every flow tried – turning or carried, flat or
+  curved – passes light but has half of de Sitter's precession, and the carried flow's bodies fail the binary and
+  Nordtvedt. What is missing is the same each time: each body's flow (and the Sun's curved space) acting on the
+  others', which needs the flows solved together, not carried separately. It keeps "clocks tick by their speed through
   space", and changes "space is flat" to "space is stretched across its own motion by u²/c²".
 - **The two checks pull opposite ways.** Every single-flow model keeps its conserved quantities; every split model's
   flows give g exactly, and none keeps its energy.

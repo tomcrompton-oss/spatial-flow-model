@@ -434,7 +434,7 @@ class MetricCalculator(Calculator):
     if not jump.any():
       return
     n = jump/length(jump)
-    moving = self.seamVelocity(p.pos)
+    moving = S.seamVelocity(p.pos, p.t) if getattr(S, 'timedSeams', False) else self.seamVelocity(p.pos)
     #in the seam's own frame H' = H - moving . p is what is kept
     keepH = lambda q, side: S.reduced(p.pos, q, p.t, p.light, side) - moving @ q + (C*length(q) if p.light else
                                                                                        C*math.sqrt(C*C + q @ q))

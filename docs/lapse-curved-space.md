@@ -232,6 +232,71 @@ has GR's precession, 1 none) and the coordinates' stretch along and across the E
 (A first fit held GR's Earth at 1 AU, off its free-fall circle by GM/c² = 1.5 km, and the Moon drifting from it
 left 200 m in every model; the GR row, whose metric holds the Earth at 1 AU, is fitted that way too.)
 
+**Relativity alone.** To see past the Newtonian error, each model is also run with c a thousand times larger, and
+what the fit gets is Newton's Moon (EIH at c × 1000) plus the model's run at c less its run at c × 1000: its
+relativistic part, its Newtonian errors taken out (`lapse_moon.py 90 differenced`):
+
+| Model | k | rms left by the fit |
+| --- | --- | --- |
+| GR's metric, through the same engine (the floor) | +0.02 | 0.035 m |
+| Turning flow, flat space | +0.48 | 0.26 m |
+| Turning flow, space from u relative to its body | +0.49 | 0.25 m |
+| Carried flow (below), flat space | +0.48 | 0.26 m |
+| Carried flow, space from u relative to its body | +0.48 | 0.26 m |
+
+Every moving-body flow has half of GR's de Sitter precession (k = 0.48; lunar laser ranging measures it to 0.6%) and
+leaves a quarter of a metre that GR doesn't. Curving space across the flow relative to its body changes neither: round
+the Earth that space is the Earth's own, and the Sun's part of it – which in GR is half of de Sitter's precession, the
+curvature of the Sun's space carried round by the Earth – isn't there.
+
+## The carried flow: bodies that move by it
+
+[engine/carried.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/engine/carried.py) is a flow for
+any number of bodies moving any way:
+
+- **Regions:** a place belongs to the body whose GM/d³ is largest there – where its own pull beats the others' tides
+  (round the Earth, out to 2.2 × 10⁹ m, past its Hill sphere; between equal masses, the nearer one).
+- **The flow in a region:** the body's river carried at the body's velocity, plus the others' tide carried in along the
+  river, so that space falls at g: $\mathbf u = \mathbf V_k + \mathbf s_k + \nabla\sigma$, with
+  $\mathbf s_k\cdot\nabla\sigma = \Phi_T$ (the others' potential less its value and slope at the body). It has no curl
+  and no Jacobi constant. To first order in the tide only, so space round the Earth at the Moon's distance falls at g
+  to 4% of the Sun's tide.
+- **The bodies:** each moves as a test particle in the carried flow of the others, its own left out, the flows
+  carried at the bodies' velocities over the step and accelerating only by the pull of the bodies in that spacetime (a
+  flow carried by a body's whole acceleration would make the body left out feel its own pull on the others). For two
+  bodies, each moves in the other's river carried with it: Schwarzschild in a frame moving with that body, so Newton
+  exactly.
+
+[studies/carried_bodies.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/carried_bodies.py),
+[studies/lapse_moving.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/lapse_moving.py),
+[studies/lapse_two_bodies.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/lapse_two_bodies.py):
+
+| Test | Carried, flat space | Carried, space from u relative to its body | GR |
+| --- | --- | --- | --- |
+| Light past the Sun, the Sun and the Earth moving (2 solar radii) | 0.0000 mas | 0.0000 mas | 0 |
+| The Moon's own orbit, relativity alone (above) | k = 0.48, 0.26 m | k = 0.48, 0.26 m | k = 0 |
+| Binary periastron advance / GR's, equal masses | 1.166 | 1.333 | 1 |
+| … mass ratio 0.1 | 1.055 | 1.110 | 1 |
+| … mass ratio 0.01 | 1.007 | 1.013 | 1 |
+| Binary's centre of mass (mass ratio 0.1) | accelerates at 0.17 m/s² | 0.18 m/s² | doesn't |
+| Nordtvedt η (a pair falling towards the Sun, held still) | −0.77 | −1.53 | 0 (lunar laser ranging: 10⁻⁴) |
+
+- **Light passes** with the bodies moving, even in flat space: with no Jacobi constant there is nothing to squeeze the
+  Sun's region.
+- **The bodies' own motion fails** as the split model's did ([Each body separately](two-bodies/split.md)): the binary's
+  advance is too large by an amount that grows with the lighter body's mass (right in the test-body limit), its centre
+  of mass accelerates by itself, and Nordtvedt's η is of order 1. The reason is the same: each body moves in the
+  others' fields alone, and nothing has a body's own field act on the others'. Curving space across the flow doubles
+  each error.
+- **Bodies held at rest don't fit it.** The carried flow has each body's region falling with the body, at the
+  others' pull there; a body held still isn't falling, so its region loses the others' uniform pull. On the two
+  bodies-at-rest tests above it gives a lunar cos D term of exactly 0 (the Sun is only a tide round the Earth; GR's
+  +9.6 mm is the Sun's potential across the fixed mirror) and light past a Jupiter held still 38,000 µas off. The
+  Jupiter test needs Jupiter on its orbit.
+- **A close pair seen from far off** isn't one of the pair's rivers with the other's tide: 1000 times their separation
+  away, that tide's expansion is no flow at all. So in the Nordtvedt test the Sun is held still. A hierarchy of
+  regions (the pair as one body from far off) would be needed for systems like that.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -248,10 +313,13 @@ What they show about the flow model:
   it is the same in every frame), makes the flow decide the geometry as well as the motion. It keeps the eikonal
   flow's results, and it fixes the turning flow's light past the Sun (9.6 mas to 0.001), because light then doesn't
   feel the turning flow's Jacobi constant.
-- The turning flow still fails the Moon's own orbit, by 16 m, at Newton's order: its flow carries the Sun's tide round
-  the Earth only approximately. And it can't be put through Nordtvedt or the binaries, as its bodies are held on
-  circles. What the moving bodies need next is a flow that is Newton's exactly round each of them – the eikonal
-  flow's paths with the bodies moving – and the bodies moved by it.
+- For moving bodies, the turning flow and the carried flow (each body's river carried at its velocity, the bodies
+  moved by it) both pass light past the Sun. With their Newtonian errors taken out, both have half of de Sitter's
+  precession and leave 0.26 m on the Moon's orbit. And the carried flow's bodies fail the binary and Nordtvedt as the
+  split model's did: each body moves in the others' fields alone.
+- So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
+  round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
+  bodies' flows solved together – a field equation for the flow – not each one carried separately.
 
 ## Run it
 
@@ -265,4 +333,12 @@ python3 studies/lapse_two_bodies.py
 
 ```bash
 python3 studies/lapse_moving.py
+```
+
+```bash
+python3 studies/lapse_moon.py 90 differenced
+```
+
+```bash
+python3 studies/carried_bodies.py
 ```

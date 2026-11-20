@@ -187,6 +187,36 @@ class Engine(unittest.TestCase):
     extra = bend([sun, jup]) - bend([sun]) - bend([jup])
     self.assertLess(abs(extra)*180/math.pi*3600e6, 5)   #microarcseconds; Jupiter's own bending here is 1600
 
+  def testCarriedFlow(self):
+    """
+    the carried flow (engine/carried.py: each body's river carried at its velocity, with the others' tides), the Sun
+    and the Earth going round each other: light 2 solar radii from the Sun bends as with the Sun alone, as GR has it;
+    and space round the Earth at the Moon's distance falls at Newton's g to a few % of the Sun's tide
+    """
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'studies'))
+    from engine.metric import MetricCalculator
+    from engine.carried import CarriedSpacetime
+    from turning_eikonal import bodies
+    def bend(bs):
+      calc = MetricCalculator(CarriedSpacetime(bs))
+      centre = bs[0].at(0.0)
+      p = Particle()
+      p.pos = centre + np.array([2*RSUN, -0.5*AU])
+      calc.initLight(p, np.array([0.0, 1.0]))
+      while p.pos[1] < centre[1] + 0.5*AU:
+        calc.move(p, calc.stepSize(p, 0.002, 0.004*AU/C))
+      return math.atan2(-p.v[0], p.v[1])
+    both, alone = bend(bodies()), bend([Body(MS, *bodies()[0].pos)])
+    self.assertLess(abs(both - alone)*180/math.pi*3600e3, 0.01)   #milliarcseconds
+    S = CarriedSpacetime(bodies())
+    x = S.bodies[1].at(0.0) + np.array([0.0, 3.844e8])
+    k = S.region(x, 0.0)
+    u = S.flow(x, 0.0, k)
+    h = 20.0
+    a = (S.flow(x + u*h/2, h/2, k) - S.flow(x - u*h/2, -h/2, k))/h
+    g = sum(b.GM*(b.at(0.0) - x)/length(b.at(0.0) - x)**3 for b in S.bodies)
+    self.assertLess(length(a - g), 0.1*2*G*MS*3.844e8/AU**3)   #the Sun's tide there: 3e-5 m/s^2
+
   def testSpaceFromTheFlow(self):
     """
     space curved across the flow by its own |u|^2/c^2, u relative to its body (FlowSpacetime transverse 'source'), on

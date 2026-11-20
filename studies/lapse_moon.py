@@ -17,6 +17,7 @@ the models (MODELS):
                                    PostNewtonian), through the same engine: the pipeline's check (k = 0, rms the floor)
   turning, flat                    the turning flow, N = 1, flat space (the flow model)
   turning, N = 1, space from u     the same, space stretched across the flow by its own |u|^2/c^2
+  carried                          engine/carried.py: each body's river carried at its velocity, with the other's tide
 
 to GR's harmonic coordinates: the flow's time is the time of things falling from rest far away, T = t + S(x)/c^2,
 S = sum 2 sqrt(2 GM r) over the bodies (each one's own river), so GR's time at the Moon is T less the Moon's S less
@@ -26,6 +27,8 @@ harmonic space at first order with r unchanged. GR's Earth goes round where it f
 
 run: python3 studies/lapse_moon.py [days]     (default 90; prints, and writes
      logs/modelChecks/lapseMoon_<days>d_<datetime>/summary.log and tracks.npz)
+     python3 studies/lapse_moon.py [days] differenced     (the relativistic part alone: each model at c less at
+                                                          c x 1000, added to Newton's - its Newtonian errors out)
      python3 studies/lapse_moon.py refit <folder>/tracks.npz     (the fits again, from a run's tracks)
 """
 import math
@@ -42,7 +45,8 @@ from engine.constants import *
 from turning_eikonal import bodies, OMEGA, MU
 from multi_body_pn import NODES, WEIGHTS
 
-MODELS = ['GR', 'turning, flat', 'turning, N = 1, space from u', 'turning, N = 1, space from u from its body']
+MODELS = ['GR', 'turning, flat', 'turning, N = 1, space from u from its body', 'carried, flat',
+          'carried, N = 1, space from u from its body']
 DTS = (60.0, 30.0)
 SAMPLE = 6*3600.0
 GRDT = 120.0
@@ -56,6 +60,9 @@ DESITTER = 1.5*math.sqrt(G*MS/AU)*G*MS/AU**2/C**2   #rad/s
 def spacetime(model):
   if model == 'GR':
     return PostNewtonian(bodies())
+  if model.startswith('carried'):
+    from engine.carried import CarriedSpacetime
+    return CarriedSpacetime(bodies(), transverse='from its body' in model)
   flow = SpecialFlowCalculator(bodies(), 2, combine='turning')
   if 'from its body' in model:
     return FlowSpacetime(flow, transverse='source')
@@ -68,9 +75,22 @@ def samples(days):
   return np.arange(DAY, (days - 1)*DAY + 1, SAMPLE)
 
 
+def setC(scale):
+  """c times scale, everywhere it is used (in this process: a pool's workers set it for each job). from c itself,
+  not the module's current value, so it doesn't compound from one job to the next"""
+  c = 299792458.0
+  for name in list(sys.modules):
+    m = sys.modules[name]
+    if (name.startswith('engine.') or name in ('__main__', 'lapse_moon', 'studies.lapse_moon')) and hasattr(m, 'C'):
+      m.C = c*scale
+  globals()['C'] = c*scale
+
+
 def run(job):
-  """the Moon in the model: its place at the samples, in the lab (and the Earth's, the Sun's)"""
-  model, dt, days = job
+  """the Moon in the model at c times scale: its place at the samples, in the lab (and the Earth's, the Sun's, and
+  the flow's integral from the Earth to it)"""
+  model, dt, days, scale = job
+  setC(scale)
   calc = MetricCalculator(spacetime(model))
   B = calc.spacetime.bodies
   p = Particle()
@@ -93,16 +113,22 @@ def run(job):
 def flowIntegral(S, a, b, t, pieces=24):
   """the integral of the model's own flow (unslowed) from a to b along the line: GR's time there is T + this/c^2
   less the same at a (a flow with no curl is the gradient of S, T = t - S/c^2 ... with t harmonic)"""
-  if not isinstance(S, FlowSpacetime):
-    return 0.0
   span = length(b - a)
   n = (b - a)/span
+  from engine.carried import CarriedSpacetime
+  if isinstance(S, CarriedSpacetime):
+    raw = CarriedSpacetime(S.bodies, tides=S.tides)   #its flow unslowed
+    along = lambda y: raw.flow(y, t) @ n
+  elif isinstance(S, FlowSpacetime):
+    along = lambda y: S.calc.flow(y, S.calc.region(y, t), t) @ n
+  else:
+    return 0.0
   edges = np.concatenate([[0.0], np.geomspace(1e3, span, pieces)])
   total = 0.0
   for lo, hi in zip(edges[:-1], edges[1:]):
     for x, wt in zip(NODES, WEIGHTS):
       y = a + ((lo + hi)/2 + (hi - lo)/2*x)*n
-      total += wt*(hi - lo)/2*(S.calc.flow(y, S.calc.region(y, t), t) @ n)
+      total += wt*(hi - lo)/2*along(y)
   return total
 
 
@@ -200,7 +226,15 @@ def grTrack(params, ts, D, earthScale=1.0):
   return np.array(out)
 
 
+def newtonTrack(job):
+  """GR's Moon (EIH) at c x 1000, from the start, the Earth at AU: Newton's, with the same integrator as the fits"""
+  ts = job
+  setC(1e3)
+  return grTrack(np.concatenate([START[0], START[1], np.zeros(3)]), ts, AU)
+
+
 def column(job):
+  setC(1.0)
   params, k, step, ts, D, earth = job
   q = params.copy()
   q[k] += step
@@ -213,6 +247,7 @@ def fit(pool, ts, target, D, earth):
   n = 8 if earth else 7
   steps = np.array([1.0, 1.0, 1e-6, 1e-6, 0.01, 1e-9, 1e-9, 1e-9][:n])
   p = np.concatenate([START[0], START[1], np.zeros(n - 4)])
+  setC(1.0)
   base = lambda p: grTrack(p[:7], ts, D, 1 + (p[7] if earth else 0.0))
   r = (base(p) - target).ravel()
   for _ in range(8):   #Gauss-Newton, the Jacobian again each time, until the rms settles
@@ -236,37 +271,54 @@ def refit(path):
       print('  %-44s k %+.4f   stretch along %+.2f, across %+.2f V^2/2c^2   rms %.4f m' % (m, k, a/EPS, b/EPS, rms), flush=True)
 
 
+def zeroStep(model, ts, runs, days, scale, mapped):
+  """the model's Moon from the Earth taken to zero step, in GR's coordinates (mapped) and at GR's sample times; and
+  the 60 s step's"""
+  tracks, times = {}, None
+  for dt in DTS:
+    rows = runs[(model, dt, days, scale)]
+    if mapped:
+      times, tracks[dt] = harmonic(model, ts, rows)
+    else:
+      times, tracks[dt] = ts, np.array([x - earth for x, sun, earth, I in rows])
+  zero = (4*tracks[DTS[1]] - tracks[DTS[0]])/3
+  #GR's times at the Moon differ from T by under a millisecond: the track is moved to them along its velocity
+  vel = np.gradient(zero, ts, axis=0)
+  shift = vel*(ts - times)[:, None]
+  return zero + shift, tracks[DTS[0]] + shift
+
+
 def main():
   if len(sys.argv) > 2 and sys.argv[1] == 'refit':
     return refit(sys.argv[2])
   days = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
-  folder = os.path.join(LOG_DIR, 'modelChecks', 'lapseMoon_%gd_%s' % (days, datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
+  differenced = 'differenced' in sys.argv[2:]
+  folder = os.path.join(LOG_DIR, 'modelChecks', 'lapseMoon_%gd%s_%s' % (days, '_differenced' if differenced else '',
+                                                                       datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
   os.makedirs(folder, exist_ok=True)
   ts = samples(days)
+  scales = (1.0, 1e3) if differenced else (1.0,)
   with Pool(8) as pool:
-    runs = dict(pool.map(run, [(m, dt, days) for m in MODELS for dt in DTS]))
+    newton = pool.apply_async(newtonTrack, [ts]) if differenced else None
+    runs = dict(pool.map(run, [(m, dt, days, s) for m in MODELS for dt in DTS for s in scales]))
     lines = ['moon: the Moon round the Earth for %g days, the Sun and the Earth going round each other; GR (EIH) fitted to'
              ' the model\'s track in harmonic coordinates, its start and k free, turned by -k de Sitter (19.2 mas a year):'
              ' k = 0 the model has GR\'s de Sitter precession, k = 1 none; the rms left' % days]
+    if differenced:
+      lines.append('  differenced: the model\'s track is its track at c less its track at c x 1000, added to Newton\'s (EIH at'
+                   ' c x 1000): its relativistic part alone, its Newtonian errors taken out')
+      newton = newton.get()
     saved = {}
     for m in MODELS:
-      tracks = {}
-      for dt in DTS:
-        times, rel = harmonic(m, ts, runs[(m, dt, days)])
-        tracks[dt] = rel
-      zero = (4*tracks[DTS[1]] - tracks[DTS[0]])/3
-      saved[m] = None
-      D = radius(m)
-      #GR's times at the Moon differ from T by under a millisecond: the track is moved to them along its velocity
-      times, _ = harmonic(m, ts, runs[(m, DTS[1], days)])
-      vel = np.gradient(zero, ts, axis=0)
-      target = zero + vel*(ts - times)[:, None]
-      saved[m] = target
-      saved[m + ' step'] = tracks[DTS[0]] + vel*(ts - times)[:, None]
-      for name, track, earth in (('step %g s' % DTS[0], saved[m + ' step'], False), ('to zero step', target, False)):
-        k, a, b, gm, rms = fit(pool, ts, track, D, earth)
-        lines.append('  %-30s %-28s k %+.4f   stretch along %+.2f, across %+.2f V^2/2c^2%s   rms %.4f m'
-                     % (m, name, k, a/EPS, b/EPS, ('   GM_Earth %+.2e' % gm) if earth else '', rms))
+      target, step = zeroStep(m, ts, runs, days, 1.0, True)
+      if differenced:
+        nz, ns = zeroStep(m, ts, runs, days, 1e3, False)
+        target, step = newton + target - nz, newton + step - ns
+      saved[m], saved[m + ' step'] = target, step
+      for name, track in (('step %g s' % DTS[0], step), ('to zero step', target)):
+        k, a, b, gm, rms = fit(pool, ts, track, radius(m), False)
+        lines.append('  %-44s %-14s k %+.4f   stretch along %+.2f, across %+.2f V^2/2c^2   rms %.4f m'
+                     % (m, name, k, a/EPS, b/EPS, rms))
         print(lines[-1], flush=True)
   np.savez(os.path.join(folder, 'tracks.npz'), ts=ts, **{m: v for m, v in saved.items()})
   with open(os.path.join(folder, 'summary.log'), 'w') as f:
