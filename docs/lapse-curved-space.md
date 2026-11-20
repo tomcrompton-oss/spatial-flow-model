@@ -297,6 +297,51 @@ any number of bodies moving any way:
   away, that tide's expansion is no flow at all. So in the Nordtvedt test the Sun is held still. A hierarchy of
   regions (the pair as one body from far off) would be needed for systems like that.
 
+## Einstein's constraints: what space the flow needs
+
+GR's 3+1 form has field equations that space and its flow must meet at each moment, the constraints. With the lapse
+N = 1 and space $\gamma = \delta + h/c^2$, to the first order they come in
+([studies/constraints.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/constraints.py)):
+
+$$\tilde R + (\nabla\cdot\mathbf u)^2 - \tilde K_{ij}\tilde K_{ij} = 16\pi G\rho,\qquad
+\partial_j\tilde K_{ij} - \partial_i\nabla\cdot\mathbf u = 0,\qquad
+\tilde R = \partial_i\partial_j h_{ij} - \nabla^2 h_{kk},\quad \tilde K_{ij} = \tfrac12(\partial_iu_j + \partial_ju_i)$$
+
+For any flow with no curl, the curvature of $h = -\mathbf u\mathbf u$ is exactly $-[(\nabla\cdot\mathbf u)^2 -
+\tilde K_{ij}\tilde K_{ij}]$: it cancels the flow's own term, whatever the flow. So
+
+$$\gamma = \delta + \frac{2\Phi\,\delta - \mathbf u\,\mathbf u}{c^2}$$
+
+– space stretched by Newton's potential and contracted along the flow by $u^2/c^2$ – meets the Hamiltonian constraint
+for every such flow, the rest being Poisson's equation for Φ; and the momentum constraint is met by any flow with no
+curl. It is GR's space sliced by free fall. Space from u, $|\mathbf u|^2\delta - \mathbf u\mathbf u$, misses it by
+$-2\nabla^2(|\mathbf u|^2 - 2\Phi)$: nothing for the eikonal flow, where $|\mathbf u|^2 = 2\Phi$. Measured, in 3D,
+as a fraction of the flow's own term, at points round 1 and 0.3 solar masses:
+
+| Flow | Flat space | Space from u (its body's) | $2\Phi\delta - \mathbf u\mathbf u$ |
+| --- | --- | --- | --- |
+| One body | 10⁻¹² | 10⁻¹⁰ | 10⁻¹⁰ |
+| Vectors | 2% (up to 54%) | 57% | 10⁻¹⁰ |
+| Along g (it has curl) | 7% | 6% | 6%; the momentum constraint 2% |
+| Eikonal, at rest | 13% (up to 82%) | 10⁻¹⁰ | 10⁻¹⁰ |
+| Carried, at rest or moving | 0.5% (up to 34%) | 4 × 10⁻⁵ (up to 12%) | 10⁻¹⁰ |
+
+So the constraints settle the space once the flow is given: they don't choose the flow (even the vectors' flow meets
+them with this space); Newton's "space falls at g" does that. Every flat-space version breaks them with two bodies,
+which is why every flat rule failed somewhere.
+
+**But space alone isn't enough.** Given the carried flow with this space (`transverse='gr'`), light past the Sun still
+passes, but the Moon is worse (k = −0.29 with 1.77 m left, Newton's error taken out), the binary's advance comes out
+−0.25 of GR's for equal masses, and Nordtvedt's η +589. Taking GR's first post-Newtonian metric to a free-fall slicing,
+$t = T + \phi/c^2 + \chi/c^4$, shows why: this space comes with first-order corrections to the flow itself,
+
+$$\mathbf u = \nabla\phi\Big[1 + \frac{v^2/2 - 3\Phi}{c^2}\Big] + \frac{\nabla\chi + 4\mathbf U}{c^2},\qquad
+\frac{D\chi}{DT} = Q,\qquad \mathbf U = \sum\frac{GM\mathbf v}{d}$$
+
+(v the flow's speed in the lab; Q a combination of Φ, v², $\mathbf u\cdot\mathbf U$ and GR's ψ), keeping N = 1 – for
+one body at rest they come to the $\sqrt{1 - \Phi/c^2}$ already used. The space and the flow's corrections only work
+together: the space with the flow uncorrected is half of GR's metric.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -317,6 +362,9 @@ What they show about the flow model:
   moved by it) both pass light past the Sun. With their Newtonian errors taken out, both have half of de Sitter's
   precession and leave 0.26 m on the Moon's orbit. And the carried flow's bodies fail the binary and Nordtvedt as the
   split model's did: each body moves in the others' fields alone.
+- Einstein's constraints give the space the flow needs: stretched by the potential, contracted along the lab's flow by
+  $u^2/c^2$, for any flow with no curl. On its own it makes the moving-body tests worse; it needs the flow's own
+  first-order corrections with it, which are GR's.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.
@@ -341,4 +389,8 @@ python3 studies/lapse_moon.py 90 differenced
 
 ```bash
 python3 studies/carried_bodies.py
+```
+
+```bash
+python3 studies/constraints.py
 ```

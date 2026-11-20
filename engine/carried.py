@@ -17,6 +17,10 @@ left out: the tide's square (|grad sigma|^2/2) and its change while space falls 
 tide's flow at the Moon's distance from the Earth. so Newton is only approximate, and the studies take a model's
 relativistic part as its run at c less its run at c x 1000 (studies/lapse_moon.py differenced)
 
+transverse 'gr': space as Einstein's Hamiltonian constraint has it for any flow with no curl, gamma = delta + (2 Phi
+delta - u u)/c^2 (Phi = sum GM/d, u the lab's flow; studies/constraints.py), the flow relative to its body slowed as
+for 'source'
+
 transverse 'source': space curved across the flow relative to its body, by its own speed (engine/metric.py
 FlowSpacetime), w = u - V_k: gamma = delta + (|w|^2 delta - w w)/c^2, w slowed by sqrt(1 - |w|^2/2c^2)
 
@@ -117,6 +121,12 @@ class CarriedSpacetime(Spacetime):
       return None
     k = self.region(x, t) if region is None else region
     w = self.ownFlow(k, x, t)
+    if self.transverse == 'gr':
+      #what Einstein's Hamiltonian constraint asks for any flow with no curl (studies/constraints.py): stretched by
+      #Newton's potential, contracted along the flow - the lab's flow - by u^2/c^2
+      u = velocityOf(self.bodies[k], t) + w
+      phi = sum(b.GM/length(x - b.at(t)) for b in self.bodies)
+      return (2*phi*np.eye(2) - np.outer(u, u))/C**2
     return ((w @ w)*np.eye(2) - np.outer(w, w))/C**2
 
   def seamVelocity(self, x, t=0.0):

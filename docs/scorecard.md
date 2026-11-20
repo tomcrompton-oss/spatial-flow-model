@@ -47,6 +47,7 @@ the other pages, not computed numbers.
 | **Turning, N = 1, [space from u relative to its body](lapse-curved-space.md#which-frames-u)** | 7 | **4** | 10 | 4 | **6** | Light past the Sun 0.001 mas off (Cassini 0.02). The Moon's orbit 16 m off (Newton's error); with that taken out, half of de Sitter's precession and 0.25 m left. Nordtvedt and the binaries can't run: its bodies are held on circles. |
 | [Carried flow](lapse-curved-space.md#the-carried-flow-bodies-that-move-by-it), flat | 5 | 4 | 3 | 5 | **7** | Each body's river carried at its velocity, with the others' tides; the bodies moved by it. Light past the Sun passes; the Moon: half of de Sitter, 0.26 m; binary advance +17% (equal masses), centre of mass accelerates; Nordtvedt η −0.77. |
 | Carried flow, space from u relative to its body | 5 | 3 | 3 | 5 | **6** | The same, light the same; the bodies' errors doubled: advance +33%, η −1.5. |
+| Carried flow, [space from Einstein's constraint](lapse-curved-space.md#einsteins-constraints-what-space-the-flow-needs) (2Φδ − uu) | 5 | 2 | 3 | 5 | **6** | Meets the constraint for any flow with no curl, and light passes; without the flow's matching corrections the Moon (1.8 m), binary (−0.25 of GR's advance) and Nordtvedt (η +589) all get worse. |
 
 Notes:
 

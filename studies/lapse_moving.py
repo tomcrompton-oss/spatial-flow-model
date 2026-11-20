@@ -36,7 +36,7 @@ from turning_eikonal import bodies, OMEGA
 
 SHARES = (0.0, 0.5, 1.0)
 MODELS = (['turning, lambda %g' % s for s in SHARES] + ['turning, N = 1, transverse space',
-          'turning, N = 1, space from u', 'turning, N = 1, from its body', 'carried, flat', 'carried, N = 1, from its body',
+          'turning, N = 1, space from u', 'turning, N = 1, from its body', 'carried, flat', 'carried, N = 1, from its body', "carried, N = 1, GR's space",
           'GR (first post-Newtonian)'])
 
 
@@ -49,7 +49,7 @@ def spacetime(model, alone=False):
   if model.startswith('carried'):
     from engine.carried import CarriedSpacetime
     return CarriedSpacetime([Body(MS, *bodies()[0].pos)] if alone else bodies(),
-                            transverse='from its body' in model)
+                            transverse='gr' if "GR's space" in model else 'from its body' in model and 'source')
   if alone:
     sun = [Body(MS, *bodies()[0].pos)]
     if model.startswith('GR'):

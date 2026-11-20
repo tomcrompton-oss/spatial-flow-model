@@ -11,7 +11,8 @@ of the others, its own left out), flat space or space curved across the flow rel
              flow's tides are Newton's only approximately, so both are run at c and at c x 1000 and the difference
              taken (the Sun held still)
 
-run: python3 studies/carried_bodies.py [test ...] [--flat | --curved]     (default both tests, both spaces; prints,
+run: python3 studies/carried_bodies.py [test ...] [--flat] [--curved] [--gr]     (default both tests, all three spaces:
+     flat, space from u relative to its body, and GR's 2 Phi delta - u u; prints,
      and writes logs/modelChecks/carriedBodies_<datetime>/summary.log)
 """
 import math
@@ -25,6 +26,7 @@ from engine.logger import LOG_DIR
 from engine.constants import *
 
 MTOTAL, A, E, ORBITS, STEPS = 2*MS, 1e8, 0.3, 12, 2000
+SPACE = {'flat': False, 'curved': 'source', 'gr': 'gr'}   #engine/carried.py transverse
 RATIOS = (1.0, 0.1, 0.01)
 
 
@@ -48,7 +50,7 @@ def binaryRun(job):
   rp = A*(1 - E)
   vrel = math.sqrt(G*MTOTAL*(1 + E)/rp)
   sim = CarriedBodies([m1, m2], [[m2/MTOTAL*rp, 0.0], [-m1/MTOTAL*rp, 0.0]],
-                      [[0.0, m2/MTOTAL*vrel], [0.0, -m1/MTOTAL*vrel]], transverse='source' if curved else False)
+                      [[0.0, m2/MTOTAL*vrel], [0.0, -m1/MTOTAL*vrel]], transverse=SPACE[curved])
   period = 2*math.pi*math.sqrt(A**3/(G*MTOTAL))
   dt = period/steps
   seps, centre, times = [], [], []
@@ -84,7 +86,7 @@ def binary(pool, spaces):
       k, P = (4*k2 - k1)/3, (4*P2 - P1)/3
       gr = 3*(G*MTOTAL*2*math.pi/P)**(2/3)/(C*C*(1 - E*E))*2*math.pi
       lines.append('  %-7s m2/m1 %-5g advance / GR\'s %.5f (steps: %.5f, %.5f)   centre of mass accelerating at %.3g m/s^2'
-                   % ('curved' if c else 'flat', r, k/gr, k1/gr, k2/gr, math.sqrt(acc @ acc)))
+                   % (c, r, k/gr, k1/gr, k2/gr, math.sqrt(acc @ acc)))
   return lines
 
 
@@ -104,7 +106,7 @@ def fallRun(job):
   #the Sun held still (as studies/split_more.py): moved, it would sit in the pair's flow 1e10 m out, where one of the
   #pair's rivers with the other's tide is no flow at all (the tide's expansion about one of them, at 1000 times their
   #separation)
-  sim = CarriedBodies(masses, xs, vs, transverse='source' if curved else False, fixed=[Body(MS)])
+  sim = CarriedBodies(masses, xs, vs, transverse=SPACE[curved], fixed=[Body(MS)])
   P = 2*math.pi*r/(2*vorb)
   T = 40*P
   while sim.t < T - 1e-9:
@@ -133,7 +135,7 @@ def nordtvedt(pool, spaces):
     a = (4*acc[dts[1]] - acc[dts[0]])/3
     eta = a[0]/(g*binding)   #falling faster towards the Sun (-x) is eta < 0... as split_more: eta = -faster
     lines.append('  %-7s the pair falls faster by %+.3e m/s^2 (steps: %+.3e, %+.3e): eta = %+.3f (GR 0)'
-                 % ('curved' if c else 'flat', -a[0], -acc[dts[0]][0], -acc[dts[1]][0], eta))
+                 % (c, -a[0], -acc[dts[0]][0], -acc[dts[1]][0], eta))
   return lines
 
 
@@ -142,7 +144,7 @@ TESTS = {'binary': binary, 'nordtvedt': nordtvedt}
 
 def main():
   args = [a for a in sys.argv[1:] if not a.startswith('--')]
-  spaces = [False] if '--flat' in sys.argv else [True] if '--curved' in sys.argv else [False, True]
+  spaces = [a[2:] for a in sys.argv[1:] if a[2:] in SPACE] or ['flat', 'curved', 'gr']
   names = args or list(TESTS)
   folder = os.path.join(LOG_DIR, 'modelChecks', 'carriedBodies_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder, exist_ok=True)

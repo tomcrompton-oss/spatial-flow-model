@@ -187,6 +187,23 @@ class Engine(unittest.TestCase):
     extra = bend([sun, jup]) - bend([sun]) - bend([jup])
     self.assertLess(abs(extra)*180/math.pi*3600e6, 5)   #microarcseconds; Jupiter's own bending here is 1600
 
+  def testConstraintSpace(self):
+    """
+    Einstein's Hamiltonian constraint (studies/constraints.py): space 2 Phi delta - u u meets it for a flow with no
+    curl - even the vectors' flow, two bodies - where flat space misses it by a part in 100 or more
+    """
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'studies'))
+    import constraints as cs
+    D, zero = 1e9, np.zeros(3)
+    B = cs.Bodies([(G*MS, zero, zero), (G*0.3*MS, np.array([D, 0, 0]), zero)])
+    flow = cs.vectors(B)
+    y = np.array([0.3*D, 0.2*D, 0.1*D])
+    e = 1e-3*B.nearest(y)
+    gr, kk, _, _ = cs.constraints(flow, cs.grSpace(B, flow), y, e)
+    flat, _, _, _ = cs.constraints(flow, cs.flatSpace(B, flow), y, e)
+    self.assertLess(abs(gr)/kk, 1e-7)
+    self.assertGreater(abs(flat)/kk, 1e-3)
+
   def testCarriedFlow(self):
     """
     the carried flow (engine/carried.py: each body's river carried at its velocity, with the others' tides), the Sun

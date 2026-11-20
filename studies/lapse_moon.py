@@ -62,7 +62,7 @@ def spacetime(model):
     return PostNewtonian(bodies())
   if model.startswith('carried'):
     from engine.carried import CarriedSpacetime
-    return CarriedSpacetime(bodies(), transverse='from its body' in model)
+    return CarriedSpacetime(bodies(), transverse='gr' if "GR's space" in model else 'from its body' in model and 'source')
   flow = SpecialFlowCalculator(bodies(), 2, combine='turning')
   if 'from its body' in model:
     return FlowSpacetime(flow, transverse='source')
