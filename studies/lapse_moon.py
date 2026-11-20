@@ -72,10 +72,12 @@ def spacetime(model):
     return SlicedPN(bodies())
   if model.startswith('GR in free-fall time'):
     from engine.carried import FreeFallPN
-    return FreeFallPN(bodies(), lapse='no lapse' not in model, retarded='at T' not in model)
+    return FreeFallPN(bodies(), lapse='no lapse' not in model, retarded='at T' not in model,
+                      tides='transported' if 'transported' in model else True)
   if model.startswith('carried'):
     from engine.carried import CarriedSpacetime
-    return CarriedSpacetime(bodies(), transverse='gr' if "GR's space" in model else 'from its body' in model and 'source')
+    return CarriedSpacetime(bodies(), transverse='gr' if "GR's space" in model else 'from its body' in model and 'source',
+                            tides='transported' if 'transported' in model else True)
   flow = SpecialFlowCalculator(bodies(), 2, combine='turning')
   if 'from its body' in model:
     return FlowSpacetime(flow, transverse='source')

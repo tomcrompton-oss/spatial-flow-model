@@ -15,7 +15,10 @@ Bernoulli's equation d phi/dt + |u|^2/2 = Phi + f(t) (space falls at g) when, to
 so sigma, zero at the body, is the integral of -Phi_T/|s_k| out along the radius, and u = V_k + s_k + grad sigma.
 left out: the tide's square (|grad sigma|^2/2) and its change while space falls in (d sigma/dt): about 1% and 5% of the
 tide's flow at the Moon's distance from the Earth. so Newton is only approximate, and the studies take a model's
-relativistic part as its run at c less its run at c x 1000 (studies/lapse_moon.py differenced)
+relativistic part as its run at c less its run at c x 1000 (studies/lapse_moon.py differenced). that takes out the
+Newtonian error, not its product with the relativistic terms: 0.7 m on the Moon in 90 days. tides='transported'
+keeps d sigma/dt, exactly (the tide taken where the falling space will be when it passes each radius: transported),
+and the square from the first order's gradient: Newton's equation is then met to 0.1% of the tide at the Moon
 
 transverse 'gr': space as Einstein's Hamiltonian constraint has it for any flow with no curl, gamma = delta + (2 Phi
 delta - u u)/c^2 (Phi = sum GM/d, u the lab's flow; studies/constraints.py), the flow relative to its body slowed as
@@ -44,6 +47,21 @@ def velocityOf(b, t):
 
 def accelerationOf(b, t):
   return b.accelerationAt(t) if hasattr(b, 'accelerationAt') else bodyAcceleration(b, t)
+
+
+def placesAt(b, times):
+  """a body's places at many times at once (m x 2): circling, moving straight, a Proxy's parabola, or one by one"""
+  times = np.asarray(times, float)
+  if isinstance(b, Proxy):
+    q = (times - b.t0)[:, None]
+    return b.x0 + b.v0*q + 0.5*b.a0*q*q
+  if getattr(b, 'circling', 0.0):
+    a = b.circling*times
+    c, s = np.cos(a), np.sin(a)
+    return np.stack([c*b.pos[0] - s*b.pos[1], s*b.pos[0] + c*b.pos[1]], axis=1)
+  if not getattr(b, 'moving', False):
+    return np.tile(b.pos, (len(times), 1))
+  return np.array([b.at(t) for t in times])
 
 
 class CarriedSpacetime(Spacetime):
@@ -104,11 +122,95 @@ class CarriedSpacetime(Spacetime):
     total = np.sum(WEIGHTS*r/2*rr*((gYs - g0) @ side)/np.sqrt(2*GMk/rr))
     return radial*n - total/r*side
 
+  def tidalPotential(self, k, D, times):
+    """
+    Phi_T at the offsets D (m x 2) from body k, each at its own time: the others' potential less its value and slope
+    at the body, worked without cancelling the potential itself (9 x 10^8 from the Sun at 1 AU, against a tide of
+    10^4): with e the other body's place from k and q = |e - D|, R = |e|,
+      1/q - 1/R - e . D/R^3 = (2 e . D - D^2)/(q R (q + R)) - e . D/R^3
+    """
+    out = np.zeros(len(D))
+    xk = placesAt(self.bodies[k], times)
+    for j, b in enumerate(self.bodies):
+      if j != k:
+        e = placesAt(b, times) - xk
+        R = np.linalg.norm(e, axis=1)
+        q = np.linalg.norm(e - D, axis=1)
+        eD = np.sum(e*D, axis=1)
+        out += b.GM*((2*eD - np.sum(D*D, axis=1))/(q*R*(q + R)) - eD/R**3)
+    return out
+
+  def transported(self, k, D, t):
+    """
+    sigma at the points D (m x 2, from body k) with the tide's change: s . grad sigma + d sigma/dt = Phi_T (d/dt at
+    fixed place from the body) is carried along the river's paths, falling straight in at s(r) = sqrt(2 GM/r) and
+    reaching the body (sigma 0) a time f(r) = (2/3) r^(3/2)/sqrt(2 GM) later, so
+
+      sigma(D, t) = -integral over r' < r of Phi_T(r' n, at t + f(r) - f(r'))/s(r') dr'
+
+    the tide where that space will be when it passes r'. exact for this linear part; the square, -|grad sigma|^2/2 in
+    the source, is added by squared() (from the first order's gradient: its own change is 10% of a 0.1% part)
+    """
+    GM = self.bodies[k].GM
+    r = np.linalg.norm(D, axis=1)
+    rr = r[:, None]*(NODES + 1)/2
+    f = lambda q: (2/3)*q**1.5/math.sqrt(2*GM)
+    times = (t + f(r)[:, None] - f(rr)).ravel()
+    S = self.tidalPotential(k, (rr[..., None]*(D/r[:, None])[:, None, :]).reshape(-1, 2), times).reshape(rr.shape)
+    return -np.sum(WEIGHTS*r[:, None]/2*S/np.sqrt(2*GM/rr), axis=1)
+
+  def firstGradients(self, k, P, t):
+    """grad sigma at the first order (as tidalFlow), at many points P (m x 2) at once"""
+    xk = self.bodies[k].at(t)
+    GM = self.bodies[k].GM
+    D = P - xk
+    r = np.linalg.norm(D, axis=1)
+    n = D/r[:, None]
+    side = np.stack([-n[:, 1], n[:, 0]], axis=1)
+    rr = r[:, None]*(NODES + 1)/2
+    Y = xk + rr[..., None]*n[:, None, :]                            #m x nodes x 2
+    g0, gY = np.zeros(2), np.zeros(Y.shape)
+    PhiT = np.zeros(len(P))
+    for j, b in enumerate(self.bodies):
+      if j != k:
+        z = b.at(t)
+        d0 = z - xk
+        r0 = length(d0)
+        g0 = g0 + b.GM*d0/r0**3
+        dY = z - Y
+        gY += b.GM*dY/np.linalg.norm(dY, axis=2)[..., None]**3
+        PhiT += b.GM/np.linalg.norm(z - P, axis=1) - b.GM/r0 - b.GM*(D @ d0)/r0**3
+    radial = -PhiT/np.sqrt(2*GM/r)
+    across = np.sum(WEIGHTS*r[:, None]/2*rr*np.sum((gY - g0)*side[:, None, :], axis=2)/np.sqrt(2*GM/rr), axis=1)
+    return radial[:, None]*n - (across/r)[:, None]*side
+
+  def squared(self, k, D, t):
+    """sigma's part from the tide's square: s . grad sigma = -|grad sigma|^2/2, so +integral of |grad sigma|^2/2s"""
+    GM = self.bodies[k].GM
+    xk = self.bodies[k].at(t)
+    r = np.linalg.norm(D, axis=1)
+    rr = r[:, None]*(NODES + 1)/2
+    P = (xk + rr[..., None]*(D/r[:, None])[:, None, :]).reshape(-1, 2)
+    G1 = self.firstGradients(k, P, t)
+    S = (0.5*np.sum(G1*G1, axis=1)).reshape(rr.shape)
+    return np.sum(WEIGHTS*r[:, None]/2*S/np.sqrt(2*GM/rr), axis=1)
+
+  def transportedFlow(self, k, x, t):
+    """grad sigma (transported), by fourth-order differences"""
+    D = x - self.bodies[k].at(t)
+    e = 1e-3*length(D)
+    steps = np.array([[e, 0], [-e, 0], [2*e, 0], [-2*e, 0], [0, e], [0, -e], [0, 2*e], [0, -2*e]])
+    v = self.transported(k, D + steps, t) + self.squared(k, D + steps, t)
+    return np.array([8*(v[0] - v[1]) - (v[2] - v[3]), 8*(v[4] - v[5]) - (v[6] - v[7])])/(12*e)
+
   def ownFlow(self, k, x, t):
     """the flow relative to body k (its river and the tide), in k's region"""
     d = x - self.bodies[k].at(t)
     r = length(d)
-    return -math.sqrt(2*self.bodies[k].GM/r)*d/r + self.tidalFlow(k, x, t)
+    w = -math.sqrt(2*self.bodies[k].GM/r)*d/r
+    if self.tides == 'transported' and len(self.bodies) > 1:
+      return w + self.transportedFlow(k, x, t)
+    return w + self.tidalFlow(k, x, t)
 
   def flow(self, x, t, region=None):
     k = self.region(x, t) if region is None else region
@@ -281,10 +383,10 @@ class FreeFallPN(Spacetime):
 
   timedSeams = True
 
-  def __init__(self, bodies, lapse=True, retarded=True):
+  def __init__(self, bodies, lapse=True, retarded=True, tides=True):
     from engine.metric import PostNewtonian
     self.bodies = list(bodies)
-    self.carried = CarriedSpacetime(self.bodies)
+    self.carried = CarriedSpacetime(self.bodies, tides=tides)
     self.pn = PostNewtonian(self.bodies)
     self.useLapse = lapse
     self.retarded = retarded

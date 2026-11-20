@@ -342,6 +342,58 @@ $$\mathbf u = \nabla\phi\Big[1 + \frac{v^2/2 - 3\Phi}{c^2}\Big] + \frac{\nabla\c
 one body at rest they come to the $\sqrt{1 - \Phi/c^2}$ already used. The space and the flow's corrections only work
 together: the space with the flow uncorrected is half of GR's metric.
 
+## Checking the Moon test with GR in a moving time
+
+The moving-body flows' Moon results – half of de Sitter, 0.26 m left – come from runs whose flow is 30 km/s (the
+Earth's velocity is in it), and from a mapping of their time to GR's. Two versions of GR in such a time check both.
+
+**GR transformed exactly** (`engine/metric.py` `SlicedPN`): GR's first post-Newtonian metric taken to
+$t = T + \phi/c^2$, with $\phi = \mathbf V\cdot\mathbf d - 2\sqrt{2GMr}$, the Earth's river carried at its velocity.
+Nothing is assumed of φ: the metric is transformed and put back in the 3+1 form, each part kept as its offset from
+flat so that nothing rounds against $c^2$. The flow is then the Earth's river at 30 km/s, and the rest of Newton's
+gravity is in the lapse (the Earth's clock runs slow by $1.5\,GM_\odot/(\mathrm{AU}\,c^2)$ against harmonic
+time). It fits as GR does: k = +0.017, 0.027 m (GR's own +0.022, 0.035 m). So the engine and the mapping are right
+with a flow the models' size.
+
+**GR in the carried flow's free-fall time** (`engine/carried.py` `FreeFallPN`): the carried flow as GR's Newtonian
+flow, with the space $2\Phi\delta - \mathbf u\mathbf u$ and the 1PN lapse that slicing has. Two things had to be
+right for it to be GR:
+
+- GR's potential must be taken where the bodies are at the point's own harmonic time, $T + \phi/c^2$, not at T.
+  Near the Earth these differ by $\mathbf V\cdot\mathbf d/c^2$, which moves the Earth's field by a 1PN amount: left
+  out, the Moon is 1.94 m off.
+- The flow must meet Newton's equation exactly, so that there is a φ at all. The carried flow's first-order tide
+  misses it by 4% of the Sun's tide at the Moon (it leaves out the tide's change while space falls in, and its
+  square). Differencing takes that out at Newton's order but not its product with the 1PN terms: it leaves 0.71 m and
+  moves k by 0.3.
+
+The tide's change is a transport along the river: $\mathbf s\cdot\nabla\sigma + \partial_T\sigma = \Phi_T$ is
+solved exactly by taking the tide at each radius where the falling space will be when it passes it,
+
+$$\sigma(\mathbf d, T) = -\int_0^r \frac{\Phi_T\big(r'\hat n,\ T + f(r) - f(r')\big)}{s(r')}\,dr',\qquad
+f(r) = \frac{2}{3}\frac{r^{3/2}}{\sqrt{2GM}}$$
+
+(f the time to fall to the body), with the square added from the first order's gradient (`tides='transported'`). The
+flow then meets Newton's equation to 0.016% of the tide at the Moon's distance (1.4% at 10⁹ m, near the edge of the
+Earth's region). The differenced Moon test, 90 days:
+
+| Model | k | rms left |
+| --- | --- | --- |
+| GR (the floor) | +0.022 | 0.035 m |
+| GR transformed exactly to the carried river's time | +0.017 | 0.027 m |
+| GR in free-fall time, first-order tide | +0.28 | 0.71 m |
+| GR in free-fall time, transported tide | **+0.010** | **0.018 m** |
+| Carried, flat, transported tide | +0.49 | 0.25 m |
+| Carried, space from u relative to its body, transported tide | +0.49 | 0.27 m |
+
+So the check is GR, and the carried flow's result stands: with the tide right, it still has half of de Sitter's
+precession and leaves 0.26 m. That is the flow's own first post-Newtonian behaviour, not its Newtonian error.
+
+The binaries are a separate matter. GR in free-fall time, run as the carried bodies are (each body a test particle in
+the others' spacetime), gives 0.83, 0.945 and 0.994 of GR's periastron advance for mass ratios 1, 0.1 and 0.01, and
+the centre of mass accelerates when the masses differ: GR's two-body equations have terms in each body's own mass,
+which a body moved only by the others' field never feels.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -365,6 +417,9 @@ What they show about the flow model:
 - Einstein's constraints give the space the flow needs: stretched by the potential, contracted along the lab's flow by
   $u^2/c^2$, for any flow with no curl. On its own it makes the moving-body tests worse; it needs the flow's own
   first-order corrections with it, which are GR's.
+- GR itself, put in the carried flow's time, passes the Moon test once the flow meets Newton's equation exactly (its
+  tide transported along the river). The carried flow with the same tide still has half of de Sitter's precession:
+  the shortfall is the flow's, not the test's.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.

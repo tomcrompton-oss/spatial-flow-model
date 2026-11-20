@@ -234,6 +234,30 @@ class Engine(unittest.TestCase):
     g = sum(b.GM*(b.at(0.0) - x)/length(b.at(0.0) - x)**3 for b in S.bodies)
     self.assertLess(length(a - g), 0.1*2*G*MS*3.844e8/AU**3)   #the Sun's tide there: 3e-5 m/s^2
 
+  def testTransportedTide(self):
+    """
+    the carried flow with its tide transported (engine/carried.py tides='transported'): space at the Moon's distance
+    from the Earth falls at Newton's g to 0.1% of the Sun's tide (the first order's: a few %); and GR's metric
+    transformed exactly to the time of the Earth's carried river (engine/metric.py SlicedPN) has the Earth's clock
+    slow by 1.5 GM_Sun/(AU c^2) - its Newton's part, the Sun's potential and the Earth's speed
+    """
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'studies'))
+    from engine.carried import CarriedSpacetime
+    from engine.metric import SlicedPN
+    from turning_eikonal import bodies
+    tide = 2*G*MS*3.844e8/AU**3
+    for tides, bound in ((True, 0.1), ('transported', 1e-3)):
+      S = CarriedSpacetime(bodies(), tides=tides)
+      x = S.bodies[1].at(0.0) + np.array([0.0, 3.844e8])
+      u = S.flow(x, 0.0, 1)
+      dudt = (S.flow(x, 0.3, 1) - S.flow(x, -0.3, 1))/0.6
+      J = np.array([(S.flow(x + e, 0.0, 1) - S.flow(x - e, 0.0, 1))/(2*3.844e4) for e in 3.844e4*np.eye(2)])
+      g = sum(b.GM*(b.at(0.0) - x)/length(b.at(0.0) - x)**3 for b in S.bodies)
+      self.assertLess(length(dudt + J.T @ u - g), bound*tide)
+    P = SlicedPN(bodies())
+    x = P.bodies[1].at(0.0) + np.array([1e8, 0.0])
+    self.assertAlmostEqual(P.lapseOffset(x, 0.0)/(1.5*G*MS/(AU*C*C)), -1.0, delta=1e-3)
+
   def testSpaceFromTheFlow(self):
     """
     space curved across the flow by its own |u|^2/c^2, u relative to its body (FlowSpacetime transverse 'source'), on
