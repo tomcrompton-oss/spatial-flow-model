@@ -287,13 +287,18 @@ class IsotropicSchwarzschild(Spacetime):
 
 
 def bodyAcceleration(b, t):
-  """a body's acceleration on its path: going round the origin, -Omega^2 x; on a straight line, 0"""
+  """a body's acceleration on its path: going round the origin, -Omega^2 x; a body moved step by step (engine/carried.py
+  Proxy), its path's; on a straight line, 0"""
+  if hasattr(b, 'pathAccelerationAt'):
+    return b.pathAccelerationAt(t)
   if getattr(b, 'circling', 0.0):
     return -b.circling**2*b.at(t)
   return ZERO
 
 
 def bodyVelocityAt(b, t):
+  if hasattr(b, 'pathVelocityAt'):
+    return b.pathVelocityAt(t)
   if getattr(b, 'circling', 0.0):
     x = b.at(t)
     return b.circling*np.array([-x[1], x[0]])
@@ -346,6 +351,79 @@ class PostNewtonian(Spacetime):
   def space(self, x, t, region=None):
     U = sum(b.GM/length(x - b.at(t)) for b in self.bodies)
     return 2*U/C**2*np.eye(2)
+
+
+class SlicedPN(Spacetime):
+  """
+  GR's first post-Newtonian metric (PostNewtonian) in a moving time, exactly: t = T + phi(x, T)/c^2 with
+
+    phi = V . d - 2 sqrt(2 GM r)        d = x - X, r = |d|, X and V a body's place and velocity at T
+
+  the body's river carried at its velocity: grad phi = V - sqrt(2GM/r) n, its rate phi_T = A . d - V^2 + sqrt(2GM/r)
+  n . V from the body's motion alone (A its acceleration). nothing is assumed of phi (it need not solve Newton's
+  equation, as engine/carried.py FreeFallPN's must): the metric g' = J^T g J (J = dt/d(T, x)) is turned back into the
+  3+1 form, each part kept as its offset from flat so nothing rounds against c^2,
+
+    gamma' - delta = h - (1 + m) grad phi grad phi/c^2 - (grad phi (gamma w) + (gamma w) grad phi)/c^2
+    gamma' u'      = A [(1 + m) grad phi + gamma w]        A = 1 + phi_T/c^2
+    N'^2 - 1       = (A^2 - 1) + A^2 m + u' . gamma' u'/c^2
+
+  (h, w and N the harmonic metric's space, flow and lapse at the point's harmonic time T + phi/c^2, m = N^2 - 1 -
+  w . gamma w/c^2). the flow is the river at the body's velocity, about 30 km/s for the Earth, and Newton's gravity of
+  everything else is in the lapse. GR, so in the studies a check of the engine and the mapping with a flow the
+  moving-body models' size (the time at the body is T: phi is 0 there, so its clock and path keep T)
+  """
+
+  def __init__(self, bodies, around=1):
+    self.bodies = list(bodies)
+    self.pn = PostNewtonian(self.bodies)
+    self.around = around
+    self.static = False
+
+  def describe(self):
+    return "GR's 1PN metric in the time of the river carried with body %d" % self.around
+
+  def potential(self, x, t):
+    """phi, grad phi, phi_T"""
+    b = self.bodies[self.around]
+    d = x - b.at(t)
+    r = length(d)
+    n = d/r
+    V, A = bodyVelocityAt(b, t), bodyAcceleration(b, t)
+    s = math.sqrt(2*b.GM/r)
+    return V @ d - 2*s*r, V - s*n, A @ d - V @ V + s*(n @ V)
+
+  def pieces(self, x, t):
+    """u, gamma - delta, N^2 - 1, and gamma^-1 - delta"""
+    phi, grad, phiT = self.potential(x, t)
+    th = t + phi/C**2
+    o = self.pn.lapseOffset(x, th)
+    w = self.pn.flow(x, th)
+    h = self.pn.space(x, th)
+    gw = w + h @ w
+    m = 2*o + o*o - (w @ gw)/C**2
+    K = h - (1 + m)*np.outer(grad, grad)/C**2 - (np.outer(grad, gw) + np.outer(gw, grad))/C**2
+    a0 = phiT/C**2
+    A = 1 + a0
+    gu = A*((1 + m)*grad + gw)
+    inv = np.eye(2) - K + K @ K
+    u = inv @ gu
+    s = (2*a0 + a0*a0) + A*A*m + (gu @ u)/C**2
+    return u, K, s, inv - np.eye(2)
+
+  def parts(self, x, t, region=None):
+    """N - 1, u, gamma^-1 - delta (the base class's form, for the Hamiltonian)"""
+    u, K, s, k = self.pieces(x, t)
+    return s/(1 + math.sqrt(1 + s)), u, k
+
+  def lapseOffset(self, x, t):
+    return self.parts(x, t)[0]
+
+  def flow(self, x, t, region=None):
+    return self.pieces(x, t)[0]
+
+  def space(self, x, t, region=None):
+    return self.pieces(x, t)[1]
 
 
 class MetricCalculator(Calculator):

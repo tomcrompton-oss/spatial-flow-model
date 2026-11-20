@@ -38,6 +38,7 @@ NODES, WEIGHTS = np.polynomial.legendre.leggauss(12)
 
 
 def velocityOf(b, t):
+  """the velocity a body's flow is carried at (a Proxy's: see there)"""
   return b.velocityAt(t) if hasattr(b, 'velocityAt') else bodyVelocityAt(b, t)
 
 
@@ -168,6 +169,13 @@ class Proxy(Body):
   def accelerationAt(self, t):
     return self.aFlow
 
+  def pathVelocityAt(self, t):
+    """its real velocity on its path (for GR's metric of it, engine/metric.py PostNewtonian)"""
+    return self.v0 + self.a0*(t - self.t0)
+
+  def pathAccelerationAt(self, t):
+    return self.a0
+
   @property
   def moving(self):
     return True
@@ -225,6 +233,8 @@ class CarriedBodies:
     return self.fixed + out
 
   def calc(self, k, dt=0.0):
+    if self.transverse == 'freefall-gr':
+      return MetricCalculator(FreeFallPN(self.proxies(k, dt)))
     return MetricCalculator(CarriedSpacetime(self.proxies(k, dt), transverse=self.transverse, tides=self.tides))
 
   def step(self, dt):
@@ -251,3 +261,89 @@ class CarriedBodies:
 
 def length(v):
   return math.sqrt(v @ v)
+
+
+class FreeFallPN(Spacetime):
+  """
+  GR's first post-Newtonian metric (engine/metric.py PostNewtonian) in the free-fall time of the carried flow:
+  t = T + phi/c^2, u0 = grad phi the carried flow (the lab's, flat, with its tides), phi_T = U - |u0|^2/2 (Bernoulli).
+  in the 3+1 form (studies/constraints.py; docs Lapse and curved space):
+
+    gamma = (1 + 2U/c^2) delta - u0 u0/c^2
+    gamma u = u0 (1 + (phi_T - 2U)/c^2) + 4 U_j/c^2
+    N^2 = 1 + [(u . gamma u - |u0|^2) + (phi_T^2 - 4 U phi_T - 2 psi + 2 U^2)/c^2]/c^2
+
+  N is 1 at Newton's order; its first post-Newtonian part is what a further term chi/c^4 in the time would move into
+  the flow (D chi/DT = Q), so that N = 1 exactly. this spacetime is GR (to the carried flow's Newtonian error), so it
+  checks the studies' mapping to GR's coordinates; and N - 1 is how far GR in free-fall time is from the premise's
+  clocks before chi
+  """
+
+  timedSeams = True
+
+  def __init__(self, bodies, lapse=True, retarded=True):
+    from engine.metric import PostNewtonian
+    self.bodies = list(bodies)
+    self.carried = CarriedSpacetime(self.bodies)
+    self.pn = PostNewtonian(self.bodies)
+    self.useLapse = lapse
+    self.retarded = retarded
+    self.static = False
+    self.centre = None
+
+  def describe(self):
+    return "GR's 1PN metric in the carried flow's free-fall time%s" % ('' if self.useLapse else ', its lapse left at 1')
+
+  def region(self, x, t):
+    return self.carried.region(x, t)
+
+  def seamVelocity(self, x, t=0.0):
+    return self.carried.seamVelocity(x, t)
+
+  def shift(self, x, t, region):
+    """
+    the potential's change from GR's metric being at harmonic time t + Delta/c^2, not at t: Delta = phi(x) - phi(body),
+    phi the potential of the region's flow (its body's velocity and river: V . d - 2 sqrt(2 GM r); the tide's part is
+    ~1e-4 of these near the body). U at Newton's order moves the flow, which has the bodies at t; GR's U is at the
+    point's own harmonic time, so the difference, dU/dt Delta/c^2, is first post-Newtonian (N^2 has -2 of it /c^2)
+    """
+    from engine.metric import bodyVelocityAt
+    b = self.bodies[region]
+    d = x - b.at(t)
+    r = math.sqrt(d @ d)
+    delta = bodyVelocityAt(b, t) @ d - 2*math.sqrt(2*b.GM*r)
+    rate = 0.0
+    for o in self.bodies:
+      e = x - o.at(t)
+      rate += o.GM*(e @ bodyVelocityAt(o, t))/(e @ e)**1.5   #dU/dt: each body's GM/|x - z(t)|
+    return rate*delta/C**2
+
+  def parts3(self, x, t, region):
+    u0 = self.carried.flow(x, t, region)
+    U, Uj, psi = self.pn.terms(x, t)
+    v2 = u0 @ u0
+    phiT = U - v2/2
+    h = (2*U*np.eye(2) - np.outer(u0, u0))/C**2
+    k = -h + h @ h                                    #gamma^-1 - delta
+    a = u0*(phiT - 2*U)/C**2 + 4*Uj/C**2              #gamma u - u0
+    u = u0 + a + k @ (u0 + a)
+    #u . gamma u - |u0|^2 = u0 . k u0 + 2 a . gamma^-1 u0 + a . gamma^-1 a
+    extra = u0 @ k @ u0 + 2*(a @ (u0 + k @ u0)) + a @ a
+    s = (extra + (phiT*phiT - 4*U*phiT - 2*psi + 2*U*U)/C**2)/C**2
+    if self.retarded:
+      s -= 2*self.shift(x, t, region)/C**2
+    return u, h, s
+
+  def flow(self, x, t, region=None):
+    k = self.region(x, t) if region is None else region
+    return self.parts3(x, t, k)[0]
+
+  def space(self, x, t, region=None):
+    k = self.region(x, t) if region is None else region
+    return self.parts3(x, t, k)[1]
+
+  def lapseOffset(self, x, t):
+    if not self.useLapse:
+      return 0.0
+    s = self.parts3(x, t, self.region(x, t))[2]
+    return s/(1 + math.sqrt(1 + s))

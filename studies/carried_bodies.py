@@ -26,7 +26,8 @@ from engine.logger import LOG_DIR
 from engine.constants import *
 
 MTOTAL, A, E, ORBITS, STEPS = 2*MS, 1e8, 0.3, 12, 2000
-SPACE = {'flat': False, 'curved': 'source', 'gr': 'gr'}   #engine/carried.py transverse
+SPACE = {'flat': False, 'curved': 'source', 'gr': 'gr', 'pn': 'freefall-gr'}   #engine/carried.py transverse ('pn':
+                                                                            #GR's metric of the others, FreeFallPN)
 RATIOS = (1.0, 0.1, 0.01)
 
 

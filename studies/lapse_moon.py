@@ -18,6 +18,13 @@ the models (MODELS):
   turning, flat                    the turning flow, N = 1, flat space (the flow model)
   turning, N = 1, space from u     the same, space stretched across the flow by its own |u|^2/c^2
   carried                          engine/carried.py: each body's river carried at its velocity, with the other's tide
+  GR in free-fall time             engine/carried.py FreeFallPN: GR's metric with the carried flow's time (a check of
+                                   the mapping: it is GR, to the carried flow's miss of Newton's equation - 4% of
+                                   the Sun's tide at the Moon, which differencing doesn't remove from its 1PN terms),
+                                   with its small lapse or that left at 1
+  GR in the carried time           engine/metric.py SlicedPN: GR's metric transformed exactly to t = T + phi/c^2,
+                                   phi the Earth's river at its velocity (a 30 km/s flow, nothing assumed): the
+                                   engine and mapping's check with a flow the models' size (k +0.017, 0.027 m)
 
 to GR's harmonic coordinates: the flow's time is the time of things falling from rest far away, T = t + S(x)/c^2,
 S = sum 2 sqrt(2 GM r) over the bodies (each one's own river), so GR's time at the Moon is T less the Moon's S less
@@ -60,6 +67,12 @@ DESITTER = 1.5*math.sqrt(G*MS/AU)*G*MS/AU**2/C**2   #rad/s
 def spacetime(model):
   if model == 'GR':
     return PostNewtonian(bodies())
+  if model == 'GR in the carried time':
+    from engine.metric import SlicedPN
+    return SlicedPN(bodies())
+  if model.startswith('GR in free-fall time'):
+    from engine.carried import FreeFallPN
+    return FreeFallPN(bodies(), lapse='no lapse' not in model, retarded='at T' not in model)
   if model.startswith('carried'):
     from engine.carried import CarriedSpacetime
     return CarriedSpacetime(bodies(), transverse='gr' if "GR's space" in model else 'from its body' in model and 'source')
@@ -115,7 +128,12 @@ def flowIntegral(S, a, b, t, pieces=24):
   less the same at a (a flow with no curl is the gradient of S, T = t - S/c^2 ... with t harmonic)"""
   span = length(b - a)
   n = (b - a)/span
-  from engine.carried import CarriedSpacetime
+  from engine.carried import CarriedSpacetime, FreeFallPN
+  from engine.metric import SlicedPN
+  if isinstance(S, SlicedPN):
+    return S.potential(b, t)[0]   #less phi at a, the Earth, where it is 0
+  if isinstance(S, FreeFallPN):
+    S = S.carried
   if isinstance(S, CarriedSpacetime):
     raw = CarriedSpacetime(S.bodies, tides=S.tides)   #its flow unslowed
     along = lambda y: raw.flow(y, t) @ n
@@ -166,15 +184,16 @@ def radius(model):
   speed, harmonic r = AU - GM_Sun/c^2 (Schwarzschild's Omega^2 = GM/R^3, R = r + GM/c^2) - held anywhere else, the
   Moon drifts from it (by 200 m in 90 days at AU). the GR row is the metric with the Earth held at AU, so its fit is too
   """
-  return AU if model == 'GR' else AU - G*MS/C**2
+  return AU if model in ('GR', 'GR in the carried time') else AU - G*MS/C**2
 
 
-def places(t, D):
-  """the Sun and the Earth on their circles (separation D), and their velocities and accelerations"""
-  a = OMEGA*t
+def places(t, D, omega=OMEGA):
+  """the Sun and the Earth on their circles (separation D, angular speed omega), and their velocities and
+  accelerations"""
+  a = omega*t
   e = np.array([math.cos(a), math.sin(a)])
   w = np.array([-math.sin(a), math.cos(a)])
-  return (-MU*D*e, (1 - MU)*D*e), (-MU*D*OMEGA*w, (1 - MU)*D*OMEGA*w), (MU*D*OMEGA**2*e, -(1 - MU)*D*OMEGA**2*e)
+  return (-MU*D*e, (1 - MU)*D*e), (-MU*D*omega*w, (1 - MU)*D*omega*w), (MU*D*omega**2*e, -(1 - MU)*D*omega**2*e)
 
 
 def eihParticle(x, v, xs, vs, accs, gms):
@@ -194,14 +213,14 @@ def eihParticle(x, v, xs, vs, accs, gms):
   return acc
 
 
-def grTrack(params, ts, D, earthScale=1.0):
+def grTrack(params, ts, D, earthScale=1.0, omega=OMEGA):
   """GR's Moon from the Earth (EIH, RK4 at GRDT, worked from the Earth so nothing rounds at 1 AU), at times ts,
   turned by -k de Sitter: params = start place (2), velocity (2), k, and the coordinates' stretch along the Earth's
   velocity and across it (a, b: x (1 + a) along, (1 + b) across - GR's Lorentz contraction is a = -V^2/2c^2)"""
   gms = [G*MS, G*ME*earthScale]
   y = np.concatenate([params[:2], params[2:4]])   #the Moon from the Earth: place, velocity
   def rate(t, y):
-    xs, vs, accs = places(t, D)
+    xs, vs, accs = places(t, D, omega)
     E, VE, AE = xs[1], vs[1], accs[1]
     x, v = E + y[:2], VE + y[2:]
     return np.concatenate([y[2:], eihParticle(x, v, xs, vs, accs, gms) - AE])
@@ -211,7 +230,7 @@ def grTrack(params, ts, D, earthScale=1.0):
     if h <= 0:
       a = -params[4]*DESITTER*t
       R = np.array([[math.cos(a), -math.sin(a)], [math.sin(a), math.cos(a)]])
-      w = places(t, D)[1][1]
+      w = places(t, D, omega)[1][1]
       w = w/length(w)
       across = np.array([-w[1], w[0]])
       out.append((np.eye(2) + params[5]*np.outer(w, w) + params[6]*np.outer(across, across)) @ R @ y[:2])
