@@ -54,10 +54,10 @@ on their paths), not that it failed it.
 | **Eikonal, N = 1, space from u** | 9 | 10 | **10** | – | – | 10 | 9 | **7** | The same space as by 2Φ/c², now decided by the flow alone. The one flow it makes GR with the bodies at rest; it can't move them. |
 | Turning, N = 1, space from the lab's u | 7 | 10 | 8 | 1 | – | 10 | 4 | **6** | Light past the Sun passes, but the Earth's 30 km/s gets into the space round it: the Moon's orbit 135 m off. Depends on the frame. |
 | **Turning, N = 1, [space from u relative to its body](lapse-curved-space.md#which-frames-u)** | 7 | 10 | **8** | 4 | – | 10 | 4 | **6** | Light past the Sun 0.001 mas off (Cassini 0.02). The Moon's orbit 16 m off (Newton's error); with that taken out, half of de Sitter's precession and 0.25 m left. Its bodies are held on circles. |
-| [Carried flow](lapse-curved-space.md#the-carried-flow-bodies-that-move-by-it), flat | 5 | 10 | 8 | 4 | 2 | 3 | 5 | **7** | Each body's river carried at its velocity, with the others' tides; the bodies moved by it. Light past the Sun passes; the Moon: half of de Sitter, 0.26 m; binary advance +17% (equal masses), centre of mass accelerates; Nordtvedt η −0.77. |
-| Carried flow, flat, [tide transported](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) | 7 | 10 | 8 | 4 | 2 | 3 | 7 | **7** | The same flow with the tide terms the first order left out: space falls at g to 0.016% of the tide at the Moon (was 4%). The Moon unchanged – half of de Sitter, 0.25 m – so that is the flow's own result. |
-| Carried flow, space from u relative to its body | 5 | 10 | 8 | 4 | 1 | 3 | 5 | **6** | The same, light the same, the Moon the same; the bodies' errors doubled: advance +33%, η −1.5. |
-| Carried flow, [space from Einstein's constraint](lapse-curved-space.md#einsteins-constraints-what-space-the-flow-needs) (2Φδ − uu) | 5 | 10 | 8 | 2 | 0 | 3 | 5 | **6** | Meets the constraint for any flow with no curl, and light passes; without the flow's matching corrections the Moon (1.8 m), binary (−0.25 of GR's advance) and Nordtvedt (η +589) all get worse. |
+| [Carried flow](lapse-curved-space.md#the-carried-flow-bodies-that-move-by-it), flat | 5 | 10 | 8 | 2 | 2 | 3 | 5 | **7** | Each body's river carried at its velocity, with the others' tides; the bodies moved by it. Light past the Sun and lunar ranging pass; light past a Jupiter held still 238 µas off; the Moon: half of de Sitter, 0.26 m; light past Jupiter on its orbit [1.7″ off](lapse-curved-space.md#the-carried-flows-seams-one-time-or-many) (each region's time jumps at its seam); binary advance +17% (equal masses), centre of mass accelerates; Nordtvedt η −0.77. |
+| Carried flow, flat, [tide transported](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) | 7 | 10 | 8 | 2 | 2 | 3 | 7 | **7** | The same flow with the tide terms the first order left out: space falls at g to 0.016% of the tide at the Moon (was 4%). The Moon unchanged – half of de Sitter, 0.25 m – so that is the flow's own result; light past Jupiter on its orbit 1.5″ off. |
+| Carried flow, space from u relative to its body | 5 | 10 | 8 | 2 | 1 | 3 | 5 | **6** | The same, light the same (Jupiter on its orbit 1.6″ off), the Moon the same; the bodies' errors doubled: advance +33%, η −1.5. |
+| Carried flow, [space from Einstein's constraint](lapse-curved-space.md#einsteins-constraints-what-space-the-flow-needs) (2Φδ − uu) | 5 | 10 | 8 | 1 | 0 | 3 | 5 | **6** | Meets the constraint for any flow with no curl, and light past the Sun passes; without the flow's matching corrections the Moon (1.8 m), light past Jupiter on its orbit (1.6″), binary (−0.25 of GR's advance) and Nordtvedt (η +589) all get worse. |
 
 **Checks**: GR itself in the moving flows' time – not models, but what shows which of the results above to trust:
 
@@ -87,6 +87,10 @@ Notes:
 - **Space from u means u relative to its body.** Built from the lab's u, the space depends on the frame the flow is
   measured in; relative to the body whose flow it is, it doesn't. For bodies at rest the two are the same.
 - **The turning flow's Newton score is 7**, on every turning row: it fails the Moon's own orbit at Newton's order.
+- **The carried flow's Combined 8**: lunar ranging's synodic term passes (exactly 0: the Sun is only a tide round
+  the Earth) and light past the Sun does; light past a Jupiter held still is 238 µas off, but holding a body still
+  doesn't fit a flow whose regions fall with their bodies. Its Moving 2 is half of de Sitter and light past Jupiter
+  on its orbit 1.5–1.7″ off.
 - **The carried flow** is the moving-body flow with the bodies moved by it. Its Newton score is 5 with the first-order
   tide (right to a few % round each body), 7 with the tide transported (0.016% at the Moon, 1.4% at the edge of the
   Earth's region). Conserved 3: no particle quantity is kept with the bodies moving, and the binary's centre of mass
@@ -101,10 +105,11 @@ Notes:
   flow, and the lapse family reaches 10 by dropping the flow altogether.
 - **Where the flow model stands.** With space stretched across its own motion by u²/c², the flow model is GR for one
   body and for bodies at rest together (the eikonal flow: 10 and 10, premise 7). The gaps are the two moving parts.
-  Every moving flow – turning or carried, flat or curved – has half of de Sitter's precession (Moving 4); and bodies
+  Every moving flow – turning or carried, flat or curved – has half of de Sitter's precession (Moving 4); the carried
+  flows, made of regions whose times jump at the seams, also turn light past a moving Jupiter by 1.7″ (Moving 2); and bodies
   moved by the others' flows fail the binary and Nordtvedt (Self-motion 2 at best), as GR's own metric does when its
   bodies are moved that way.
-- **What would close them.** De Sitter needs the Sun's curved space carried round with the Earth; the binary and
+- **What would close them.** The carried flow needs one time: one potential continuous across its seams. De Sitter needs the Sun's curved space carried round with the Earth; the binary and
   Nordtvedt need each body's field to act on its own source. Both point to the bodies' flows solved together – a
   field equation for the flow – not each one carried separately.
 - **The two checks pull opposite ways.** Every single-flow model keeps its conserved quantities; every split model's

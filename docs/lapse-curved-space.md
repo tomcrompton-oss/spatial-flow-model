@@ -291,8 +291,9 @@ any number of bodies moving any way:
 - **Bodies held at rest don't fit it.** The carried flow has each body's region falling with the body, at the
   others' pull there; a body held still isn't falling, so its region loses the others' uniform pull. On the two
   bodies-at-rest tests above it gives a lunar cos D term of exactly 0 (the Sun is only a tide round the Earth; GR's
-  +9.6 mm is the Sun's potential across the fixed mirror) and light past a Jupiter held still 38,000 µas off. The
-  Jupiter test needs Jupiter on its orbit.
+  +9.6 mm is the Sun's potential across the fixed mirror) and light past a Jupiter held still 238 µas off (most of
+  it the Sun's uniform pull, missing in Jupiter's region). The Jupiter test needs Jupiter on its orbit, and there it
+  fails for a different reason: [the regions' times don't meet at the seams](#the-carried-flows-seams-one-time-or-many).
 - **A close pair seen from far off** isn't one of the pair's rivers with the other's tide: 1000 times their separation
   away, that tide's expansion is no flow at all. So in the Nordtvedt test the Sun is held still. A hierarchy of
   regions (the pair as one body from far off) would be needed for systems like that.
@@ -394,6 +395,54 @@ the others' spacetime), gives 0.83, 0.945 and 0.994 of GR's periastron advance f
 the centre of mass accelerates when the masses differ: GR's two-body equations have terms in each body's own mass,
 which a body moved only by the others' field never feels.
 
+## The carried flow's seams: one time or many
+
+Light past Jupiter tests what happens where two regions meet. Two things came out of it.
+
+**An engine fix.** Crossing a seam, light keeps its momentum along the seam and its energy, and its momentum across
+the seam changes. The engine took "across" to be the direction of the flow's jump. That holds for the flows whose
+seams are where the two sides' speeds are equal, but not for the carried flow, whose seam is where the pulls are
+equal: there the Sun's river points at the Sun, not across the seam. With the seam's own normal (`seamNormal`),
+light past Jupiter held still goes from 38,000 µas of cross term to 238. Bodies on their orbits don't cross seams, so
+the Moon and binary results above are unchanged.
+
+**A flaw in the model.** Each region's flow is the gradient of its own potential, $\mathbf u = \nabla\phi_k$, and
+that potential sets the region's time (its free-fall time, $T + \phi_k/c^2$). Nothing makes the potentials agree
+where two regions meet, so the time jumps at the seam by $\Delta\phi/c^2$. Light going into a region and out again
+picks up a delay that varies across the beam, and is turned by it, to first order in $u/c$:
+
+$$\delta\theta \approx \frac{1}{c}\,\frac{\partial}{\partial b}\Big[\Delta\phi(\text{in}) - \Delta\phi(\text{out})\Big]$$
+
+For a jump $\Delta\mathbf U$ that is the same all over the seam, $\Delta\phi = \Delta\mathbf U\cdot\mathbf x$, and
+the turn is $2\,\Delta U_\parallel\, b/(c\,y)$, with $\Delta U_\parallel$ the jump's part along the ray and y half
+the ray's chord through the region. A jump across the ray cancels going in and out; one along it doesn't. A toy
+model of a circular seam gives exactly this: 17″ for a 13 km/s jump along the ray.
+
+| Light past Jupiter, the Sun 5.2 AU away: cross term (µas) | 1 R_J | 10 R_J | 100 R_J |
+| --- | --- | --- | --- |
+| GR, Jupiter held still | +0.25 | −0.01 | −0.08 |
+| GR, Jupiter on its orbit | +0.34 | −0.05 | −0.11 |
+| Carried, flat, Jupiter held still | −1,224 | −238 | −349 |
+| Carried, flat, Jupiter on its orbit | +1,757,180 | +1,606,733 | +106,274 |
+| Carried, space from u relative to its body, on its orbit | +1,757,181 | +1,606,727 | +106,205 |
+| VLBI's limit | 10 | 10 | 10 |
+
+Held still, Jupiter's region doesn't move, the jump is the Sun's river across the ray, and it nearly cancels. On its
+orbit, Jupiter's region is carried at 13 km/s along the ray, and the light is turned by 1.7″. GR has no such
+term: a moving body's frame has $t' = t - \mathbf V\cdot\mathbf x/c^2$, the relativity of simultaneity, and the
+carried flow, carrying each river by a Galilean shift, leaves it out.
+
+So the carried flow needs **one time**: a single potential for the whole flow, continuous across the seams (its
+part along each seam the same on both sides). The eikonal flows have this; it was what their seam rule assumed. The
+lunar range doesn't see it (the Moon and the light stay in the Earth's region), and nor does the Moon's orbit.
+
+**GR's pieces with the clocks left alone.** GR in the carried flow's time differs from the carried flow in three
+pieces – Einstein's space, a first post-Newtonian rescaling of the flow, and the moving bodies' $4U_j$ – and in its
+lapse. `FreeFallPN` can now drop each (`keep`). With the lapse held at 1, the Moon is 1.3 km off (k = −1685), and
+dropping any one piece leaves it 0.5–1.3 km off. The lapse's first post-Newtonian part, of order $V^2/c^2$, is
+needed before any of the pieces can be judged; keeping N = 1 means moving it into the flow (a term $\chi/c^4$ in the
+time), which is still to be built.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -420,6 +469,8 @@ What they show about the flow model:
 - GR itself, put in the carried flow's time, passes the Moon test once the flow meets Newton's equation exactly (its
   tide transported along the river). The carried flow with the same tide still has half of de Sitter's precession:
   the shortfall is the flow's, not the test's.
+- The carried flow's regions each keep their own time, and it jumps at the seams: light past a Jupiter on its orbit
+  is turned by 1.7″. A flow made of separate regions needs one potential across all of them.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.
