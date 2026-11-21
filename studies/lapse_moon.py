@@ -76,7 +76,8 @@ def spacetime(model):
     from engine.carried import FreeFallPN
     return FreeFallPN(bodies(), lapse='no lapse' not in model, retarded='at T' not in model,
                       tides='transported' if 'transported' in model else True,
-                      keep=[w for w in ('space', 'scale', 'moving') if 'no ' + w not in model])
+                      keep=[w for w in ('space', 'scale', 'moving') if 'no ' + w not in model],
+                      chi=1 if 'chi' in model else None)
   if model.startswith('carried'):
     from engine.carried import CarriedSpacetime
     return CarriedSpacetime(bodies(), transverse='gr' if "GR's space" in model else 'from its body' in model and 'source',

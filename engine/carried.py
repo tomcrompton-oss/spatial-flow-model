@@ -376,6 +376,131 @@ def length(v):
   return math.sqrt(v @ v)
 
 
+class ChiTable:
+  """
+  chi round a body going round on a circle (or at rest): the time shift T' = T + chi/c^4 that takes GR's lapse in the
+  carried flow's free-fall time to 1. D chi/DT = Q = c^4 (N^2 - 1)/2: chi is Q carried along the flow. the body's
+  circle makes the whole system steady in the frame turning with it, where D/DT = w . grad, w = u - Omega x x; so chi
+  is worked out once, at T = 0 (transported: each path followed out from r_min, chi 0 there, along w), and turned
+  with the body: chi(d, T) = table(R(-omega T) d). (transport='radial' carries it along the body's straight infall
+  alone, at s(r) = sqrt(2 GM/r) - which leaves ~10% of the lapse's gradient at the Moon: the turning frame's swirl and
+  the tide's flow matter.)
+
+  Q has a V . n s^3 part, so chi has a logarithm at the body, and r_min fixes it (its gradient, the flow's correction,
+  is ~GM V/(r c^2)). the table is a Fourier series in angle, each coefficient a natural cubic spline in ln r, so the
+  flow's correction - its exact gradient - has no curl. left: 0.1% of the lapse's gradient along the Moon's orbit
+  (0.2% at most; finer in r, less)
+  """
+
+  def __init__(self, source, k, rmin=1e6, rmax=3e9, radii=384, angles=96, nodes=32, transport='flow'):
+    b = source.bodies[k]
+    self.body, self.omega = b, getattr(b, 'circling', 0.0) or 0.0
+    if getattr(b, 'moving', False) and not self.omega:
+      raise ValueError('chi is tabled for a body going round on a circle, or at rest')
+    GM = b.GM
+    self.rmin, self.rmax = rmin, rmax
+    self.us = np.linspace(math.log(rmin), math.log(rmax), radii)
+    self.du = self.us[1] - self.us[0]
+    thetas = 2*math.pi*np.arange(angles)/angles
+    x, w = np.polynomial.legendre.leggauss(nodes)
+    f = lambda r: (2/3)*r**1.5/math.sqrt(2*GM)
+    values = self.transported(source, k, thetas) if transport == 'flow' else np.zeros((radii, angles))
+    for i, u in enumerate(self.us[1:] if transport != 'flow' else [], 1):
+      ups = math.log(rmin) + (u - math.log(rmin))*(x + 1)/2   #the nodes in ln r'
+      weights = w*(u - math.log(rmin))/2
+      rr = np.exp(ups)
+      r = math.exp(u)
+      times = f(r) - f(rr)
+      for j, th in enumerate(thetas):
+        n = np.array([math.cos(th), math.sin(th)])
+        Q = np.array([C**4*source.parts3(b.at(tt) + q*n, tt, k)[2]/2 for q, tt in zip(rr, times)])
+        values[i, j] = -np.sum(weights*Q/np.sqrt(2*GM/rr)*rr)   #dr = r du
+    self.angles = angles
+    self.coef = np.fft.rfft(values, axis=1)/angles              #chi = sum over m of Re(c_m e^{i m theta}) (x2 for m > 0)
+    self.coef[:, 1:] *= 2
+    if angles % 2 == 0:
+      self.coef[:, -1] /= 2
+    self.m = np.arange(self.coef.shape[1])
+    self.second = self.spline(self.coef)
+
+  def transported(self, source, k, thetas, paths=2, substeps=2):
+    """chi on the grid, carried along the flow itself - w = u - Omega x x, the flow in the frame turning with the
+    body, where the setup is steady and D chi/DT = w . grad chi = Q. each path starts at r_min (chi 0) and is followed
+    back out, in u = ln r: d theta/du = (w . side)/(w . n), d chi/du = Q r/(w . n); the paths' chi at each radius is
+    fitted round the circle with the table's harmonics (least squares: paths x as many paths as angles), so no
+    jitter from one radius to the next"""
+    b = source.bodies[k]
+    z = b.at(0.0)
+    P = paths*len(thetas)
+    def rates(u, th):
+      r = math.exp(u)
+      out = np.zeros((2, len(th)))
+      for i, a in enumerate(th):
+        n = np.array([math.cos(a), math.sin(a)])
+        x = z + r*n
+        flow, _, s = source.parts3(x, 0.0, k)
+        w = flow - self.omega*np.array([-x[1], x[0]])
+        radial = min(w @ n, -1e-3)                       #inward; a path that turns outward is cut off there
+        out[0, i] = (w @ np.array([-n[1], n[0]]))/radial
+        out[1, i] = C**4*s/2*r/radial
+      return out
+    th = 2*math.pi*np.arange(P)/P
+    chi = np.zeros(P)
+    values = np.zeros((len(self.us), len(thetas)))
+    for i in range(1, len(self.us)):
+      h = self.du/substeps
+      for j in range(substeps):
+        u = self.us[i - 1] + j*h
+        k1 = rates(u, th)
+        k2 = rates(u + h/2, th + h/2*k1[0])
+        k3 = rates(u + h/2, th + h/2*k2[0])
+        k4 = rates(u + h, th + h*k3[0])
+        th = th + h/6*(k1[0] + 2*k2[0] + 2*k3[0] + k4[0])
+        chi = chi + h/6*(k1[1] + 2*k2[1] + 2*k3[1] + k4[1])
+      #the Fourier series (the table's harmonics) that best fits the paths' chi, at the grid's angles
+      M = np.exp(1j*np.outer(th, np.arange(-(len(thetas)//2) + 1, len(thetas)//2)))
+      c = np.linalg.lstsq(M, chi.astype(complex), rcond=None)[0]
+      values[i] = np.real(np.exp(1j*np.outer(thetas, np.arange(-(len(thetas)//2) + 1, len(thetas)//2))) @ c)
+    return values
+
+  def spline(self, y):
+    """a natural cubic spline's second derivatives in u, for each column of y"""
+    n = len(self.us)
+    A = np.zeros((n, n))
+    rhs = np.zeros(y.shape, dtype=y.dtype)
+    A[0, 0] = A[-1, -1] = 1.0
+    for i in range(1, n - 1):
+      A[i, i - 1], A[i, i], A[i, i + 1] = 1/6, 2/3, 1/6
+      rhs[i] = (y[i + 1] - 2*y[i] + y[i - 1])/self.du**2
+    return np.linalg.solve(A, rhs)
+
+  def at(self, d, t):
+    """chi and its gradient at d from the body, at time t"""
+    r = math.sqrt(d @ d)
+    if r <= self.rmin:
+      return 0.0, np.zeros(2)
+    a = -self.omega*t
+    c, s = math.cos(a), math.sin(a)
+    e = np.array([c*d[0] - s*d[1], s*d[0] + c*d[1]])   #into the table's orientation
+    u = min(math.log(r), self.us[-1])
+    i = min(int((u - self.us[0])/self.du), len(self.us) - 2)
+    A = (self.us[i + 1] - u)/self.du
+    B = 1 - A
+    h = self.du
+    y0, y1, s0, s1 = self.coef[i], self.coef[i + 1], self.second[i], self.second[i + 1]
+    val = A*y0 + B*y1 + ((A**3 - A)*s0 + (B**3 - B)*s1)*h*h/6
+    dval = (y1 - y0)/h + (-(3*A*A - 1)*s0 + (3*B*B - 1)*s1)*h/6
+    th = math.atan2(e[1], e[0])
+    rot = np.exp(1j*self.m*th)
+    chi = float(np.real(np.sum(val*rot)))
+    dchi_du = float(np.real(np.sum(dval*rot)))
+    dchi_dth = float(np.real(np.sum(1j*self.m*val*rot)))
+    n = e/r
+    side = np.array([-n[1], n[0]])
+    g = dchi_du/r*n + dchi_dth/r*side
+    return chi, np.array([c*g[0] + s*g[1], -s*g[0] + c*g[1]])   #back to the lab's orientation
+
+
 class FreeFallPN(Spacetime):
   """
   GR's first post-Newtonian metric (engine/metric.py PostNewtonian) in the free-fall time of the carried flow:
@@ -394,13 +519,17 @@ class FreeFallPN(Spacetime):
 
   timedSeams = True
 
-  def __init__(self, bodies, lapse=True, retarded=True, tides=True, keep=('space', 'scale', 'moving')):
+  def __init__(self, bodies, lapse=True, retarded=True, tides=True, keep=('space', 'scale', 'moving'), chi=None):
     """keep: GR's pieces kept beyond the carried flow, to see what each does - 'space' (gamma), 'scale' (u0's
-    (phi_T - 2U)/c^2) and 'moving' (the moving bodies' 4 U_j/c^2)"""
+    (phi_T - 2U)/c^2) and 'moving' (the moving bodies' 4 U_j/c^2). chi: the index of a body round which the time is
+    shifted by chi/c^4 (ChiTable), taking the lapse to 1 there and its 1PN part into the flow; lapse then keeps only
+    what the table leaves"""
     from engine.metric import PostNewtonian
     self.keep = set(keep)
+    self.chiBody, self.chiTable = chi, None
     self.bodies = list(bodies)
     self.carried = CarriedSpacetime(self.bodies, tides=tides)
+    self.tides = tides
     self.pn = PostNewtonian(self.bodies)
     self.useLapse = lapse
     self.retarded = retarded
@@ -451,7 +580,22 @@ class FreeFallPN(Spacetime):
     s = (extra + (phiT*phiT - 4*U*phiT - 2*psi + 2*U*U)/C**2)/C**2
     if self.retarded:
       s -= 2*self.shift(x, t, region)/C**2
+    if self.chiBody is not None and region == self.chiBody:
+      u, s = self.shifted(x, t, u, s)
     return u, h, s
+
+  def shifted(self, x, t, u, s):
+    """the flow and N^2 - 1 in the time T + chi/c^4: gamma u less grad chi/c^2 (u, to first post-Newtonian order),
+    and N^2 less 2 D chi/DT/c^4"""
+    if self.chiTable is None:
+      full = FreeFallPN(self.bodies, lapse=True, retarded=self.retarded, tides=self.tides, keep=self.keep)
+      self.chiTable = ChiTable(full, self.chiBody)
+    b = self.bodies[self.chiBody]
+    d = x - b.at(t)
+    _, grad = self.chiTable.at(d, t)
+    dt = 10.0
+    rate = (self.chiTable.at(x - b.at(t + dt), t + dt)[0] - self.chiTable.at(x - b.at(t - dt), t - dt)[0])/(2*dt)
+    return u - grad/C**2, s - 2*(rate + u @ grad)/C**4
 
   def flow(self, x, t, region=None):
     k = self.region(x, t) if region is None else region

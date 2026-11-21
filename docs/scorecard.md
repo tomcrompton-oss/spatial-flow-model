@@ -65,6 +65,7 @@ on their paths), not that it failed it.
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | [GR transformed exactly](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) to the time of the Earth's carried river | 10 | 10 | 10 | 10 | – | 10 | 2 | **1** | GR with a 30 km/s flow: the Moon fits as GR does (k +0.017, 0.027 m), so the engine and the mapping are right. The flow is the Earth's river alone, the rest of gravity in the clocks. |
 | GR in the carried flow's free-fall time, tide transported | 7 | 10 | 10 | 10 | 3 | 3 | 7 | **3** | The Moon is GR's (k +0.010, 0.018 m), so the carried flow's half of de Sitter is its own. Moved as the carried bodies are, the binary gets 0.83 of GR's advance at equal masses: each body feels only the others' field. |
+| GR in the carried flow's free-fall time, [N = 1 by χ](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) | 7 | 10 | 10 | 9 | – | 3 | 7 | **5** | The lapse's first post-Newtonian part moved into the flow by a shift of time χ/c⁴ carried along it, so the clocks are Part 1's. The Moon GR's to 0.15 m (k +0.11), de Sitter whole. Needs GR's curved space: flat, the Moon is 580 m off. The Earth held on a circle. |
 
 Notes:
 

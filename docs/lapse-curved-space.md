@@ -441,7 +441,33 @@ pieces – Einstein's space, a first post-Newtonian rescaling of the flow, and t
 lapse. `FreeFallPN` can now drop each (`keep`). With the lapse held at 1, the Moon is 1.3 km off (k = −1685), and
 dropping any one piece leaves it 0.5–1.3 km off. The lapse's first post-Newtonian part, of order $V^2/c^2$, is
 needed before any of the pieces can be judged; keeping N = 1 means moving it into the flow (a term $\chi/c^4$ in the
-time), which is still to be built.
+time).
+
+**χ: the lapse moved into the flow.** Shifting the time by $\chi/c^4$ changes the lapse and the flow together,
+
+$$N'^2 = N^2 - \frac{2}{c^4}\frac{D\chi}{DT},\qquad \mathbf u' = \mathbf u - \frac{\nabla\chi}{c^2},\qquad
+\frac{D}{DT} = \partial_T + \mathbf u\cdot\nabla,$$
+
+so N′ = 1 when $D\chi/DT = Q = c^4(N^2 - 1)/2$: χ is Q carried along the flow, as the tide is. Round the Earth on its
+circle the setup is steady in the frame turning with it, so `ChiTable` works χ out once – each path followed out from
+1000 km along that frame's flow $\mathbf w = \mathbf u - \boldsymbol\Omega\times\mathbf x$, χ = 0 at its start – and
+turns the table with the Earth. (Q has a part ∝ $r^{-3/2}$ at the body, so χ has a logarithm there; the start fixes
+it.) The flow's correction $-\nabla\chi/c^2$ is about 1 cm/s at the Moon. What the lapse's gradient did – what moves
+the Moon – is left at 0.1% on average (0.2% at most) along its orbit. Carrying χ along the radial infall only left
+10%: the turning frame's swirl (80 m/s at the Moon, against 1.4 km/s of infall) and the tide's flow matter.
+
+| GR in the carried flow's free-fall time, tide transported | k | rms |
+|---|---|---|
+| with χ, lapse kept (a change of time: GR) | +0.017 | 0.024 m |
+| with χ, **N = 1** | +0.11 | 0.15 m |
+| with χ, N = 1, space flat | +599 | 580 m |
+| without χ, N = 1 | −1685 | 1.3 km |
+
+With N = 1 the Moon is GR's to 0.15 m, and de Sitter's precession is whole (stretched 2.03 and 2.00 of $V^2/2c^2$,
+GR's 2). So GR's first post-Newtonian metric for the Sun, the Earth and the Moon is a flow with Part 1's clocks:
+clocks tick by their speed through the space around them, and moving with the flow is free fall. But only in GR's
+space, $(1 + 2U/c^2)\delta - \mathbf u_0\mathbf u_0/c^2$: with space flat the Moon is 580 m off. The shift in time
+can take the lapse into the flow; nothing takes the space's curvature there.
 
 ## Light past a moving Jupiter, as VLBI measures it
 
@@ -513,6 +539,9 @@ What they show about the flow model:
 - The carried flow's regions each keep their own time, and it jumps at the seams: light past a Jupiter on its orbit
   is turned by 1.7″. A flow made of separate regions needs one potential across all of them. Measured as VLBI does,
   the turning flow – one potential – is within 3–22 µas of GR near Jupiter, and the carried flow 0.2″ off.
+- With a further shift of time (χ, carried along the flow), GR for the Sun, the Earth and the Moon has N = 1 exactly
+  and the Moon's whole de Sitter precession (0.15 m left): GR is a flow with Part 1's clocks. Its space must still be
+  curved – flat, the Moon is 580 m off.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.
