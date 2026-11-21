@@ -53,7 +53,7 @@ on their paths), not that it failed it.
 | Along g, N = 1, space from u | 3 | 10 | 4 | – | – | 10 | 2 | **7** | Lunar ranging exactly GR's (round trips see only the flow's speed); light past Jupiter 1000 µas off (its flow has curl). |
 | **Eikonal, N = 1, space from u** | 9 | 10 | **10** | – | – | 10 | 9 | **7** | The same space as by 2Φ/c², now decided by the flow alone. The one flow it makes GR with the bodies at rest; it can't move them. |
 | Turning, N = 1, space from the lab's u | 7 | 10 | 8 | 1 | – | 10 | 4 | **6** | Light past the Sun passes, but the Earth's 30 km/s gets into the space round it: the Moon's orbit 135 m off. Depends on the frame. |
-| **Turning, N = 1, [space from u relative to its body](lapse-curved-space.md#which-frames-u)** | 7 | 10 | **8** | 4 | – | 10 | 4 | **6** | Light past the Sun 0.001 mas off (Cassini 0.02). The Moon's orbit 16 m off (Newton's error); with that taken out, half of de Sitter's precession and 0.25 m left. Its bodies are held on circles. |
+| **Turning, N = 1, [space from u relative to its body](lapse-curved-space.md#which-frames-u)** | 7 | 10 | **8** | 4 | – | 10 | 4 | **6** | Light past the Sun 0.001 mas off (Cassini 0.02). Light past Jupiter on its orbit, [as VLBI measures it](lapse-curved-space.md#light-past-a-moving-jupiter-as-vlbi-measures-it), 3–22 µas off within 0.6 AU (its flow farther out isn't a gradient). The Moon's orbit 16 m off (Newton's error); with that taken out, half of de Sitter's precession and 0.25 m left. Its bodies are held on circles. |
 | [Carried flow](lapse-curved-space.md#the-carried-flow-bodies-that-move-by-it), flat | 5 | 10 | 8 | 2 | 2 | 3 | 5 | **7** | Each body's river carried at its velocity, with the others' tides; the bodies moved by it. Light past the Sun and lunar ranging pass; light past a Jupiter held still 238 µas off; the Moon: half of de Sitter, 0.26 m; light past Jupiter on its orbit [1.7″ off](lapse-curved-space.md#the-carried-flows-seams-one-time-or-many) (each region's time jumps at its seam); binary advance +17% (equal masses), centre of mass accelerates; Nordtvedt η −0.77. |
 | Carried flow, flat, [tide transported](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) | 7 | 10 | 8 | 2 | 2 | 3 | 7 | **7** | The same flow with the tide terms the first order left out: space falls at g to 0.016% of the tide at the Moon (was 4%). The Moon unchanged – half of de Sitter, 0.25 m – so that is the flow's own result; light past Jupiter on its orbit 1.5″ off. |
 | Carried flow, space from u relative to its body | 5 | 10 | 8 | 2 | 1 | 3 | 5 | **6** | The same, light the same (Jupiter on its orbit 1.6″ off), the Moon the same; the bodies' errors doubled: advance +33%, η −1.5. |
@@ -87,6 +87,9 @@ Notes:
 - **Space from u means u relative to its body.** Built from the lab's u, the space depends on the frame the flow is
   measured in; relative to the body whose flow it is, it doesn't. For bodies at rest the two are the same.
 - **The turning flow's Newton score is 7**, on every turning row: it fails the Moon's own orbit at Newton's order.
+- **Light past a moving Jupiter** is measured as VLBI does (the angle between two rays at one observer), so the
+  slicing of time doesn't enter. A flow that is one potential has no first-order effect on it; the carried flow's
+  seams give 0.2″, the turning flow 3–22 µas where its tables hold.
 - **The carried flow's Combined 8**: lunar ranging's synodic term passes (exactly 0: the Sun is only a tide round
   the Earth) and light past the Sun does; light past a Jupiter held still is 238 µas off, but holding a body still
   doesn't fit a flow whose regions fall with their bodies. Its Moving 2 is half of de Sitter and light past Jupiter

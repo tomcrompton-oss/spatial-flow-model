@@ -443,6 +443,47 @@ dropping any one piece leaves it 0.5–1.3 km off. The lapse's first post-Newton
 needed before any of the pieces can be judged; keeping N = 1 means moving it into the flow (a term $\chi/c^4$ in the
 time), which is still to be built.
 
+## Light past a moving Jupiter, as VLBI measures it
+
+A ray's direction through the coordinates depends on how time is sliced: re-slicing by a flow's potential turns it
+by $u_\perp/c$, which is about 20″ for the 25–40 km/s the turning flow has far from the bodies. The cross term (both
+bodies less each alone) cancels that, but needs a flow that can be run for one body, which the turning flow can't.
+[studies/light_two_rays.py](https://github.com/tomcrompton-oss/spatial-flow-model/blob/main/studies/light_two_rays.py)
+measures what VLBI does instead: the angle at one observer between a ray passing Jupiter at b and one at 100 R_J,
+each shot from a fixed emitter H before Jupiter to an observer H beyond it. The observer moves with the model's space
+there, and measures angles with its metric; GR is given the same observer (its directions aberrated exactly by that
+velocity). That angle is the same in any slicing and any coordinates.
+
+| The angle, off GR's (µas) | H = 2 AU, 1 R_J | 10 R_J | H = 0.6 AU, 1 R_J | 10 R_J |
+| --- | --- | --- | --- | --- |
+| Eikonal, space from u, bodies at rest (the floor) | +0.5 | +0.4 | +2.1 | +1.6 |
+| Eikonal, flat, bodies at rest | +41 | +36 | +22 | +19 |
+| Carried, Jupiter alone, moving at 13 km/s along the ray | +5.0 | +4.5 | | |
+| Turning (one potential), Jupiter on its orbit | +611,861 | +583,322 | **−2.9** | **+22** |
+| Carried (a potential per region), Jupiter on its orbit | +782,950 | +710,218 | +200,096 | +182,123 |
+
+Curving space across the flow changes none of the moving rows by more than 0.04 µas: these are first order in
+$u/c$. Three things follow:
+
+- **A body's river carried at its velocity is right**: Jupiter alone, moving, is within 5 µas of GR. What fails needs
+  two bodies.
+- **One potential is what light needs.** A flow that is the gradient of one continuous potential has no first-order
+  effect on this angle at all: re-slicing time by the potential removes it. A first-order turn needs curl, and the
+  ray is turned by $(1/c)\int \nabla\times\mathbf u\,dy$ along it. The carried flow has its curl in the seams (each
+  region's potential jumping there): 0.2″ even with light only 0.6 AU either side of Jupiter. The turning flow, one
+  potential, is within 3–22 µas of GR there, against VLBI's 10.
+- **The turning flow's tables fail beyond 0.7 AU of Jupiter.** Its curl, measured along the rays' line, is 0 to six
+  places within 0.65 AU of Jupiter, and about $2\Omega$ (noisy, 0.4–1.8 times) from 0.7 AU to 1.5–2 AU. There
+  Jupiter's paths, run back in time with the Coriolis force, have curved round and cross, and the table's direction
+  is a blend of different branches: no potential. $(1/c)\,2\Omega L$ over the 2 AU of each ray is about 9″, and the
+  patch's edges move between the two rays: the 0.6″. That is the turning flow's construction, not its idea: where
+  its paths cross, a single-valued flow would take one branch (the larger potential) and have a seam with the
+  potential continuous across it, as the static eikonal flow's does.
+
+So for moving bodies the flow needs what the static eikonal flow has: one potential over all of space, its seams
+where the bodies' potentials are equal. The carried flow has a potential for each region; the turning flow has one,
+but only near the bodies.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -470,7 +511,8 @@ What they show about the flow model:
   tide transported along the river). The carried flow with the same tide still has half of de Sitter's precession:
   the shortfall is the flow's, not the test's.
 - The carried flow's regions each keep their own time, and it jumps at the seams: light past a Jupiter on its orbit
-  is turned by 1.7″. A flow made of separate regions needs one potential across all of them.
+  is turned by 1.7″. A flow made of separate regions needs one potential across all of them. Measured as VLBI does,
+  the turning flow – one potential – is within 3–22 µas of GR near Jupiter, and the carried flow 0.2″ off.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.
@@ -487,6 +529,10 @@ python3 studies/lapse_two_bodies.py
 
 ```bash
 python3 studies/lapse_moving.py
+```
+
+```bash
+python3 studies/light_two_rays.py 0.6
 ```
 
 ```bash
