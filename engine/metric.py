@@ -181,7 +181,9 @@ class FlowSpacetime(Spacetime):
     """transverse: True, space stretched across the flow by 2 Phi/c^2 (GR's static metric sliced by free fall);
     'flow', by the flow's own |u|^2/c^2 - the same for the eikonal flow, where |u|^2 = 2 Phi, and set by the flow
     alone for any other; 'source', by the flow relative to the body whose flow it is (u - that body's velocity), which
-    a uniform change of frame leaves alone, where 'flow' does not"""
+    a uniform change of frame leaves alone, where 'flow' does not; 'constraint', Einstein's constraint for a flow with
+    no curl, (2 Phi delta - u u)/c^2 - the space stretched by the flow's head, d phi/dT + |u|^2/2, which is Phi when the
+    flow keeps Bernoulli's equation (docs Lapse and curved space)"""
     self.calc = calc
     self.bodies = calc.bodies
     self.lapseFn, self.spaceFn = lapse, space
@@ -201,6 +203,8 @@ class FlowSpacetime(Spacetime):
       extra.append('curved space %g' % self.curve)
     if self.transverse == 'source':
       extra.append('space curved across the flow by its speed relative to its body')
+    elif self.transverse == 'constraint':
+      extra.append("space from Einstein's constraint, (2 Phi delta - u u)/c^2")
     elif self.transverse == 'flow':
       extra.append('space curved across the flow by its own speed, (|u|^2 delta - u u)/c^2'
                    + (', the flow slowed by sqrt(1 - |u|^2/2c^2)' if self.slower else ''))
@@ -242,6 +246,8 @@ class FlowSpacetime(Spacetime):
         u = u - self.sourceVelocity(x, t, self.calc.region(x, t) if region is None else region)
       if self.transverse in ('flow', 'source'):
         k = ((u @ u)*np.eye(2) - np.outer(u, u))/C**2   #decided by the flow alone: its speed, and its direction
+      elif self.transverse == 'constraint':
+        k = (2*potential(self.bodies, x, t)*np.eye(2) - np.outer(u, u))/C**2
       else:
         n = u/length(u)
         k = 2*potential(self.bodies, x, t)/C**2*(np.eye(2) - np.outer(n, n))

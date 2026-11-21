@@ -510,6 +510,39 @@ So for moving bodies the flow needs what the static eikonal flow has: one potent
 where the bodies' potentials are equal. The carried flow has a potential for each region; the turning flow has one,
 but only near the bodies.
 
+## One potential for the whole plane: the turning flow with J = 0
+
+A flow steady in the frame turning with the bodies has $\phi = \Phi(\mathbf y) - JT$; for its potential to be
+continuous across the seams, J must be one number everywhere. The turning flow's J, chosen so that the Earth's (or
+Jupiter's) flow is its own river alone, is $-\tfrac32 GM_\odot/a$: then the Sun's paths stop at 2a/3, and beyond about
+0.65 AU from Jupiter the table has no flow, or one that isn't a gradient. With **J = 0**,
+$|\mathbf w|^2 = 2(U + \Omega^2\rho^2/2)$ is positive everywhere: the Sun's paths reach every point, and the bodies'
+flows are solved together as one potential – the moving eikonal for bodies on circles. Its table is a gradient to
+0.02–0.1° out to ±1.8 AU (with the carried J, 18–99° off beyond 1 AU).
+
+Its space, from Einstein's constraint for a flow with no curl, is stretched by the flow's head,
+$\partial\phi/\partial T + |\mathbf u|^2/2$, which is Φ when the flow keeps Bernoulli's equation:
+$\gamma = \delta + (2\Phi\,\delta - \mathbf u\mathbf u)/c^2$ (`FlowSpacetime(transverse='constraint')`).
+
+| Light past Jupiter on its orbit, as VLBI measures it (µas off GR, at 1 / 10 R_J) | 2 AU | 0.6 AU |
+|---|---|---|
+| Turning, J = 0, Einstein's space | −12 / −2 | +4 / +2.5 |
+| Turning, J = 0, flat | +5 / +14 | +64 / +58 |
+| Turning, carried J | +611,861 / +583,322 | −3 / +22 |
+| Carried | +782,950 / +710,218 | +200,096 / +182,123 |
+
+One potential is what light needs: the J = 0 flow is the first moving-body flow within VLBI's 10 µas at 2 AU.
+
+But the Moon fails: with J = 0 and Einstein's space it is 98 km off (k ≈ −10⁵); flat, 2.8 m off, its stretch −0.08
+along and +2.5 across (GR's 2 and 2); with the carried J and Einstein's space, 260 m. Round the Earth the J = 0 flow
+moves at about 50 km/s through the turning frame – it carries the Sun's potential and the orbit's speed,
+$|\mathbf w|^2 = 2GM/r + 3GM_\odot/a$ – and Einstein's space is right only together with the flow's first
+post-Newtonian corrections and the lapse's (χ). Without them the error grows with the flow's speed, and the Earth,
+held on its circle, doesn't share it. Every flow obeying Newton's equation is a slicing of GR's time at Newton's order
+(N = 1 + O(c⁻⁴)), so with those pieces any of them – the carried flow's, or this one – gives GR; the flow then decides
+only the slicing. What the flow itself decides is the Newtonian order and, through one potential, light; the moving
+bodies' first post-Newtonian dynamics still come from GR's pieces.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -542,6 +575,10 @@ What they show about the flow model:
 - With a further shift of time (χ, carried along the flow), GR for the Sun, the Earth and the Moon has N = 1 exactly
   and the Moon's whole de Sitter precession (0.15 m left): GR is a flow with Part 1's clocks. Its space must still be
   curved – flat, the Moon is 580 m off.
+- The turning flow with Jacobi constant 0 is one potential over the whole plane (the bodies' flows solved together,
+  for bodies on circles). With Einstein's space, light past a moving Jupiter is within 2–12 µas of GR. The Moon fails
+  (98 km): Einstein's space needs the flow's first post-Newtonian corrections with it, and with J = 0 the flow round
+  the Earth is 50 km/s. With those corrections any flow keeping Newton's equation is GR in another time.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.

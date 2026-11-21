@@ -17,6 +17,9 @@ the models (MODELS):
                                    PostNewtonian), through the same engine: the pipeline's check (k = 0, rms the floor)
   turning, flat                    the turning flow, N = 1, flat space (the flow model)
   turning, N = 1, space from u     the same, space stretched across the flow by its own |u|^2/c^2
+  turning J = 0, ...               the turning flow with Jacobi constant 0: one potential over the whole plane
+  ..., Einstein's space            space from Einstein's constraint, (2 Phi delta - u u)/c^2: stretched by the
+                                   flow's head, d phi/dT + |u|^2/2 = Phi
   carried                          engine/carried.py: each body's river carried at its velocity, with the other's tide
   GR in free-fall time             engine/carried.py FreeFallPN: GR's metric with the carried flow's time (a check of
                                    the mapping: it is GR, to the carried flow's miss of Newton's equation - 4% of
@@ -83,6 +86,10 @@ def spacetime(model):
     return CarriedSpacetime(bodies(), transverse='gr' if "GR's space" in model else 'from its body' in model and 'source',
                             tides='transported' if 'transported' in model else True)
   flow = SpecialFlowCalculator(bodies(), 2, combine='turning')
+  if 'J = 0' in model:
+    flow.jacobi = 0.0   #one potential over the whole plane (the Sun's paths reach everywhere)
+  if "Einstein's space" in model:
+    return FlowSpacetime(flow, transverse='constraint')
   if 'from its body' in model:
     return FlowSpacetime(flow, transverse='source')
   if 'space from u' in model:

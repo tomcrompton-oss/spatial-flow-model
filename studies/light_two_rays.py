@@ -13,7 +13,7 @@ space's metric gamma; in GR it moves at the model's u through GR's static frame 
 the space being conformally flat to first order), so GR's directions are aberrated exactly (special relativity) by
 that velocity
 
-cases: Jupiter at rest, the eikonal flow (flat, and space from u relative to its body) and GR, the Sun and Jupiter at
+cases (also the turning flow with Jacobi constant 0 - one potential over the whole plane - and space from Einstein's constraint): Jupiter at rest, the eikonal flow (flat, and space from u relative to its body) and GR, the Sun and Jupiter at
 rest about their centre of mass; Jupiter on its orbit, the turning flow (the eikonal flow in the frame turning with
 them: one potential), and the carried flow (each region its own potential), against GR with the same bodies moving
 
@@ -48,6 +48,8 @@ CASES = {
   'eikonal, space from u, at rest': 'GR, at rest',
   'turning, flat, on its orbit': 'GR, on its orbit',
   'turning, space from u, on its orbit': 'GR, on its orbit',
+  'turning J = 0, flat, on its orbit': 'GR, on its orbit',
+  "turning J = 0, Einstein's space, on its orbit": 'GR, on its orbit',
   'carried, flat, on its orbit': 'GR, carried setup',
   'carried, space from u, on its orbit': 'GR, carried setup',
 }
@@ -75,6 +77,10 @@ def spacetime(case):
     return CarriedSpacetime(B, transverse='source' if 'space from u' in case else False)
   flow = (SpecialFlowCalculator(B, 2, combine='turning') if case.startswith('turning')
           else SpecialFlowCalculator(B, 2, direction='eikonal-exact'))
+  if 'J = 0' in case:
+    flow.jacobi = 0.0   #one potential over the whole plane: the Sun's paths reach everywhere
+  if "Einstein's space" in case:
+    return FlowSpacetime(flow, transverse='constraint')
   return FlowSpacetime(flow, transverse='source') if 'space from u' in case else FlowSpacetime(flow)
 
 
