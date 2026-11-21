@@ -559,6 +559,20 @@ So with J = 0 – one potential over the whole plane – GR has Part 1's clocks 
 light, to the half metre the exact transform itself leaves (the J = 0 flow is fast, and its time is far from
 harmonic, so the fit's floor is higher than the carried time's).
 
+Which of GR's pieces the J = 0 time needs, each dropped in turn (χ and N = 1 kept):
+
+| Dropped | Moon, rms | k |
+|---|---|---|
+| nothing | 0.60 m | −0.18 |
+| the moving bodies' 4U_j/c² | 0.49 m | +0.77 |
+| curved space | 23 km | +3×10⁴ |
+| the flow's rescaling, $(\varphi_T - 2U)/c^2 = -(U + u^2/2)/c^2$ | 105 km | −1.2×10⁵ |
+
+The moving bodies' term isn't needed; space and the rescaling both are, by tens of kilometres, because the flow is
+fast. The flow model with Einstein's space and J = 0 (98 km) is the row without the rescaling. So what a flow of its
+own must supply beyond Einstein's space is a flow slowed by $(U + u^2/2)/c^2$ and the lapse's part moved into it,
+$-\nabla\chi/c^2$.
+
 Two things had to be right for this. GR's time at the Earth runs at $dt/dT = 1 + \kappa/c^2$, κ = dφ/dT along the
 Earth: for the carried flow (and the carried J) κ = −J = 1.5 GM☉/a, and the Earth held at Ω in T is GR's free fall at
 harmonic r = AU − GM☉/c²; for J = 0 the potential is steady at the Earth, κ = 0, and GR's Earth is at AU. Fitted at
