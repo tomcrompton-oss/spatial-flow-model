@@ -511,7 +511,8 @@ class MetricCalculator(Calculator):
     jump = S.flow(p.pos, p.t, before) - S.flow(p.pos, p.t, after)
     if not jump.any():
       return
-    n = jump/length(jump)
+    #across the seam: the jump's direction, where the seam is where the two sides' speeds are equal; else its own
+    n = S.seamNormal(p.pos, p.t) if hasattr(S, 'seamNormal') else jump/length(jump)
     moving = S.seamVelocity(p.pos, p.t) if getattr(S, 'timedSeams', False) else self.seamVelocity(p.pos)
     #in the seam's own frame H' = H - moving . p is what is kept
     keepH = lambda q, side: S.reduced(p.pos, q, p.t, p.light, side) - moving @ q + (C*length(q) if p.light else

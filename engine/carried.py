@@ -232,10 +232,21 @@ class CarriedSpacetime(Spacetime):
       return (2*phi*np.eye(2) - np.outer(u, u))/C**2
     return ((w @ w)*np.eye(2) - np.outer(w, w))/C**2
 
+  def seamNormal(self, x, t=0.0):
+    """the seam's direction across itself at x (engine/metric.py crossSeam: the flow's jump here is not across it,
+    as it is for the flows whose seams are where the two sides' speeds are equal)"""
+    grad, _ = self.seamGradient(x, t)
+    return grad/length(grad)
+
   def seamVelocity(self, x, t=0.0):
     """the seam's velocity across itself at x: the seam is where ln(GM_a/d_a^3) = ln(GM_b/d_b^3), for the two largest"""
     if len(self.bodies) == 1:
       return np.zeros(2)
+    grad, rate = self.seamGradient(x, t)
+    return -rate*grad/(grad @ grad)
+
+  def seamGradient(self, x, t):
+    """the gradient of the seam's function at x, and its rate of change there"""
     ranks = np.argsort([-b.GM/length(x - b.at(t))**3 for b in self.bodies])[:2]
     def f(y, s):
       a, b = self.bodies[ranks[0]], self.bodies[ranks[1]]
@@ -244,7 +255,7 @@ class CarriedSpacetime(Spacetime):
     grad = np.array([(f(x + e, t) - f(x - e, t))/(2*h) for e in (np.array([h, 0.0]), np.array([0.0, h]))])
     dt = 1.0
     rate = (f(x, t + dt) - f(x, t - dt))/(2*dt)
-    return -rate*grad/(grad @ grad)
+    return grad, rate
 
 
 class Proxy(Body):
@@ -383,8 +394,11 @@ class FreeFallPN(Spacetime):
 
   timedSeams = True
 
-  def __init__(self, bodies, lapse=True, retarded=True, tides=True):
+  def __init__(self, bodies, lapse=True, retarded=True, tides=True, keep=('space', 'scale', 'moving')):
+    """keep: GR's pieces kept beyond the carried flow, to see what each does - 'space' (gamma), 'scale' (u0's
+    (phi_T - 2U)/c^2) and 'moving' (the moving bodies' 4 U_j/c^2)"""
     from engine.metric import PostNewtonian
+    self.keep = set(keep)
     self.bodies = list(bodies)
     self.carried = CarriedSpacetime(self.bodies, tides=tides)
     self.pn = PostNewtonian(self.bodies)
@@ -401,6 +415,9 @@ class FreeFallPN(Spacetime):
 
   def seamVelocity(self, x, t=0.0):
     return self.carried.seamVelocity(x, t)
+
+  def seamNormal(self, x, t=0.0):
+    return self.carried.seamNormal(x, t)
 
   def shift(self, x, t, region):
     """
@@ -425,9 +442,9 @@ class FreeFallPN(Spacetime):
     U, Uj, psi = self.pn.terms(x, t)
     v2 = u0 @ u0
     phiT = U - v2/2
-    h = (2*U*np.eye(2) - np.outer(u0, u0))/C**2
+    h = (2*U*np.eye(2) - np.outer(u0, u0))/C**2 if 'space' in self.keep else np.zeros((2, 2))
     k = -h + h @ h                                    #gamma^-1 - delta
-    a = u0*(phiT - 2*U)/C**2 + 4*Uj/C**2              #gamma u - u0
+    a = (u0*(phiT - 2*U)/C**2 if 'scale' in self.keep else 0.0) + (4*Uj/C**2 if 'moving' in self.keep else 0.0)
     u = u0 + a + k @ (u0 + a)
     #u . gamma u - |u0|^2 = u0 . k u0 + 2 a . gamma^-1 u0 + a . gamma^-1 a
     extra = u0 @ k @ u0 + 2*(a @ (u0 + k @ u0)) + a @ a

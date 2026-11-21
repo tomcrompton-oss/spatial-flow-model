@@ -33,13 +33,15 @@ direction (r_harmonic = r - GM/c^2); space from u needs no change of x: dr^2 + (
 harmonic space at first order with r unchanged. GR's Earth goes round where it falls freely (radius)
 
 run: python3 studies/lapse_moon.py [days]     (default 90; prints, and writes
-     logs/modelChecks/lapseMoon_<days>d_<datetime>/summary.log and tracks.npz)
+     logs/modelChecks/lapseMoon_<days>d_<datetime>/summary.log and tracks.npz; while it runs, progress.log there
+     has a line as each run passes each tenth of its days, with the time left, and as each run ends: tail -f it)
      python3 studies/lapse_moon.py [days] differenced     (the relativistic part alone: each model at c less at
                                                           c x 1000, added to Newton's - its Newtonian errors out)
      python3 studies/lapse_moon.py refit <folder>/tracks.npz     (the fits again, from a run's tracks)
 """
 import math
 import os
+import time
 import sys
 from datetime import datetime
 from multiprocessing import Pool
@@ -73,7 +75,8 @@ def spacetime(model):
   if model.startswith('GR in free-fall time'):
     from engine.carried import FreeFallPN
     return FreeFallPN(bodies(), lapse='no lapse' not in model, retarded='at T' not in model,
-                      tides='transported' if 'transported' in model else True)
+                      tides='transported' if 'transported' in model else True,
+                      keep=[w for w in ('space', 'scale', 'moving') if 'no ' + w not in model])
   if model.startswith('carried'):
     from engine.carried import CarriedSpacetime
     return CarriedSpacetime(bodies(), transverse='gr' if "GR's space" in model else 'from its body' in model and 'source',
@@ -113,6 +116,7 @@ def run(job):
   calc.initPV(p, bodyVelocityAt(B[1], 0.0) + START[1])
   ts = samples(days)
   out, i = [], 0
+  started, tenth = time.time(), 1
   every = int(round(SAMPLE/dt))
   first = int(round(ts[0]/dt))
   n = 0
@@ -122,7 +126,28 @@ def run(job):
     if n >= first and (n - first) % every == 0:
       out.append((p.pos.copy(), B[0].at(p.t), B[1].at(p.t), flowIntegral(calc.spacetime, B[1].at(p.t), p.pos, p.t)))
       i += 1
+      while tenth <= 10 and i >= tenth*len(ts)/10:   #each tenth of the samples (a short run's samples pass several)
+        spent = time.time() - started
+        progress('%-44s step %g s, c x %g: %3d%% (day %.0f of %g), %s so far, about %s left'
+                 % (model, dt, scale, 10*tenth, p.t/DAY, days, clock(spent), clock(spent*(len(ts) - i)/i)))
+        tenth += 1
   return job, out
+
+
+PROGRESS = None   #the run's progress.log (main sets it; the pool's workers, forked, inherit it)
+
+
+def progress(line):
+  """a line with the time, printed and added to the run's progress.log (tail -f it to follow a run)"""
+  line = '%s  %s' % (datetime.now().strftime('%H:%M:%S'), line)
+  print(line, flush=True)
+  if PROGRESS:
+    with open(PROGRESS, 'a') as f:
+      f.write(line + '\n')
+
+
+def clock(seconds):
+  return '%dh%02dm' % divmod(round(seconds/60), 60) if seconds >= 3600 else '%.0f min' % (seconds/60)
 
 
 def flowIntegral(S, a, b, t, pieces=24):
@@ -319,9 +344,18 @@ def main():
   os.makedirs(folder, exist_ok=True)
   ts = samples(days)
   scales = (1.0, 1e3) if differenced else (1.0,)
+  global PROGRESS
+  PROGRESS = os.path.join(folder, 'progress.log')
+  jobs = [(m, dt, days, s) for m in MODELS for dt in DTS for s in scales]
+  progress('%d runs of %g days on 8 workers (%s); progress in %s' % (len(jobs), days, ', '.join(MODELS), PROGRESS))
+  started = time.time()
   with Pool(8) as pool:
     newton = pool.apply_async(newtonTrack, [ts]) if differenced else None
-    runs = dict(pool.map(run, [(m, dt, days, s) for m in MODELS for dt in DTS for s in scales]))
+    runs = {}
+    for job, out in pool.imap_unordered(run, jobs):
+      runs[job] = out
+      progress('done %d of %d: %s, step %g s, c x %g (%s in all)' % (len(runs), len(jobs), job[0], job[1], job[3],
+                                                                     clock(time.time() - started)))
     lines = ['moon: the Moon round the Earth for %g days, the Sun and the Earth going round each other; GR (EIH) fitted to'
              ' the model\'s track in harmonic coordinates, its start and k free, turned by -k de Sitter (19.2 mas a year):'
              ' k = 0 the model has GR\'s de Sitter precession, k = 1 none; the rms left' % days]
@@ -330,6 +364,7 @@ def main():
                    ' c x 1000): its relativistic part alone, its Newtonian errors taken out')
       newton = newton.get()
     saved = {}
+    progress('all runs done; fitting GR to each model')
     for m in MODELS:
       target, step = zeroStep(m, ts, runs, days, 1.0, True)
       if differenced:
