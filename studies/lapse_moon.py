@@ -18,6 +18,9 @@ the models (MODELS):
   turning, flat                    the turning flow, N = 1, flat space (the flow model)
   turning, N = 1, space from u     the same, space stretched across the flow by its own |u|^2/c^2
   turning J = 0, ...               the turning flow with Jacobi constant 0: one potential over the whole plane
+  GR in the turning time, ...      GR's 1PN metric in the turning flow's time, J = 0 (engine/carried.py
+                                   FreeFallTurning; 'carried J' for the carried one), as 'GR in free-fall time'
+                                   (chi, no lapse, no moving, ...) is in the carried flow's
   ..., Einstein's space            space from Einstein's constraint, (2 Phi delta - u u)/c^2: stretched by the
                                    flow's head, d phi/dT + |u|^2/2 = Phi
   carried                          engine/carried.py: each body's river carried at its velocity, with the other's tide
@@ -75,6 +78,16 @@ def spacetime(model):
   if model == 'GR in the carried time':
     from engine.metric import SlicedPN
     return SlicedPN(bodies())
+  if model.startswith('GR in the turning time'):
+    from engine.carried import FreeFallTurning
+    from engine.turning import carriedJacobi
+    from engine.flow import SpecialFlowCalculator
+    J = 0.0
+    if 'carried J' in model:
+      J = carriedJacobi(bodies(), SpecialFlowCalculator(bodies(), 2, combine='turning').omega)
+    return FreeFallTurning(bodies(), lapse='no lapse' not in model, retarded='at T' not in model,
+                           keep=[w for w in ('space', 'scale', 'moving') if 'no ' + w not in model],
+                           chi=1 if 'chi' in model else None, jacobi=J)
   if model.startswith('GR in free-fall time'):
     from engine.carried import FreeFallPN
     return FreeFallPN(bodies(), lapse='no lapse' not in model, retarded='at T' not in model,

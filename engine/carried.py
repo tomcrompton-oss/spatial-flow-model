@@ -567,7 +567,7 @@ class FreeFallPN(Spacetime):
     return rate*delta/C**2
 
   def parts3(self, x, t, region):
-    u0 = self.carried.flow(x, t, region)
+    u0 = self.baseFlow(x, t, region)
     U, Uj, psi = self.pn.terms(x, t)
     v2 = u0 @ u0
     phiT = U - v2/2
@@ -588,14 +588,21 @@ class FreeFallPN(Spacetime):
     """the flow and N^2 - 1 in the time T + chi/c^4: gamma u less grad chi/c^2 (u, to first post-Newtonian order),
     and N^2 less 2 D chi/DT/c^4"""
     if self.chiTable is None:
-      full = FreeFallPN(self.bodies, lapse=True, retarded=self.retarded, tides=self.tides, keep=self.keep)
-      self.chiTable = ChiTable(full, self.chiBody)
+      self.chiTable = ChiTable(self.withLapse(), self.chiBody)
     b = self.bodies[self.chiBody]
     d = x - b.at(t)
     _, grad = self.chiTable.at(d, t)
     dt = 10.0
     rate = (self.chiTable.at(x - b.at(t + dt), t + dt)[0] - self.chiTable.at(x - b.at(t - dt), t - dt)[0])/(2*dt)
     return u - grad/C**2, s - 2*(rate + u @ grad)/C**4
+
+  def withLapse(self):
+    """the same spacetime with its lapse, unshifted: the source chi is worked out from"""
+    return FreeFallPN(self.bodies, lapse=True, retarded=self.retarded, tides=self.tides, keep=self.keep)
+
+  def baseFlow(self, x, t, region):
+    """u0: the flow (keeping Newton's equation, with Bernoulli's phi_T = U - |u0|^2/2) whose time this is"""
+    return self.carried.flow(x, t, region)
 
   def flow(self, x, t, region=None):
     k = self.region(x, t) if region is None else region
@@ -610,3 +617,58 @@ class FreeFallPN(Spacetime):
       return 0.0
     s = self.parts3(x, t, self.region(x, t))[2]
     return s/(1 + math.sqrt(1 + s))
+
+
+class FreeFallTurning(FreeFallPN):
+  """
+  FreeFallPN in the time of the turning flow with Jacobi constant 0 (engine/turning.py, SpecialFlowCalculator combine
+  'turning'): one potential, phi = -S, over the whole plane, for two bodies going round their centre of mass. its
+  Bernoulli's phi_T + |u|^2/2 = U + J is FreeFallPN's with J = 0, so the same 3+1 form is GR's metric in this time;
+  with chi (ChiTable carries Q along this flow in the turning frame) the lapse is 1
+  """
+
+  def __init__(self, bodies, lapse=True, retarded=True, keep=('space', 'scale', 'moving'), chi=None, jacobi=0.0):
+    from engine.flow import SpecialFlowCalculator
+    super().__init__(bodies, lapse=lapse, retarded=retarded, tides=True, keep=keep, chi=chi)
+    self.jacobi = jacobi
+    self.calc = SpecialFlowCalculator(self.bodies, 2, combine='turning')
+    self.calc.jacobi = jacobi
+    self.omega = self.calc.omega
+    self.field = self.calc.rayField()
+
+  def describe(self):
+    return "GR's 1PN metric in the time of the turning flow, J = %g%s" % (self.jacobi, '' if self.useLapse else
+                                                                         ', its lapse left at 1')
+
+  def withLapse(self):
+    return FreeFallTurning(self.bodies, lapse=True, retarded=self.retarded, keep=self.keep, jacobi=self.jacobi)
+
+  def baseFlow(self, x, t, region):
+    return self.calc.turningFlow(x, region, t)
+
+  def region(self, x, t):
+    return self.calc.region(x, t)
+
+  def seamVelocity(self, x, t=0.0):
+    return self.omega*np.array([-x[1], x[0]])
+
+  def seamNormal(self, x, t=0.0):
+    """across the seam: grad (S_0 - S_1), the two regions' potentials, turned back to time t"""
+    from engine.flow import turn
+    y = turn(x, -self.omega*t)
+    h = 1e5
+    g = np.array([(self.field.action(y + h*e, 0) - self.field.action(y + h*e, 1)
+                   - self.field.action(y - h*e, 0) + self.field.action(y - h*e, 1))/(2*h) for e in np.eye(2)])
+    return turn(g/length(g), self.omega*t)
+
+  def shift(self, x, t, region):
+    """as FreeFallPN's, Delta = phi(x) - phi(body) = -(S(x) - S at the region's body, its offset)"""
+    from engine.flow import turn
+    from engine.metric import bodyVelocityAt
+    y = turn(x, -self.omega*t)
+    delta = -(self.field.action(y, region) - self.field.offsets[region])
+    rate = 0.0
+    for o in self.bodies:
+      e = x - o.at(t)
+      rate += o.GM*(e @ bodyVelocityAt(o, t))/(e @ e)**1.5
+    return rate*delta/C**2

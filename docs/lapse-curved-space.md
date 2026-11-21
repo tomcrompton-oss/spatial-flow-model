@@ -543,6 +543,15 @@ held on its circle, doesn't share it. Every flow obeying Newton's equation is a 
 only the slicing. What the flow itself decides is the Newtonian order and, through one potential, light; the moving
 bodies' first post-Newtonian dynamics still come from GR's pieces.
 
+**GR in this flow's time.** `FreeFallTurning` puts GR's first post-Newtonian metric in the turning flow's time (its
+potential is −S), as `FreeFallPN` does in the carried flow's, with χ to take the lapse to 1. χ for the J = 0 flow
+leaves 0.04% of the lapse's gradient at the Moon. With the turning flow's carried J the Moon fits as GR (k +0.03,
+0.02 m), so the mapping is right. With J = 0 it doesn't: 197 m off (k −225), with the lapse or with χ and N = 1 alike.
+Round the Earth the J = 0 flow is 22–81 km/s in the lab, so its first post-Newtonian pieces are large – the flow's
+rescaling alone is about 1 m/s at the Moon – and must cancel closely; the table's flow falls at g only to 10⁻⁶ m/s²
+there (an error going as 1/r³, nothing to do with where its paths start). Whether one potential, Part 1's clocks
+and Einstein's space pass the Moon as well as light waits on a more accurate J = 0 flow round the Earth.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
