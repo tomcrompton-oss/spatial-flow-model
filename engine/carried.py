@@ -627,23 +627,37 @@ class FreeFallTurning(FreeFallPN):
   with chi (ChiTable carries Q along this flow in the turning frame) the lapse is 1
   """
 
-  def __init__(self, bodies, lapse=True, retarded=True, keep=('space', 'scale', 'moving'), chi=None, jacobi=0.0):
+  def __init__(self, bodies, lapse=True, retarded=True, keep=('space', 'scale', 'moving'), chi=None, jacobi=0.0,
+               fine=None):
+    """fine: round the lighter body (out to 3e9 m), the flow from LocalTurningFlow - the ray table's is off by a
+    near-uniform ~1e-9 m/s^2 round the Moon's orbit with J = 0, which drives the Moon by ~100 m. by default, for J = 0
+    only (with the carried J the flow is slow, ~1 km/s at the Moon, and its paths curl round within 3e9 m; there the
+    ray table does)"""
     from engine.flow import SpecialFlowCalculator
+    from engine.turning import LocalTurningFlow
     super().__init__(bodies, lapse=lapse, retarded=retarded, tides=True, keep=keep, chi=chi)
     self.jacobi = jacobi
     self.calc = SpecialFlowCalculator(self.bodies, 2, combine='turning')
     self.calc.jacobi = jacobi
     self.omega = self.calc.omega
     self.field = self.calc.rayField()
+    self.fine = (jacobi == 0.0) if fine is None else fine
+    self.local = LocalTurningFlow(self.bodies, self.omega, self.field.J) if self.fine else None
 
   def describe(self):
     return "GR's 1PN metric in the time of the turning flow, J = %g%s" % (self.jacobi, '' if self.useLapse else
                                                                          ', its lapse left at 1')
 
   def withLapse(self):
-    return FreeFallTurning(self.bodies, lapse=True, retarded=self.retarded, keep=self.keep, jacobi=self.jacobi)
+    return FreeFallTurning(self.bodies, lapse=True, retarded=self.retarded, keep=self.keep, jacobi=self.jacobi,
+                           fine=self.fine)
 
   def baseFlow(self, x, t, region):
+    from engine.flow import turn
+    if self.local is not None and region == self.local.k:
+      y = turn(x, -self.omega*t)
+      if self.local.covers(y):
+        return turn(self.local.w(y) + self.omega*np.array([-y[1], y[0]]), self.omega*t)
     return self.calc.turningFlow(x, region, t)
 
   def region(self, x, t):

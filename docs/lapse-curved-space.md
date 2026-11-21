@@ -533,8 +533,9 @@ $\gamma = \delta + (2\Phi\,\delta - \mathbf u\mathbf u)/c^2$ (`FlowSpacetime(tra
 
 One potential is what light needs: the J = 0 flow is the first moving-body flow within VLBI's 10 µas at 2 AU.
 
-But the Moon fails: with J = 0 and Einstein's space it is 98 km off (k ≈ −10⁵); flat, 2.8 m off, its stretch −0.08
-along and +2.5 across (GR's 2 and 2); with the carried J and Einstein's space, 260 m. Round the Earth the J = 0 flow
+But the Moon fails: with J = 0 and Einstein's space it is 98 km off (k ≈ −10⁵); flat, 197 m off; with the carried J
+and Einstein's space, 260 m. (An earlier fit had the flat J = 0 flow at 2.8 m: it put GR's Earth at AU − GM☉/c², the
+place for the carried times, where the J = 0 time needs AU – see below.) Round the Earth the J = 0 flow
 moves at about 50 km/s through the turning frame – it carries the Sun's potential and the orbit's speed,
 $|\mathbf w|^2 = 2GM/r + 3GM_\odot/a$ – and Einstein's space is right only together with the flow's first
 post-Newtonian corrections and the lapse's (χ). Without them the error grows with the flow's speed, and the Earth,
@@ -545,12 +546,27 @@ bodies' first post-Newtonian dynamics still come from GR's pieces.
 
 **GR in this flow's time.** `FreeFallTurning` puts GR's first post-Newtonian metric in the turning flow's time (its
 potential is −S), as `FreeFallPN` does in the carried flow's, with χ to take the lapse to 1. χ for the J = 0 flow
-leaves 0.04% of the lapse's gradient at the Moon. With the turning flow's carried J the Moon fits as GR (k +0.03,
-0.02 m), so the mapping is right. With J = 0 it doesn't: 197 m off (k −225), with the lapse or with χ and N = 1 alike.
-Round the Earth the J = 0 flow is 22–81 km/s in the lab, so its first post-Newtonian pieces are large – the flow's
-rescaling alone is about 1 m/s at the Moon – and must cancel closely; the table's flow falls at g only to 10⁻⁶ m/s²
-there (an error going as 1/r³, nothing to do with where its paths start). Whether one potential, Part 1's clocks
-and Einstein's space pass the Moon as well as light waits on a more accurate J = 0 flow round the Earth.
+leaves 0.04% of the lapse's gradient at the Moon. The Moon fits as GR both ways:
+
+| Time | Moon, rms | k |
+|---|---|---|
+| Turning flow, carried J | 0.03 m | +0.0005 |
+| Turning flow, J = 0, with the lapse | 0.53 m | +0.30 |
+| Turning flow, J = 0, χ and N = 1 | 0.60 m | −0.18 |
+| GR transformed exactly to the J = 0 time (`SlicedPN` with this potential; the check) | 0.63 m | +0.25 |
+
+So with J = 0 – one potential over the whole plane – GR has Part 1's clocks (N = 1) and passes the Moon as well as
+light, to the half metre the exact transform itself leaves (the J = 0 flow is fast, and its time is far from
+harmonic, so the fit's floor is higher than the carried time's).
+
+Two things had to be right for this. GR's time at the Earth runs at $dt/dT = 1 + \kappa/c^2$, κ = dφ/dT along the
+Earth: for the carried flow (and the carried J) κ = −J = 1.5 GM☉/a, and the Earth held at Ω in T is GR's free fall at
+harmonic r = AU − GM☉/c²; for J = 0 the potential is steady at the Earth, κ = 0, and GR's Earth is at AU. Fitted at
+AU − GM☉/c², every J = 0 time is off by the same 195–197 m (k −225), the exact transform included. And the study
+maps T to GR's time with the integral of the model's own flow from the Earth to the Moon – the turning flow's, about
+10¹³ m²/s there with J = 0. The flow round the Earth (`LocalTurningFlow`: the Earth's paths followed out with fine
+steps and fitted smoothly in angle and ln r) falls at g to 5×10⁻¹² m/s² at the Moon; the ray table's does to 10⁻⁹
+(a check with too wide a finite difference had made that look like 10⁻⁶), and the Moon is the same with either.
 
 ## What it means
 
@@ -586,8 +602,9 @@ What they show about the flow model:
   curved – flat, the Moon is 580 m off.
 - The turning flow with Jacobi constant 0 is one potential over the whole plane (the bodies' flows solved together,
   for bodies on circles). With Einstein's space, light past a moving Jupiter is within 2–12 µas of GR. The Moon fails
-  (98 km): Einstein's space needs the flow's first post-Newtonian corrections with it, and with J = 0 the flow round
-  the Earth is 50 km/s. With those corrections any flow keeping Newton's equation is GR in another time.
+  (98 km; flat, 197 m): Einstein's space needs the flow's first post-Newtonian corrections with it, and with J = 0 the
+  flow round the Earth is 50 km/s. With those corrections – GR in this flow's time, the lapse taken to 1 by χ – the
+  Moon passes (0.6 m) as well as light: one potential, Part 1's clocks, and GR's curved space and moving-body pieces.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.

@@ -87,7 +87,7 @@ def spacetime(model):
       J = carriedJacobi(bodies(), SpecialFlowCalculator(bodies(), 2, combine='turning').omega)
     return FreeFallTurning(bodies(), lapse='no lapse' not in model, retarded='at T' not in model,
                            keep=[w for w in ('space', 'scale', 'moving') if 'no ' + w not in model],
-                           chi=1 if 'chi' in model else None, jacobi=J)
+                           chi=1 if 'chi' in model else None, jacobi=J, fine=False if 'ray table' in model else None)
   if model.startswith('GR in free-fall time'):
     from engine.carried import FreeFallPN
     return FreeFallPN(bodies(), lapse='no lapse' not in model, retarded='at T' not in model,
@@ -176,13 +176,15 @@ def flowIntegral(S, a, b, t, pieces=24):
   less the same at a (a flow with no curl is the gradient of S, T = t - S/c^2 ... with t harmonic)"""
   span = length(b - a)
   n = (b - a)/span
-  from engine.carried import CarriedSpacetime, FreeFallPN
+  from engine.carried import CarriedSpacetime, FreeFallPN, FreeFallTurning
   from engine.metric import SlicedPN
   if isinstance(S, SlicedPN):
     return S.potential(b, t)[0]   #less phi at a, the Earth, where it is 0
-  if isinstance(S, FreeFallPN):
+  if isinstance(S, FreeFallPN) and not isinstance(S, FreeFallTurning):
     S = S.carried
-  if isinstance(S, CarriedSpacetime):
+  if isinstance(S, FreeFallTurning):   #its own flow, the turning one (with J = 0 ~50 km/s at the Moon, not the carried)
+    along = lambda y: S.baseFlow(y, t, S.region(y, t)) @ n
+  elif isinstance(S, CarriedSpacetime):
     raw = CarriedSpacetime(S.bodies, tides=S.tides)   #its flow unslowed
     along = lambda y: raw.flow(y, t) @ n
   elif isinstance(S, FlowSpacetime):
@@ -229,10 +231,16 @@ def length(v):
 def radius(model):
   """
   the Earth's distance from the Sun in GR's fit: where GR's Earth falls freely on a circle at the bodies' angular
-  speed, harmonic r = AU - GM_Sun/c^2 (Schwarzschild's Omega^2 = GM/R^3, R = r + GM/c^2) - held anywhere else, the
-  Moon drifts from it (by 200 m in 90 days at AU). the GR row is the metric with the Earth held at AU, so its fit is too
+  speed in the model's time T. GR's time at the Earth runs at dt/dT = 1 + kappa/c^2, kappa = d phi/dT along it: for the
+  carried flow (and the turning flow with the carried J) kappa = -J = 1.5 GM_Sun/AU, and the Earth at Omega in T is
+  GR's free fall at harmonic r = AU - GM_Sun/c^2 (Schwarzschild's Omega^2 = GM/R^3, R = r + GM/c^2) - held anywhere
+  else, the Moon drifts from it (by 200 m in 90 days at AU). the GR row is the metric with the Earth held at AU, so
+  its fit is too; and so are the times in which phi is steady at the Earth (kappa = 0): the river carried with it
+  (GR in the carried time) and the turning flow with J = 0
   """
-  return AU if model in ('GR', 'GR in the carried time') else AU - G*MS/C**2
+  steady = model in ('GR', 'GR in the carried time') or 'J = 0' in model or (
+    model.startswith('GR in the turning time') and 'carried J' not in model)
+  return AU if steady else AU - G*MS/C**2
 
 
 def places(t, D, omega=OMEGA):
