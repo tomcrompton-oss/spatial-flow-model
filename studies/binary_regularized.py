@@ -11,21 +11,23 @@ why this is the J = 0 flow's rule, and why it can be worked out in GR's harmonic
      below, from engine/turning.py LocalTurningFlow). so the flow's regular part at the body is the body's own
      velocity: a body at rest in the turning frame moves with its space
   2. the time. the J = 0 rules (docs Lapse and curved space: N = 1, Einstein's space, the flow slowed by
-     (U + u^2/2)/c^2, chi) are GR's first post-Newtonian metric in the time t = T + phi/c^2 + chi/c^4, less the moving
-     bodies' 4 U_j/c^2 (engine/carried.py FreeFallTurning, keep without 'moving'): leaving it out changes only the
+     (U + u^2/2)/c^2, chi, and the flow plus 4 U_j/c^2) are GR's first post-Newtonian metric in the time
+     t = T + phi/c^2 + chi/c^4 (engine/carried.py FreeFallTurning); without rule 5, less the moving bodies'
+     4 U_j/c^2 (keep without 'moving'): leaving it out changes only the
      flow, g_Ti, and taken back to harmonic time only g_ti (g_ij at O(c^-4), which moves bodies at 2PN). the
      time's rate at the body is 1 (phi steady there, kappa = 0), and the products of the time's singular parts with
      the field's have no r^0 part on the sphere (half powers of r, or odd in the direction), so at 1PN the
      regularized body moves as it would in harmonic time; chi moves bodies only at 2PN
-  so each body moves as a regularized geodesic of GR's harmonic 1PN metric less 4 U_j: part 2, exactly, with sympy
+  so each body moves as a regularized geodesic of GR's harmonic 1PN metric (less 4 U_j without rule 5): part 2,
+  exactly, with sympy
 
 part 2: G = M = a = 1, eps = 1/c^2, the bodies on circles about their centre of mass at Newton's omega; per unit
 mass L = v^2/2 + U + eps (v^4/8 + 3/2 U v^2 - U^2/2 + psi - 4 U_j v_j), U, U_j, psi as engine/metric.py
 PostNewtonian's (psi with each body's kinetic and binding energy and its field's motion, d^2/dt^2 sum GM r/2). each
 body's acceleration from Lagrange's equations at points r n round it, moving with it; its finite part; then
 omega^2 = 1 + eps k from the two bodies' relative acceleration. GR (EIH): k = -(3 - eta), eta = m1 m2/M^2. for five
-metrics: GR's (the check), the J = 0 rules (less 4 U_j), and the other body's field alone (with and without its
-binding term, and without 4 U_j)
+metrics: GR's (the J = 0 rules, all five), the rules without rule 5 (less 4 U_j), and the other body's field
+alone (with and without its binding term, and without 4 U_j)
 
 part 3: the periastron advance, from the two-body Lagrangian these give. with the relative motion's
 L/mu = v^2/2 + GM/r + [lambda v^4/8 + (GM/2r)(alpha v^2 + beta (n.v)^2) - delta (GM)^2/(2 r^2)]/c^2, the advance per
@@ -45,8 +47,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 from engine.logger import LOG_DIR
 
-METRICS = (('GR, the whole metric (the check)', 1, True, True),
-           ('J = 0 rules: GR less 4 U_j', 0, True, True),
+METRICS = (('GR, the whole metric: the J = 0 rules, all five', 1, True, True),
+           ('J = 0 rules without rule 5: GR less 4 U_j', 0, True, True),
            ('the other body alone', 1, False, False),
            ('the other body alone, with its binding term', 1, False, True),
            ('the other body alone, less 4 U_j', 0, False, False))
@@ -155,7 +157,7 @@ def advance(lines):
   for eta in (0.0, 0.1, 0.2, 0.25):
     gr = k(1 - 3*eta, 3 + eta, eta, 1)
     rules = k(1 - 3*eta, 3 - 7*eta, eta, 1)
-    lines.append('  eta %.2f   GR %.3f   J = 0 rules %.3f (%.2f of GR\'s)' % (eta, gr, rules, rules/gr))
+    lines.append('  eta %.2f   GR %.3f   without rule 5 %.3f (%.2f of GR\'s)' % (eta, gr, rules, rules/gr))
     print(lines[-1], flush=True)
 
 
