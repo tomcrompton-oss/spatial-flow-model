@@ -1,3 +1,3 @@
 # python 3.9 or later; tkinter (for csv_viewer.py) comes with python
 numpy
-sympy   # studies/binary_regularized.py and studies/flow_field_equations.py only
+sympy   # studies/binary_regularized.py, studies/flow_field_equations.py and studies/ball_law.py only
