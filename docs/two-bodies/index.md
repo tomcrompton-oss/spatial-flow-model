@@ -2,8 +2,9 @@
 
 With one body, spatial flow is general relativity exactly ([1.4](../part1/conclusion.md)): space falls into the body
 at $\sqrt{2GM/r}$, clocks tick by their speed through that space, and light crosses it at c. With two bodies, each has
-its own flow, and the model has to say how they combine. Nothing in the one-body model fixes that rule. These pages
-try each rule in turn, run it in the simulation, and check it against what is expected.
+its own flow, and the picture has to say how they combine. Nothing in the one-body case fixes that rule. These pages
+try each rule in turn, run it in the simulation, and check it against what is expected – the ways of building the
+flow that don't give GR, and why, on the way to the one that does.
 
 ## What a rule has to do
 
@@ -37,21 +38,20 @@ and goes through one test in detail, with the simulation's runs in the viewer.
 | [The eikonal flow](eikonal.md) | that speed, pointing down the paths of things falling from rest far away | ✅ Newton and clocks; ❌ lunar laser ranging (27σ) |
 | [Each body carrying its flow](turning.md) | the eikonal flow turning with the bodies, the Earth carrying its own | ✅ lunar ranging; ❌ light past the Sun (1000 × Cassini's limit) |
 | [Each body separately](split.md) | each body's own one-body flow, its effects on a particle applied one after the other | ✅ most tests with one body much heavier, and with each body's flow carried by the heavier body's space, lunar ranging and de Sitter precession; ❌ then the Nordtvedt effect, and a binary of comparable masses: the orbit turns 17% too slowly, and the pair accelerates by itself |
+| [One potential, space curved](../lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0) | the turning flow with Jacobi constant 0, space stretched across it, its first post-Newtonian corrections from Einstein's equations | ✅ every test run on it: lunar ranging, the Moon's orbit and de Sitter, light past a moving Jupiter, the circular binary – GR |
 
 The first two fail at the level of Newton's gravity. The next two pass Newton's tests and fail the first
-relativistic one, each in a different place, because a single flow has to carry every body's space at once. The last
-drops the single flow and treats each body by its own exact solution. It passes most tests with one body much
-heavier than the other, and carrying each body's flow in the heavier body's space gets the Moon right – lunar
-ranging and de Sitter precession – but then a bound pair falls towards the Sun too slowly, and with comparable masses
-the bodies' fields have to act on each other, and they don't.
+relativistic one, each in a different place, because a single flow through flat space has to carry every body's space
+at once. The fifth drops the single flow and treats each body by its own exact solution; it passes most tests with
+one body much heavier than the other, but with comparable masses the bodies' fields have to act on each other, and
+they don't. The last keeps one flow and lets space be curved across it, as Einstein's constraint requires: that is
+GR, written as a flow.
 
 [Two checks on every model](checks.md) scores each one on whether it keeps the energy and angular momentum its
 symmetries say it should, and whether its flow's change along itself is Newton's g. Every single flow keeps its
 conserved quantities (it is one spacetime), so the second check tells them apart; the split model passes the second
 by construction and fails the first, keeping no energy at the first relativistic order.
 
-[Many bodies](../many-bodies.md) works through the eikonal and turning flows at more length.
-[Lapse and curved space](../lapse-curved-space.md) relaxes the flow model's two assumptions: clocks that tick by more
-than their speed through space, and space that is curved as well as flowing. Keeping the clocks as they are and
-curving space across the eikonal flow by the potential passes lunar ranging's synodic term and the Jupiter bending with
-the bodies at rest; moving bodies are still to do.
+[Many bodies](../many-bodies.md) works through the eikonal and turning flows at more length, and
+[Lapse and curved space](../lapse-curved-space.md) builds the flow that is GR: clocks that keep the flow's time
+(N = 1), one potential over the whole plane, and space stretched across the flow.

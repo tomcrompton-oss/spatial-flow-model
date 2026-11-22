@@ -29,12 +29,9 @@ a stationary one.
    in plus its own velocity relative to that space: $v = u + w$.
 2. Objects within a region of space move and accelerate with the space, without any change in their relative
    position or velocity, and without feeling any force.
-3. Moving between regions of space flowing at different rates does not change a particle's velocity $v$.
-
-!!! warning "Correction"
-    Postulate 3 holds in the Newtonian version of the mechanics below, but not exactly in the relativistic one: once
-    the change in $w$ is added relativistically, crossing between regions does change $v$ (see 1.2.3.1, where the
-    simulation shows it). The original also numbers three sections 1.2.1 and two 1.2.2; they are renumbered here.
+3. Moving between regions of space flowing at different rates does not change a particle's velocity $v$ – in the
+   Newtonian version of the mechanics below. In the relativistic one the change in $w$ is added relativistically, and
+   crossing between regions does turn $v$ a little (1.2.5.1).
 
 ## 1.2.2 Approach
 
@@ -62,13 +59,10 @@ $$
 
 - It is a true velocity (unlike the classical escape velocity, which is a speed).
 - It always points directly at the body.
-- Space only ever flows towards the body: unlike water down a drain, it does not spiral round it.
-
-!!! info "Since this was written"
-    For a spinning body space does turn as it falls: in the river model of a rotating (Kerr) black hole the river
-    flows straight in but also *twists*, and that twist is what drags frames round the hole. The simulation now
-    includes it (`engine/kerr.py`) and matches exact Kerr results for light bending and orbits in the equatorial
-    plane.
+- Round a body that doesn't spin, space only ever flows towards it: unlike water down a drain, it does not spiral
+  round it. Round a spinning body it does turn as it falls: in the river model of a rotating (Kerr) black hole the
+  river flows straight in but also *twists*, and that twist is what drags frames round the hole. The simulation
+  includes it (`engine/kerr.py`), and matches exact Kerr for light bending and orbits in the equatorial plane.
 
 ## 1.2.4 The Newtonian limit
 
@@ -98,27 +92,21 @@ has moved through the space by $\mathbf w\,dt$. With only gravity acting, the pr
 4. Move the particle by its local velocity, $\mathbf w\,dt$, to location 3.
 5. Find the gravitational velocity $\mathbf u_3$ there.
 6. Having moved from 2 to 3 the particle is in a new frame of reference, so its relative velocity changes:
-   $\mathbf w \Rightarrow \mathbf w + (\mathbf u_2 - \mathbf u_3)$.
+   $\mathbf w \Rightarrow \mathbf w + (\mathbf u_2 - \mathbf u_3)$. (A particle that has moved into faster-flowing
+   space has to slow relative to it to keep the same $\mathbf v$.)
 7. Repeat.
 
-At any time the apparent velocity and acceleration follow from $\mathbf v = \mathbf u + \mathbf w$.
+At any time the apparent velocity and acceleration follow from $\mathbf v = \mathbf u + \mathbf w$. As $dt \to 0$
+the procedure is
 
-!!! info "Since this was written"
-    As $dt \to 0$ the procedure is
+$$
+\frac{d\mathbf x}{dt} = \mathbf w + \mathbf u, \qquad \frac{d\mathbf w}{dt} = -(\mathbf w\cdot\nabla)\,\mathbf u
+$$
 
-    $$
-    \frac{d\mathbf x}{dt} = \mathbf w + \mathbf u, \qquad \frac{d\mathbf w}{dt} = -(\mathbf w\cdot\nabla)\,\mathbf u
-    $$
-
-    The simulation now takes the metric's own form of it, on the momentum $\mathbf p = \gamma\mathbf w$:
-    $d\mathbf x/dt = \mathbf u + \mathbf w$, $d\mathbf p/dt = -\nabla(\mathbf u\cdot\mathbf p)$, second order
-    by the midpoint rule, with steps that shrink close to the body. Round one body the two are the same; the momentum
-    form stays second order close to a hole, and is right where the flow has curl (below).
-
-!!! warning "Correction"
-    The original's step 7 writes the change as $\mathbf u_3 - \mathbf u_2$. A particle that has moved into
-    faster-flowing space has to slow relative to it to keep the same $\mathbf v$, so the change is
-    $\mathbf u_2 - \mathbf u_3$ — the form the simulation uses (`engine/flow.py`).
+The simulation takes the metric's own form of it, on the momentum $\mathbf p = \gamma\mathbf w$:
+$d\mathbf x/dt = \mathbf u + \mathbf w$, $d\mathbf p/dt = -\nabla(\mathbf u\cdot\mathbf p)$, second order by the
+midpoint rule, with steps that shrink close to the body. Round one body the two are the same; the momentum form stays
+second order close to a hole, and is right where the flow has curl (1.2.5.1).
 
 ### Particles in still space
 
@@ -162,21 +150,13 @@ The simulation at different time steps:
 | final velocity seen from the ground (m/s) | −29.498 | −14.732 | −14.141 | −14.023 | −14.015 |
 
 With Newton's equations, $d = \tfrac12 g t^2 = 10$ m gives $t = \sqrt{2d/g} = 1.428$ s and $v = gt = 14.02$ m/s. With
-a small enough $dt$ the flowing-space simulation agrees.
+a small enough $dt$ the flowing-space simulation agrees, converging steadily down to 0.0001 s.
 
 <iframe src="../../viewer/index.html?run=../runs/part1/part1_apple.full.json" width="100%" height="460" loading="lazy" title="Newton's apple"></iframe>
 
 *The apple's height against time, in the flow model (blue) and under Newtonian gravity (orange, dashed): the two lie
 on top of each other. The flow model falls 10 m in 1.4272 s, arriving at 14.015 m/s; Newtonian gravity takes
 1.4271 s.* [Open full screen](../../viewer/index.html?run=../runs/part1/part1_apple.full.json){ target=_blank }
-
-!!! warning "Correction"
-    The original gives $t = \sqrt{2d/t}$; it should be $\sqrt{2d/g}$.
-
-!!! tip "Suggestion"
-    The original says a $dt$ below about 0.001 s starts to add floating point errors. The table doesn't show that:
-    the results keep converging down to 0.0001 s, and the current simulation, with its second-order step, gets the
-    same 1.4272 s and 14.015 m/s at that step. Worth dropping the claim, or showing where rounding takes over.
 
 ## 1.2.5 Special relativity
 
@@ -199,8 +179,9 @@ relativistic formula.
 Back to particles moving between regions, now beyond the Newtonian limit: a photon at the speed of light, crossing
 regions of space that are themselves moving at a large fraction of $c$. As it moves between regions its local
 velocity changes. With Newtonian addition this exactly cancels the extra motion of the space, and the photon goes
-straight. With the relativistic formula, entering the first moving region slows its local velocity slightly, and as
-it crosses further regions this becomes a rotation: the photon's path curves.
+straight – but only by letting its local speed exceed $c$, which is why the relativistic formula is needed. With it,
+entering the first moving region slows its local velocity slightly, and as it crosses further regions this becomes a
+rotation: the photon's path curves.
 
 ![Light crossing regions of space flowing downwards ever faster: its velocity in each region (red) turns, and the path seen from outside (blue) curves](images/regions.png)
 
@@ -216,15 +197,10 @@ added relativistically — $|w|$ stays at $c$ and the path curves, ending at $v 
 geodesic of this flow's spacetime — $w$ is unchanged and the light is carried down with the space, ending at
 $v = (c, -0.8c)$.* [Open full screen](../../viewer/index.html?run=../runs/part1/part1_regions.full.json){ target=_blank }
 
-!!! info "Since this was written"
-    The three answers differ because this flow has *curl*: the flow's speed changes across the direction it flows
-    in. For such a flow the procedure's rule, $d\mathbf w/dt = -(\mathbf w\cdot\nabla)\mathbf u$, is not the
-    geodesic of the flowing-space metric $ds^2 = -c^2dt^2 + |d\mathbf x - \mathbf u\,dt|^2$; the geodesic rule acts
-    on the momentum, $d\mathbf p/dt = -(\nabla\mathbf u)\cdot\mathbf p$. For the flow round a single body, which has no
-    curl, the two are the same — which is why the four tests in 1.3 come out right. The difference does matter for
-    flows with curl, such as a gravitational wave crossing the plane ([Gravitational waves](../waves.md)), and the
-    simulation now steps on the momentum by default.
-
-!!! tip "Suggestion"
-    The Newtonian version keeps the photon's path straight only by letting its local speed exceed $c$ (to 1.28c
-    here). Worth saying, since it is the reason the relativistic formula is needed.
+The three answers differ because this flow has *curl*: the flow's speed changes across the direction it flows in.
+For such a flow the procedure's rule, $d\mathbf w/dt = -(\mathbf w\cdot\nabla)\mathbf u$, is not the geodesic of the
+flowing-space metric $ds^2 = -c^2dt^2 + |d\mathbf x - \mathbf u\,dt|^2$; the geodesic rule acts on the momentum,
+$d\mathbf p/dt = -(\nabla\mathbf u)\cdot\mathbf p$, and the dotted path is the right one. For the flow round a single
+body, which has no curl, the two rules are the same – which is why the four tests in 1.3 come out as general
+relativity. The difference matters for flows with curl, such as a gravitational wave crossing the plane
+([Gravitational waves](../waves.md)), and the simulation steps on the momentum.

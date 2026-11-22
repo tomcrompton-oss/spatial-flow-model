@@ -1,31 +1,22 @@
 # 1.4 Conclusion of Part 1
 
-In Part 1 we set out a hypothesis for an alternative theory of gravity, based on the motion of space.
+Part 1 set out gravity as the motion of space: space flowing into a body at the escape velocity, through flat space,
+with clocks slowed only by their speed through it. With the simulation as it is now, all four tests come out as
+general relativity:
 
-It passes the four original tests of general relativity. We didn't look at time dilation in much detail, but the
-other tests passed with a very high degree of accuracy — over 99% agreement with general relativity's approximations
-for the bending of light and the precession of Mercury, although less for the Shapiro effect.
+| Test | Spatial flow against general relativity |
+| --- | --- |
+| gravitational redshift | exact: a clock holding still against the flow ticks at GR's static rate, $\sqrt{1 - r_s/r}$ (1.3.1) |
+| bending of light | exact GR deflection to parts in $10^7$, 1–1000 AU out, 0.025–1 solar radii from the Sun |
+| precession | exact GR for the orbit's own apsides to 1.6 × 10⁻⁴, at 65–19,600 Schwarzschild radii |
+| Shapiro delay | round trips as GR; each leg differs only by the clock offset between its ends (1.3.4) |
 
-The Shapiro effect raised some interesting questions: although the round trip agrees with general relativity, the
-time delay is not symmetrical. Part 2 looks at time dilation more closely, including that asymmetry.
-
-!!! info "Since this was written"
-    With the simulation as it is now, all four tests pass outright:
-
-    | Test | Spatial flow against general relativity |
-    | --- | --- |
-    | gravitational redshift | exact: a clock holding still against the flow ticks at GR's static rate, $\sqrt{1 - r_s/r}$ (1.3.1) |
-    | bending of light | exact GR deflection to parts in $10^7$, 1–1000 AU out, 0.025–1 solar radii from the Sun |
-    | precession | exact GR for the orbit's own apsides to 1.6 × 10⁻⁴, at 65–19,600 Schwarzschild radii |
-    | Shapiro delay | round trips as GR; each leg differs only by the clock offset between its ends (1.3.4) |
-
-    The reason is that, for a single body, spatial flow *is* general relativity: the flowing-space metric
-    $ds^2 = -c^2dt^2 + |d\mathbf x - \mathbf u\,dt|^2$ with $|\mathbf u| = \sqrt{2GM/r}$ is the Schwarzschild solution
-    in Gullstrand–Painlevé coordinates, and the procedure of 1.2 is its geodesic equation, because the flow has no
-    curl. The time spatial flow runs on — a distant observer's, and anything falling with the space — is
-    Gullstrand–Painlevé time. That answers the question the original asks in Part 2, of whether this is "just
-    another coordinate system": for one body, yes. Whether it stays so with more than one body is where it gets
-    interesting ([Two bodies](../two-bodies/index.md), [Many bodies](../many-bodies.md)).
+The reason is that, for a single body, spatial flow *is* general relativity: the flowing-space metric
+$ds^2 = -c^2dt^2 + |d\mathbf x - \mathbf u\,dt|^2$ with $|\mathbf u| = \sqrt{2GM/r}$ is the Schwarzschild solution in
+Gullstrand–Painlevé coordinates, and the procedure of 1.2 is its geodesic equation, because the flow has no curl. The
+time spatial flow runs on – a distant observer's, and anything falling with the space – is Gullstrand–Painlevé time.
+So spatial flow is a way of seeing general relativity, and the question for more than one body is what the flow has
+to be like to stay so ([Two bodies](../two-bodies/index.md), [Lapse and curved space](../lapse-curved-space.md)).
 
 ## The model as it is now
 

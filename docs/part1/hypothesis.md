@@ -1,16 +1,7 @@
 # 1.1 Hypothesis
 
-*Part 1 is the first part of Thomas Crompton's paper "Spatial Flow Theory of General Relativity", revised for the
-web. The boxes are review notes on the original:*
-
-!!! warning "Correction"
-    Something in the original that is wrong, with what it should say.
-
-!!! tip "Suggestion"
-    Different wording, or a point worth adding.
-
-!!! info "Since this was written"
-    What the simulation shows now, which the original could not.
+*Part 1 is based on the first part of Thomas Crompton's paper "Spatial Flow Theory of General Relativity", revised
+for the web.*
 
 Classically the vacuum was treated as nothing, defined only by what it lacks. But with quantum mechanics, and the
 various possible explanations of dark energy, the once empty vacuum may now be seething with zero-point energy,
@@ -27,7 +18,7 @@ $$
 v_e = \sqrt{\frac{2GM}{r}}
 $$
 
-Special relativity introduces time dilation: a clock moving at speed $v$ runs slow,
+Special relativity introduces time dilation: a clock moving at any speed $v$ runs slow,
 
 $$
 t_0 = t\sqrt{1 - \frac{v^2}{c^2}}
@@ -40,31 +31,19 @@ $$
 t_0 = t\sqrt{1 - \frac{2GM}{rc^2}} = t\sqrt{1 - \frac{r_s}{r}} = t\sqrt{1 - \frac{v_e^2}{c^2}}
 $$
 
-So the gravitational time dilation of a clock in a gravity well is exactly the special relativistic time dilation of
-a clock moving at the speed it would need to escape from the well — or, if the surrounding space were falling into
-the well, the speed a clock would need to "swim against the tide" just to stay where it is.
+The last step is an identity, $v_e^2/c^2 = 2GM/rc^2$, not an approximation. So the gravitational time dilation of a
+clock in a gravity well is exactly the special relativistic time dilation of a clock moving at the speed it would
+need to escape from the well – or, if the surrounding space were falling into the well, the speed a clock would need
+to "swim against the tide" just to stay where it is.
 
-We therefore have two parts to our hypothesis:
+That gives the two ideas this view of gravity rests on:
 
-1. Space moves (flows) under the effect of gravity towards a gravitational body, at a speed equal to the classical
-   escape velocity.
-2. The time dilation attributed to gravitational potential in general relativity is actually a special relativistic
-   time dilation, due to the flow of space.
+1. Space moves (flows) towards a gravitational body, at a speed equal to the classical escape velocity.
+2. The time dilation general relativity attributes to the gravitational potential is the special relativistic time
+   dilation of moving through that flowing space.
 
-!!! warning "Correction"
-    The original writes the special relativistic formula with $v_e$; it holds for any speed $v$, and becomes the
-    gravitational one when $v = v_e$. It also says "actual a special relativistic time dilation" (*actually*) and
-    heads the section "Hypothosis".
-
-!!! info "Since this was written"
-    The equality is exact, not approximate: $v_e^2/c^2 = 2GM/rc^2$ identically, so a clock holding still against
-    space flowing in at $v_e$ ticks at GR's rate for a static clock, $\sqrt{1 - r_s/r}$, at every distance. The
-    asterisk in the original ("exactly\* — we'll explore this in more detail later") can go.
-
-!!! tip "Suggestion"
-    Say here that this flowing-space picture has a history: it is the Schwarzschild solution in Gullstrand–Painlevé
-    coordinates (1921–22), and Hamilton and Lisle's "river model of black holes" (2008) develops it, including a
-    spinning hole (see [References](../references.md)). For a single body the hypothesis reproduces general
-    relativity exactly; Part 2 of the original reaches this, and the conclusion of Part 1 is a natural place to
-    say it. Where the picture may part from general relativity is with more than one body — see
-    [Two bodies](../two-bodies/index.md).
+This is a way of describing general relativity, not a replacement for it. Space flowing in at $v_e$ through flat
+space, with clocks slowed only by their speed through it, is the Schwarzschild solution in Gullstrand–Painlevé
+coordinates (1921–22), and Hamilton and Lisle's "river model of black holes" (2008) develops the picture, including a
+spinning hole (see [References](../references.md)). Part 1 works it through for one body; Part 2 asks what the flow
+has to be like for several.

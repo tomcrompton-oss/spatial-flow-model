@@ -1,6 +1,6 @@
 # Scorecard
 
-Every model and variation so far, scored out of 10 on eight measures. These are judgements from the test results on
+Every construction tried, scored out of 10 on eight measures. These are judgements from the test results on
 the other pages, not computed numbers. A dash means the model can't take that test (its bodies are at rest, or held
 on their paths), not that it failed it.
 
@@ -74,7 +74,8 @@ on their paths), not that it failed it.
 Notes:
 
 - **The four GR parts separate the models.** Every flow model has GR's one body; the flat flows fail when fields
-  combine; space from u fixes that for the eikonal flow; every moving flow has half of de Sitter (Moving 4); and every
+  combine; space from u fixes that for the eikonal flow; every flow carried with its body has half of de Sitter (Moving 4), and
+  the J = 0 flow with its corrections doesn't (Moving 9); and every
   model whose bodies move by the others' fields fails the binary and Nordtvedt (Self-motion 0–2) – including GR's own
   metric moved that way (the second check), so that part is about how the bodies are moved, not the flow. Moved
   instead as geodesics of the whole metric with their own singular terms removed, GR's metric gives GR's circular
@@ -114,16 +115,16 @@ Notes:
 
 ## What the scores show
 
-- **The trade-off.** Every gain on GR has cost on the premise: the split model reaches Moving 8 by dropping the single
-  flow, and the lapse family reaches 10 by dropping the flow altogether.
-- **Where the flow model stands.** With space stretched across its own motion by u²/c², the flow model is GR for one
-  body and for bodies at rest together (the eikonal flow: 10 and 10, premise 7). The gaps are the two moving parts.
-  Every moving flow – turning or carried, flat or curved – has half of de Sitter's precession (Moving 4); the carried
-  flows, made of regions whose times jump at the seams, also turn light past a moving Jupiter by 1.7″ (Moving 2); and bodies
-  moved by the others' flows fail the binary and Nordtvedt (Self-motion 2 at best), as GR's own metric does when its
-  bodies are moved that way.
-- **What would close them.** The carried flow needs one time: one potential continuous across its seams. De Sitter needs the Sun's curved space carried round with the Earth; the binary and
-  Nordtvedt need each body's field to act on its own source. Both point to the bodies' flows solved together – a
-  field equation for the flow – not each one carried separately.
+- **Each part of GR picks out what the flow needs.** Every construction has GR's one body. The flat flows fail when
+  fields combine, until space is stretched across the flow (the eikonal flow with space from u: Combined 10). The flows
+  that carry each body's river with it fail moving sources – half of de Sitter's precession, and seams that turn light
+  past a moving Jupiter by 1.7″ – until the bodies' flows are one potential (J = 0). And bodies moved by the others'
+  fields alone fail the binary, until each moves with the regular part of its own space.
+- **Where it ends.** The J = 0 flow's rules – N = 1, Einstein's space, one potential, and its first post-Newtonian
+  corrections from Einstein's equations – score 9–10 on every part run (Nordtvedt not yet worked out) with premise 7:
+  GR for several bodies, written as one flow with Part 1's clocks. What it gives up is flat space.
+- **The trade-off along the way.** The constructions in between traded premise for GR: the split model reached
+  Moving 8 by dropping the single flow, and the lapse family reached 10 by dropping the flow altogether. The J = 0
+  rules don't trade: they keep the single flow and the clocks, and curve space instead.
 - **The two checks pull opposite ways.** Every single-flow model keeps its conserved quantities; every split model's
   flows give g exactly, and none keeps its energy.
