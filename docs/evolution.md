@@ -25,7 +25,8 @@ each other.
 
 Model 4.2 is GR's whole first post-Newtonian metric, written in the slicing whose observers fall freely with the flow.
 Spin is built and tested for one body (1.3), and not yet for several (4.3). [Prior work](prior-work.md) compares each
-piece with the published literature.
+piece with the published literature. [What comes from outside](from-outside.md) asks which of the
+sources could come from the flow itself.
 
 ## 1. One body
 
