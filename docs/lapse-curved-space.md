@@ -227,7 +227,8 @@ has GR's precession, 1 none) and the coordinates' stretch along and across the E
   sums that over three months. With metres left over, k – a 0.2 m effect – can't be read.
 - **Nordtvedt and the binary pulsars can't be run on it.** Both need the bodies to move by the model's own field (a
   self-gravitating pair falling towards the Sun; an eccentric binary of comparable masses), and the turning flow puts
-  its bodies on fixed circles at one angular speed.
+  its bodies on fixed circles at one angular speed. (A circular binary can be worked out: see
+  [its bodies](#one-potential-for-the-whole-plane-the-turning-flow-with-j-0), for the J = 0 flow.)
 
 (A first fit held GR's Earth at 1 AU, off its free-fall circle by GM/c² = 1.5 km, and the Moon drifting from it
 left 200 m in every model; the GR row, whose metric holds the Earth at 1 AU, is fitted that way too.)
@@ -600,6 +601,47 @@ maps T to GR's time with the integral of the model's own flow from the Earth to 
 steps and fitted smoothly in angle and ln r) falls at g to 5×10⁻¹² m/s² at the Moon; the ray table's does to 10⁻⁹
 (a check with too wide a finite difference had made that look like 10⁻⁶), and the Moon is the same with either.
 
+**Its bodies: a circular binary** (`studies/binary_regularized.py`). To move the bodies by the J = 0 flow, each
+needs a rule for how it moves in a flow that holds its own field. Round the Earth the flow moves through the turning
+frame at about 51 km/s, but it streams out from the Earth equally every way: its average round a circle about the
+Earth is under 10⁻⁹ m/s at 1,000 and 10,000 km and 3×10⁻⁵ m/s at 300,000 km (the Sun's tide). So the flow's regular
+part at a body is the body's own velocity, and a body at rest in the turning frame moves with its space. The rule
+that says this is the one GR's two-body motion is derived with: each body a geodesic of the whole metric with its
+own singular terms removed (Hadamard's finite part, the r⁰ part of its acceleration on a small sphere round it,
+averaged over the sphere).
+
+The J = 0 rules are GR's first post-Newtonian metric in another time, less the moving bodies' 4U_j/c² – which,
+taken back to harmonic time, is GR's $g_{ti}$ and nothing else at this order. That time runs at rate 1 at each body
+(κ = 0), and its singular parts leave nothing in the finite part (half powers of r, or odd in the direction), so
+the J = 0 rules' bodies move as GR's harmonic metric less 4U_j moves them. That is worked out exactly (sympy), for
+two bodies on circles at a, η = m₁m₂/M²:
+
+| Each body a regularized geodesic of | k in ω² = (GM/a³)(1 + k GM/(ac²)) | equal masses |
+|---|---|---|
+| GR's whole metric (the check) | −3 + η | −2.75 |
+| the J = 0 rules (GR less 4U_j) | −3 + 5η | −1.75 |
+| the other body's field alone | −3 + 3η | −2.25 |
+| … with its binding term (−GM_A/r_AB in the other's ψ) | −3 + η | −2.75 |
+| … less 4U_j | −3 + 7η | −1.25 |
+
+Nothing pushes along the orbit in any of them. The periastron advance follows from the two-body Lagrangian each
+gives (first-order perturbation; it is 3 GM/(c²p) per orbit over 2π for a test body and for GR at any η). Leaving
+out 4U_j takes $-4Gm_1m_2\,\mathbf v_1\cdot\mathbf v_2/(rc^2)$ out of GR's (EIH's), and the advance becomes
+(3 − 8η) GM/(c²p): a third of GR's at equal masses, which the double pulsar measures to about 10⁻⁴.
+
+- **The rule works.** GR's own metric moved this way is GR's binary exactly. At this order removing a body's own
+  terms leaves the other body's field together with its binding term – the one place a body's field acts on the
+  other's source. That is what "each body in the others' fields alone" leaves out – the rule the carried flow's
+  bodies were moved by, which with GR's own metric gave 0.83 of GR's advance (the scorecard's second check). So that
+  check's failure is the missing binding term; the carried flow's own errors haven't been split up this way.
+- **The J = 0 rules fail it by 4η**, the moving bodies' term they left out. The Moon didn't need it (0.49 m
+  without, 0.60 m with); the binary does: it is one body's velocity in its field felt by the other's velocity.
+- **With 4U_j back** – the flow plus each body's potential carried at its velocity, $4U_j/c^2$ – the J = 0 time is GR
+  in it, and the binary is GR's. That term is Newtonian, like the rest (U and the bodies' velocities), but with it
+  the rules are GR's whole first post-Newtonian metric, rearranged.
+- This is the circular binary only; eccentric orbits can't be run in the turning flow, whose bodies go round on
+  circles. The advance comes from the Lagrangian, not a run, and Nordtvedt hasn't been worked out.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -637,6 +679,11 @@ What they show about the flow model:
   (98 km; flat, 197 m): Einstein's space needs the flow's first post-Newtonian corrections with it, and with J = 0 the
   flow round the Earth is 50 km/s. With those corrections – GR in this flow's time, the lapse taken to 1 by χ – the
   Moon passes (0.6 m) as well as light: one potential, Part 1's clocks, and GR's curved space and moving-body pieces.
+- Its bodies, each moving with the regular part of its space (its own singular terms removed), make a circular
+  binary. With GR's pieces in the J = 0 time that is GR's binary exactly; the J = 0 rules, which leave out the moving
+  bodies' 4U_j/c², get ω's first post-Newtonian coefficient −3 + 5η for GR's −3 + η, and a third of GR's periastron
+  advance at equal masses. The Moon doesn't need that term; the binary does. And "each body in the others' fields
+  alone" fails by the binding term in the others' source, which removing a body's own terms keeps.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.
@@ -669,4 +716,8 @@ python3 studies/carried_bodies.py
 
 ```bash
 python3 studies/constraints.py
+```
+
+```bash
+python3 studies/binary_regularized.py
 ```
