@@ -20,7 +20,7 @@ time, and the steps pass it. bodies can also move (Body.velocity, in a straight 
 and, if Calculator.carried, carried along with them (the space round each moving body moves with it). with neither,
 the flow is steady
 
-the calculators that were in flow2.py and are no longer used are in legacy/legacy_calculators.py
+the calculators that were in flow2.py and are no longer used were kept in legacy/legacy_calculators.py (removed after af11f8d; in git history)
 """
 import copy
 import math
