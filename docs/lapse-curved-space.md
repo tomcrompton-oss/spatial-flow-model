@@ -646,6 +646,45 @@ out 4U_j takes $-4Gm_1m_2\,\mathbf v_1\cdot\mathbf v_2/(rc^2)$ out of GR's (EIH'
 - This is the circular binary only; eccentric orbits can't be run in the turning flow, whose bodies go round on
   circles. The advance comes from the Lagrangian, not a run, and Nordtvedt hasn't been worked out.
 
+**Where rules 3–5 come from** (`studies/flow_field_equations.py`). Rules 3–5 are the flow's first post-Newtonian
+correction, $\gamma\mathbf u = \mathbf u_0 + \mathbf A/c^2 - \nabla\chi/c^2$ with $\mathbf A = -(U + u_0^2/2)\mathbf u_0 + 4\mathbf U_j$.
+With N = 1 and Einstein's space, two of Einstein's equations involve that correction and nothing else new at this
+order (not space's next order, $c^{-4}$):
+
+- **the momentum constraint**, which on a correction acts as $-\tfrac12\nabla\times\nabla\times$: it fixes the
+  correction's curl;
+- **the trace of the evolution equation** – Raychaudhuri's, for the observers moving with the flow, who with N = 1 fall
+  freely – which fixes its divergence.
+
+Both were checked exactly (sympy) for every flow that keeps Bernoulli's equation – an arbitrary φ, its rates from
+Bernoulli, two bodies on general curved paths – at points away from the bodies:
+
+| Einstein's equation, first post-Newtonian order | What the rules give |
+|---|---|
+| momentum constraint, rules 3 and 5 | 0 (10⁻¹³⁹) |
+| … rule 3 alone | misses by exactly $2\nabla\,\partial_T U$, the potential's motion |
+| … rule 5 alone, or neither | misses |
+| trace of the evolution equation, rules 3 and 5, χ left out | misses by exactly $-\nabla^2 Q/c^2$, Q the lapse χ takes away |
+| … the same with ψ's 1/r parts (the bodies' kinetic and binding energy) left out of Q | the same number |
+
+So:
+
+- **Rules 3 and 5 are the momentum constraint.** Together they are its solution; each alone fails. The constraint fixes
+  only their curl, so they could be any split with the same curl, the rest a gradient – which rule 4 absorbs. Rule 5's
+  4U_j is the part the bodies' momentum needs: without it the constraint misses by the moving potential's term.
+- **Rule 4 is the trace of the evolution equation.** With N = 1 that equation asks of the flow's gradient part exactly
+  what χ does, so "χ carried along the flow from Q" is that equation, not a separate rule.
+- **What the vacuum equations can't fix is ψ's 1/r parts.** Away from the bodies they are harmonic and drop out; they
+  are set by the bodies themselves – each body's kinetic and binding energy as the source, as its mass is Newton's.
+  Rule 4's source is the one place a fact about the bodies, not the field, goes in.
+
+The rules then come down to: N = 1; Bernoulli's equation for the flow at Newton's order; and Einstein's equations –
+the Hamiltonian constraint for space (rule 2), the momentum constraint and the trace of the evolution equation for
+the flow's correction (rules 3–5) – with the bodies' mass, momentum and energy as their sources. That is GR in the
+slicing whose observers fall freely with the flow: a field equation for the flow, but Einstein's. It isn't run here:
+these are pointwise checks away from the bodies, not a solve, and the Hamiltonian constraint and the rest of the
+evolution equations at this order bring in space's next order, which the rules don't give.
+
 ## What it means
 
 The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
@@ -689,6 +728,10 @@ What they show about the flow model:
   does, so it is now the rules' fifth, and with it the J = 0 rules pass the Moon (0.60 m), light and the circular
   binary – as GR's whole first post-Newtonian metric in the flow's time, which is what they now are. And "each body in
   the others' fields alone" fails by the binding term in the others' source, which removing a body's own terms keeps.
+- Rules 3–5 aren't put in by hand: with N = 1 and Einstein's space, the momentum constraint fixes the flow's
+  correction's curl (rules 3 and 5 together; without 4U_j it misses by the potential's motion) and the trace of the
+  evolution equation its divergence (rule 4, χ). Only ψ's 1/r parts – the bodies' kinetic and binding energy – come
+  from the bodies rather than the field. The field equation the flow needs is Einstein's, in its free-fall slicing.
 - So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
   round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
   bodies' flows solved together – a field equation for the flow – not each one carried separately.
@@ -725,4 +768,8 @@ python3 studies/constraints.py
 
 ```bash
 python3 studies/binary_regularized.py
+```
+
+```bash
+python3 studies/flow_field_equations.py
 ```
