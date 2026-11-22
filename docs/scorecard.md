@@ -67,8 +67,8 @@ on their paths), not that it failed it.
 | [GR transformed exactly](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) to the time of the Earth's carried river | 10 | 10 | 10 | 10 | – | 10 | 2 | **1** | GR with a 30 km/s flow: the Moon fits as GR does (k +0.017, 0.027 m), so the engine and the mapping are right. The flow is the Earth's river alone, the rest of gravity in the clocks. |
 | GR in the carried flow's free-fall time, tide transported | 7 | 10 | 10 | 10 | 3 | 3 | 7 | **3** | The Moon is GR's (k +0.010, 0.018 m), so the carried flow's half of de Sitter is its own. Moved as the carried bodies are, the binary gets 0.83 of GR's advance at equal masses: each body feels only the others' field. |
 | GR in the carried flow's free-fall time, [N = 1 by χ](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) | 7 | 10 | 10 | 9 | – | 3 | 7 | **5** | The lapse's first post-Newtonian part moved into the flow by a shift of time χ/c⁴ carried along it, so the clocks are Part 1's. The Moon GR's to 0.15 m (k +0.11), de Sitter whole. Needs GR's curved space: flat, the Moon is 580 m off. The Earth held on a circle. |
-| GR in the [turning flow's time, J = 0](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0), N = 1 by χ | 9 | 10 | 10 | 9 | – | 3 | 9 | **6** | One potential over the whole plane, Part 1's clocks, and GR's curved space and first post-Newtonian pieces in its time: the Moon GR's to 0.6 m (k −0.18), light as GR's. The flow decides the slicing; GR's pieces still decide the moving bodies' dynamics. |
-| [The J = 0 flow's own rules](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0): N = 1, Einstein's space, the flow slowed by (U + u²/2)/c², χ | 9 | 10 | 10 | 9 | – | 4 | 9 | **6** | No moving bodies' term. The Moon 0.49 m; χ's source needs the bodies' 1PN potential ψ (1.6 m without) and U at harmonic time (14.5 m without). All Newtonian quantities, but it is GR's metric rearranged, not derived. |
+| GR in the [turning flow's time, J = 0](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0), N = 1 by χ | 9 | 10 | 10 | 9 | – | 10 | 9 | **6** | One potential over the whole plane, Part 1's clocks, and GR's curved space and first post-Newtonian pieces in its time: the Moon GR's to 0.6 m (k −0.18), light as GR's. The flow decides the slicing; GR's pieces still decide the moving bodies' dynamics. |
+| [The J = 0 flow's own rules](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0): N = 1, Einstein's space, the flow slowed by (U + u²/2)/c², χ | 9 | 10 | 10 | 9 | – | 10 | 9 | **6** | No moving bodies' term. The Moon 0.49 m; χ's source needs the bodies' 1PN potential ψ (1.6 m without) and U at harmonic time (14.5 m without). All Newtonian quantities, but it is GR's metric rearranged, not derived. |
 
 Notes:
 
@@ -82,7 +82,9 @@ Notes:
   light past Jupiter, causality, the lunar range to a held mirror), which are the same for every frame rule built on
   Lorentz frames.
 - **Conserved, for the lapse and curved-space models**: each is one steady spacetime, and the engine keeps its energy
-  (E and L to 3 × 10⁻⁸ in its checks). They have not been through the four-orbit study.
+  (E and L to 3 × 10⁻⁸ in its checks). They have not been through the four-orbit study. The J = 0 time is steady in
+  the turning frame, and keeps the Jacobi constant: the Moon's J drifts by −6.2, −1.6 and −0.39 m²/s² in 30 days at
+  steps of 240, 120 and 60 s (the step's, going as its square), about 10⁻⁴ of a 1PN unit at zero step.
 - **Flow = g, for the λ models**: the flow carries only 1 − λ of g, and the clocks the rest. The check as defined
   doesn't apply, though Newton's g comes out right.
 - **Space curved across the flow**: every version keeps N = 1, so it loses one premise point for no longer being flat.
