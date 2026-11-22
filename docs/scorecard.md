@@ -121,7 +121,7 @@ Notes:
   past a moving Jupiter by 1.7″ – until the bodies' flows are one potential (J = 0). And bodies moved by the others'
   fields alone fail the binary, until each moves with the regular part of its own space.
 - **Where it ends.** The J = 0 flow's rules – N = 1, Einstein's space, one potential, and its first post-Newtonian
-  corrections from Einstein's equations – score 9–10 on every part run (Nordtvedt not yet worked out) with premise 7:
+  corrections from Einstein's equations – score 9–10 on every part run (Nordtvedt not yet run; GR's first post-Newtonian equations give η = 0) with premise 7:
   GR for several bodies, written as one flow with Part 1's clocks. What it gives up is flat space.
 - **The trade-off along the way.** The constructions in between traded premise for GR: the split model reached
   Moving 8 by dropping the single flow, and the lapse family reached 10 by dropping the flow altogether. The J = 0

@@ -24,6 +24,7 @@ theme:
 nav:
   - Overview: index.md
   - Preface: preface.md
+  - The model, step by step: evolution.md
   - Part 1 – The Flow of Space:
       - 1.1 Hypothesis: part1/hypothesis.md
       - 1.2 Mechanics of spatial flow: part1/mechanics.md
@@ -47,6 +48,7 @@ nav:
       - Viewers: viewers.md
       - Results: results.md
       - File formats: formats.md
+  - Prior work: prior-work.md
   - References: references.md
 
 markdown_extensions:

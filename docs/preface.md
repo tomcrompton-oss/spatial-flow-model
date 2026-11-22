@@ -26,6 +26,6 @@ light step by step through each version of the flow, and the studies compare the
 post-Newtonian equations, and measurement – lunar laser ranging, Cassini, VLBI and the binary pulsars.
 The viewers on these pages replay the runs.
 
-**How to read it.** Part 1 stands on its own. For Part 2, [Part 2 in brief](part2.md) gives the result in a page; the
+**How to read it.** Part 1 stands on its own. [The model, step by step](evolution.md) lays out the whole model one feature at a time. For Part 2, [Part 2 in brief](part2.md) gives the result in a page; the
 [two-body pages](two-bodies/index.md) go through the rules one at a time; [Lapse and curved space](lapse-curved-space.md)
 builds the flow that works; and the [scorecard](scorecard.md) puts every version side by side.
