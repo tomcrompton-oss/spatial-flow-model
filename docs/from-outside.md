@@ -73,9 +73,9 @@ elsewhere.
 | 3.1: Bernoulli's equation with J = 0 | Hamilton–Jacobi | **Yes.** It is the first integral of free fall for a flow with no curl, and J = 0 is space at rest far away. U isn't an input: it is the flow's head, and its Poisson equation is the ball law. |
 | 2.2: curved space | Einstein's Hamiltonian constraint | **Yes.** It is the ball law for balls moving through the flow: the $w^iw^jR_{ij}$ that flat space gets wrong. |
 | 3.2: the flow slowed by $(U + u^2/2)/c^2$, and χ | GR's first post-Newtonian metric | **Yes.** χ is the ball law for balls falling with the flow, at first post-Newtonian order (Raychaudhuri's equation, the trace of the evolution equation). The slowing, with 4.2's term, is the momentum constraint: the ball law's mixed part. ([Where the rules come from](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0).) |
-| 3.2: χ's source, the bodies' kinetic and binding energy | GR's ψ | **Mostly, not yet done.** The kinetic part is a moving body's energy, from special relativity. The binding part is the ball law's nonlinearity: a body's energy in another body's potential is part of the source. Both should follow from the ball law applied inside the bodies, as Einstein, Infeld and Hoffmann's equations of motion do. |
+| 3.2: χ's source, the bodies' kinetic and binding energy | GR's ψ | **Yes, from one body's field (checked, below).** The kinetic part, $\tfrac32v^2$, is the body's static field Lorentz-boosted to its velocity. The binding part, $-U_\text{others}$, is its static field set in the others' clocks and rulers. |
 | 4.1: Hadamard regularization | post-Newtonian theory | **Yes.** The partie finie is the field averaged over a small sphere round the body. So the rule is premise 4 for an extended body: a body moves with the space it is in, averaged over the space round it. At first post-Newtonian order a spherical body's structure drops out, so this is the real bodies' result. The J = 0 flow's own part averages to about zero round the Earth (`studies/binary_regularized.py`). |
-| 4.2: $4\mathbf U_j/c^2$ | the first post-Newtonian vector potential | **Yes, by special relativity – argued, not yet run.** A body moving steadily has the static body's field, boosted to its velocity. The curl of 4U_j is what the boost gives: 2U from the clocks and 2U from the curved space. A change of time slicing only adds a gradient, so it can't change the curl. The boosted fields add to give the part linear in each body's mass, and the ball law's nonlinearity gives the rest. |
+| 4.2: $4\mathbf U_j/c^2$ | the first post-Newtonian vector potential | **Yes, by special relativity (checked, below).** It is a body's static field, Lorentz-boosted to its velocity: 2U from its clocks and 2U from its curved space. Rule 5 isn't a separate rule. |
 | 1.3 and 4.3: spin | the river model (Kerr) | **Yes.** At first post-Newtonian order it is the momentum constraint with the bodies' angular momentum as the source: the same part of the ball law as 4U_j. Kerr is a vacuum solution of the whole law. Hamilton's twist is what keeps space flat; once space is curved it isn't needed as a separate rule. |
 | the seam rule, and the bodies' offset in J | choices | **Nothing to derive.** They choose how time is sliced and leave the spacetime as it is. (The [eccentric binary](lapse-curved-space.md#off-circles-the-j-0-flow-for-an-eccentric-binary) shows the offset can't keep the seam on the saddle.) |
 
@@ -83,22 +83,49 @@ elsewhere.
 
 - **Special relativity, locally.** The flow picture assumes it; nothing in the flow gives it.
 - **The bodies' masses**, and G.
-- **The ball law itself.** It is Einstein's equation, so none of this derives GR from the flow without GR's content.
-  What it shows is that GR's content fits in one sentence about the flow, and that Newton, the post-Newtonian rules
+- **The ball law itself**, for what the bodies' own fields don't give: the nonlinearity between them. It is
+  Einstein's equation, so none of this derives GR from the flow without GR's content. What it shows is that GR's content fits in one sentence about the flow, and that Newton, the post-Newtonian rules
   and curved space all follow from it. The flow describes how space moves; a law about what moves it has to come from
   somewhere. Jacobson ("Thermodynamics of spacetime: the Einstein equation of state", *Phys. Rev. Lett.* **75**,
   1260, 1995) derived the law from Raychaudhuri's equation for light rays and horizon thermodynamics, with entropy
   proportional to area. That brings thermodynamics in from outside instead.
 
-## Not yet checked
+## A body's own field, moving and among others
 
-- **4U_j from the boosted river.** Boosting 1.2's one-body flow, with 2.2's space, should give 4.2's term's curl.
-  That would make rule 5 a consequence of special relativity, not a rule.
-- **χ's source from the ball law inside the bodies.** The kinetic and binding energy that step 3.2 takes from GR's
-  ψ, worked out from a small fluid body.
+`studies/field_from_bodies.py` checks, exactly, where the rules' moving-body terms come from. The rules take three
+things from GR's first post-Newtonian metric in harmonic coordinates, before the J = 0 slicing: the space
+$(1 + 2U)\,\delta$, the vector potential $g_{0i} = -4U_i$, and χ's source
+$\psi = \sum_b (m_b/r_b)(\tfrac32 v_b^2 - U_\text{others}) + \tfrac12\partial_t^2\sum_b m_br_b$. Each is rebuilt from
+one body's static field, $g_{00} = -1 + 2m/R - 2m^2/R^2$, $g_{ij} = (1 + 2m/R)\,\delta$, which is Part 1's one-body
+flow in these coordinates.
+
+| Built from one body's static field | Against GR's first post-Newtonian metric | Result |
+| --- | --- | --- |
+| **Boosted** to velocity v (special relativity) | one body moving at v: $g_{00}$ with ψ's $\tfrac32 v^2$ and $\tfrac12\partial_t^2(mr)$, $g_{0i} = -4mv_i/r$, $g_{ij} = (1 + 2U)\delta$ | exactly equal, every component, to first post-Newtonian order |
+| **Set in another body's clocks and rulers** ($dt_\text{local} = \sqrt{-g_{00}}\,dt$, $dx_\text{local} = \sqrt{1 + 2U_1}\,dx$) | two bodies at rest, near body 2: $g_{00}$ with ψ's $-U_1$, and $g_{ij}$ | exactly equal. The $m_2U_1/r_2$ term is −6: −4 from $-2U^2$, −2 from ψ |
+
+The check can fail: with $-2U_i$ in place of $-4U_i$, and $v^2$ in place of $\tfrac32 v^2$, the boosted field
+misses by 0.53 in $g_{0x}$ and 0.075 in $g_{00}$ at the test points.
+
+So:
+
+- **Rule 5 is a moving body's field.** $4\mathbf U_j$ is what Lorentz-boosting a body's static field puts into
+  $g_{0i}$: 2U from its clocks and 2U from its curved space. Boosted with flat space (Painlevé–Gullstrand's) it gets
+  only the clocks' 2U. The J = 0 slicing carries $-4U_i$ into the flow unchanged, as $+4\mathbf U_j$.
+- **χ's source comes from the bodies' own fields.** Its kinetic part is the same boost. Its binding part is a body's
+  field set in the clocks and rulers of the others' field where the body is: its clocks slowed by the others'
+  potential, which in the flow picture is its speed through the others' flowing space (Part 1's clock rule), and its
+  rulers stretched by step 2.2's space. Nothing about the bodies is needed beyond their masses and velocities.
+- **What stays for the ball law** is what makes the fields more than their sum: the $-2U^2$ in $g_{00}$, which for
+  bodies at rest says that their clock rates multiply. Near a body the check above fixes its cross term. Between the
+  bodies it comes from the vacuum ball law for observers at rest.
 
 ## Run it
 
 ```bash
 python3 studies/ball_law.py
+```
+
+```bash
+python3 studies/field_from_bodies.py
 ```

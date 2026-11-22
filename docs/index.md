@@ -34,7 +34,7 @@ Press Play; choose "All environments" under Background to see every ring's flow.
 
 ## The code
 
-The project is Python with numpy (sympy for three studies): `engine/` holds the physics, `studies/` the runnable experiments, `tests/` the
+The project is Python with numpy (sympy for four studies): `engine/` holds the physics, `studies/` the runnable experiments, `tests/` the
 regression checks, `viewer/` the desktop viewer (tkinter) and `web/` the browser viewer. Everything a viewer draws
 comes from files the studies write, so the physics lives in one place.
 
