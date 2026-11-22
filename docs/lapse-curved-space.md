@@ -729,8 +729,31 @@ most 0.1%).
 So an eccentric binary still has one J = 0 flow, a free-fall slicing that reaches everywhere, smooth near the bodies.
 Its kinks move round the orbit, and far out at periastron they cover a quarter of the region. That is a known
 property of slicing by free fall, where the free-fall paths focus and cross, and not a difference from GR: the
-spacetime is GR's whatever the slicing, and only the flow's description of it has kinks. Nothing has been run in
-this flow yet – the bodies, the Moon or light – and the corrections of rules 3–5 haven't been built on it.
+spacetime is GR's whatever the slicing, and only the flow's description of it has kinks.
+
+**Its bodies** (`studies/eccentric_bodies.py`). The circular binary's bodies move as GR's (EIH) given two facts about
+the flow at each body ([above](#one-potential-for-the-whole-plane-the-turning-flow-with-j-0)):
+
+- the time's rate there is 1, so φ is constant along the body's path. The eccentric flow is built that way;
+- the flow's regular part there is the body's own velocity.
+
+The rules are GR's first post-Newtonian metric in the J = 0 time for any flow that keeps Bernoulli's equation, so they
+don't need circles. The second fact is measured here. Each body's flow is taken on rings of the paths that reach it
+just after the snapshot, 0.002–0.1 a out. It is averaged over the direction round the body, and the body's velocity
+is subtracted:
+
+| Mass ratio, e | At periastron, innermost ring: share of the flow's speed / of the body's speed | At apastron |
+| --- | --- | --- |
+| 0.1, circles (the check) | 9 × 10⁻¹¹ – 8 × 10⁻¹⁰ / 1–3 × 10⁻⁸ | the same |
+| 0.1, e = 0.6 | 2 × 10⁻¹⁰ – 2 × 10⁻⁹ / 1–3 × 10⁻⁸ | 4 × 10⁻¹¹ – 4 × 10⁻¹⁰ / 1–3 × 10⁻⁸ |
+| 1, e = 0.6 | 9 × 10⁻¹⁰ / 2 × 10⁻⁸ | 2 × 10⁻¹⁰ / 2 × 10⁻⁸ |
+
+The average falls as the ring shrinks, as $r^3$ at periastron and as $r^{1.3}$–$r^{1.6}$ at apastron: the tide's
+terms cancel on a circle. The innermost rings' 1–3 × 10⁻⁸ of the body's speed is the same on circles as off them,
+the measurement's floor. So off circles each body still moves with its own space, and the regularized bodies move by
+EIH. EIH has GR's periastron advance at every eccentricity, keeps the centre of mass still at this order, and has no
+Nordtvedt effect. This is argued from the circular case's reasoning with the measured flow. No eccentric orbit has
+been run, and the Moon and light haven't been run in this flow.
 
 ## What it means
 
@@ -804,4 +827,8 @@ python3 studies/flow_field_equations.py
 
 ```bash
 python3 studies/eccentric_flow.py
+```
+
+```bash
+python3 studies/eccentric_bodies.py
 ```

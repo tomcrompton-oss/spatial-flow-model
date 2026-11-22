@@ -19,6 +19,13 @@ one-body flow of Part 1 in these coordinates:
      (dt_local = sqrt(-g_00) dt, dx_local = sqrt(1 + 2U_1) dx, U_1 = a there), against the metric above near body 2
      for two bodies at rest: the terms in m_2 a / r_2
 
+  C. what the bodies' own fields don't give - the nonlinearity between them: for bodies at rest the ball law for
+     observers at rest, in vacuum, is R_nn = (lap_gamma N)/N = 0 (a static spacetime's identity), lap_gamma the
+     Laplacian of the space gamma = (1 + 2U) delta. two point masses, U = m_1/r_1 + m_2/r_2, at points away from them:
+     g_00 = -(1 - 2U + 2U^2 - 2 psi) with psi harmonic (its binding part, sum c_b/r_b) meets it to eps^4, for any c_b;
+     with -2U^2 changed it doesn't. so -2U^2 - every product of the bodies' potentials - is the ball law's, and only
+     psi's binding constants are left, which B fixes near each body
+
 run: python3 studies/field_from_bodies.py     (needs sympy: pip install sympy; a few seconds. prints, and writes
      logs/modelChecks/fieldFromBodies_<datetime>/summary.log)
 """
@@ -82,6 +89,33 @@ def inField():
   return d00, dxx, cross*r2
 
 
+def nonlinear():
+  """C: the vacuum ball law for observers at rest, lap_gamma N = 0, with gamma = (1 + 2U) delta, for two bodies"""
+  x, y, z, eps = sp.symbols('x y z epsilon', real=True)
+  P = sp.Matrix([x, y, z])
+  bodies = [(Q(1), sp.Matrix([Q(-1, 3), Q(1, 5), 0])), (Q(1, 2), sp.Matrix([Q(2, 3), Q(-1, 4), Q(1, 7)]))]
+  dist = lambda zb: sp.sqrt(((P - zb).T*(P - zb))[0])
+  U = sum(eps**2*m/dist(zb) for m, zb in bodies)
+  c1, c2 = sp.symbols('c_1 c_2')
+  psi = eps**4*(c1/dist(bodies[0][1]) + c2/dist(bodies[1][1]))          #any harmonic 1/r parts
+  def residual(k):
+    N = sp.sqrt(1 - 2*U + k*U**2 - 2*psi)
+    gam = 1 + 2*U                                                        #gamma = gam delta: sqrt(det) = gam^(3/2)
+    lap = sum(sp.diff(gam**Q(3, 2)*gam**-1*sp.diff(N, v), v) for v in (x, y, z))/gam**Q(3, 2)
+    return lap
+  points = ({x: Q(1, 2), y: Q(3, 2), z: Q(-1, 3)}, {x: Q(-2), y: Q(1, 3), z: Q(1, 2)}, {x: Q(5, 4), y: Q(-1), z: Q(2)})
+  out = []
+  for k in (2, 1, 3):
+    r = residual(k)
+    worst = 0
+    for p in points:                                                     #at the point first, then the series in eps
+      e = r.subs(p).subs({c1: Q(3, 7), c2: Q(-5, 11)})
+      e = sp.series(e, eps, 0, 5).removeO().subs(eps, 1)
+      worst = max(worst, abs(sp.N(e, 30)))
+    out.append((k, worst))
+  return out
+
+
 def main():
   folder = os.path.join(LOG_DIR, 'modelChecks', 'fieldFromBodies_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder, exist_ok=True)
@@ -99,6 +133,10 @@ def main():
   say('   g_00 to eps^4: %s' % d00)
   say('   g_xx to eps^2: %s' % dxx)
   say('   the m_2 a / r_2 term of g_00: %s (from -2U^2: -4; from 2 psi: -2)' % cross)
+  say('C. the vacuum ball law for observers at rest, lap_gamma N = 0, gamma = (1 + 2U) delta, two bodies at rest,')
+  say('   g_00 = -(1 - 2U + k U^2 - 2 psi), psi = c_1/r_1 + c_2/r_2 (any c_b), largest residual at three points to eps^4:')
+  for k, worst in nonlinear():
+    say('   k = %d%s: %.1e' % (k, ' (GR\'s -2U^2)' if k == 2 else '', worst))
   with open(os.path.join(folder, 'summary.log'), 'w') as f:
     f.write('\n'.join(lines) + '\n')
   print('written to', folder)
