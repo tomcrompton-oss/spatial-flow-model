@@ -156,7 +156,7 @@ a small enough $dt$ the flowing-space simulation agrees, converging steadily dow
 
 *The apple's height against time, in the flow model (blue) and under Newtonian gravity (orange, dashed): the two lie
 on top of each other. The flow model falls 10 m in 1.4272 s, arriving at 14.015 m/s; Newtonian gravity takes
-1.4271 s.* [Open full screen](../../viewer/index.html?run=../runs/part1/part1_apple.full.json){ target=_blank }
+1.4271 s.* [Open full screen](../../../viewer/index.html?run=../runs/part1/part1_apple.full.json){ target=_blank }
 
 ## 1.2.5 Special relativity
 
@@ -195,7 +195,7 @@ at relativistic speeds.
 Dashed: the change in the flow added as plain vectors — the path stays straight, but $|w|$ grows to 1.28c. Solid:
 added relativistically — $|w|$ stays at $c$ and the path curves, ending at $v = (0.75c, -0.14c)$. Dotted: the true
 geodesic of this flow's spacetime — $w$ is unchanged and the light is carried down with the space, ending at
-$v = (c, -0.8c)$.* [Open full screen](../../viewer/index.html?run=../runs/part1/part1_regions.full.json){ target=_blank }
+$v = (c, -0.8c)$.* [Open full screen](../../../viewer/index.html?run=../runs/part1/part1_regions.full.json){ target=_blank }
 
 The three answers differ because this flow has *curl*: the flow's speed changes across the direction it flows in.
 For such a flow the procedure's rule, $d\mathbf w/dt = -(\mathbf w\cdot\nabla)\mathbf u$, is not the geodesic of the

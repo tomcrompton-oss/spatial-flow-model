@@ -83,7 +83,7 @@ approximation is 4% off at 24: close to the hole it is the approximation that fa
 *Light passing a black hole of one solar mass at 4, 6, 10, 20 and 30 Schwarzschild radii, in the flow model (solid)
 and under Newtonian gravity starting at $c$ (dashed); the arrows are the flow of space. Close to the hole the flow
 model bends light several times as much — 57° against 14° at 4 Schwarzschild radii — and further out the ratio falls
-towards the factor of two in the table (2.8 at 30 Schwarzschild radii, from 150 out on either side).* [Open full screen](../../viewer/index.html?run=../runs/part1/part1_bending.full.json){ target=_blank }
+towards the factor of two in the table (2.8 at 30 Schwarzschild radii, from 150 out on either side).* [Open full screen](../../../viewer/index.html?run=../runs/part1/part1_bending.full.json){ target=_blank }
 
 ## 1.3.3 The precession of Mercury
 
@@ -132,7 +132,7 @@ relativity to 1.6 × 10⁻⁴, falling with the step size (`studies/gr_compariso
 
 *An orbit between about 20 and 60 Schwarzschild radii of a one-solar-mass hole, six times round. The flow model's orbit
 (solid) precesses about 20° an orbit — exact general relativity gives 19.5° for those apsides — while the Newtonian
-ellipse (dashed) stays closed.* [Open full screen](../../viewer/index.html?run=../runs/part1/part1_orbit.full.json){ target=_blank }
+ellipse (dashed) stays closed.* [Open full screen](../../../viewer/index.html?run=../runs/part1/part1_orbit.full.json){ target=_blank }
 
 ## 1.3.4 The Shapiro time delay
 
@@ -203,4 +203,4 @@ hole, to a mirror 60 on the other side, and back — distance along the line aga
 2.220 ms (2.069 ms each way in flat space). The legs differ by 189 µs, of which 176 µs is the clock offset between the
 two ends; the rest comes from the light taking slightly different paths out and back. The round trip is 113 µs longer
 than in flat space: the Shapiro delay, close to the weak-field estimate of about 100 µs even this near the hole.*
-[Open full screen](../../viewer/index.html?run=../runs/part1/part1_radar.full.json){ target=_blank }
+[Open full screen](../../../viewer/index.html?run=../runs/part1/part1_radar.full.json){ target=_blank }

@@ -129,7 +129,7 @@ angle D. With free-fall frames it leaves 0.15 m:
 
 *The lunar range in the split model less GR's, after the fit (m), over two synodic months (days): Lorentz frames,
 free-fall frames, and the Earth alone (the test's floor).* [Open full
-screen](../../viewer/index.html?run=../runs/lunarOrbit/lunarOrbit.full.json){ target=_blank }
+screen](../../../viewer/index.html?run=../runs/lunarOrbit/lunarOrbit.full.json){ target=_blank }
 
 **Why the Lorentz frames fail.** The Earth moves at V = 29.8 km/s through the Sun's flow, which is 42 km/s at the
 Earth. With Lorentz frames the split model works out the Earth's effects in a frame boosted from the lab, and nothing

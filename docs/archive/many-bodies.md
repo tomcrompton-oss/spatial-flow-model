@@ -71,7 +71,7 @@ at rest, so carrying it properly is the question of [section 5](#5-carrying-the-
 <iframe src="../viewer/index.html?run=../runs/movingBodies/multiBody_moving.full.json" width="100%" height="560" loading="lazy" title="Balls dropped beside the moving Earth"></iframe>
 
 *Balls let go beside the Earth as it moves up the screen at 29.8 km/s, in the Earth's frame: flow taken along (solid),
-carried (dashed).* [Open full screen](../viewer/index.html?run=../runs/movingBodies/multiBody_moving.full.json){ target=_blank }
+carried (dashed).* [Open full screen](../../viewer/index.html?run=../runs/movingBodies/multiBody_moving.full.json){ target=_blank }
 
 ## 4. Beyond Newton
 
@@ -119,7 +119,7 @@ Nordtvedt effect).
 <iframe src="../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json" width="100%" height="440" loading="lazy" title="The extra lunar range by the Moon's angle from the Sun"></iframe>
 
 *The extra lunar range (m) the Sun's potential makes in the flow, by the Moon's angle from the Sun (degrees).*
-[Open full screen](../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json){ target=_blank }
+[Open full screen](../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json){ target=_blank }
 
 **Light past Jupiter.** Light is run in the model past Jupiter, with the Sun 5.2 AU away, 10 AU either side. The
 bending with both bodies, less the Sun's alone and Jupiter's alone, is 0 in GR to first order in G. The model's own
@@ -197,7 +197,7 @@ every possible family has E < 0.
 
 *Space paths out of the Sun (turning back at 2/3 AU) and out of the Earth (curling round past its Hill sphere), in
 the frame turning with the Earth, run back in time as the tables are built.*
-[Open full screen](../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json){ target=_blank }
+[Open full screen](../../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json){ target=_blank }
 
 **In 3D it is worse.** With J below zero, along the axis of the orbit beyond 2/3 AU from the Sun $|\mathbf w|^2$ would
 have to be negative, so no flow can exist there. In 3D, J ≥ 0, and the stretch round the Earth is at least

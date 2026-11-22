@@ -98,7 +98,7 @@ ones swirling in from far away.
 
 *Space paths out of the Sun (turning back at 2/3 AU) and out of the Earth (curling round past its Hill sphere), in
 the frame turning with the Earth.* [Open full
-screen](../../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json){ target=_blank }
+screen](../../../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json){ target=_blank }
 
 **What fixes it.** The squeeze comes from the Jacobi constant chosen for the Earth. With **J = 0** the Sun's paths
 reach every point, the bodies' flows are one potential over the whole plane, and with space stretched across the flow

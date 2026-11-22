@@ -1,6 +1,6 @@
 /*
 the browser viewer: a cut-down version of viewer/ (the desktop viewer) that runs in a browser with no server. it reads
-a run's files as docs/formats.md describes them - full.json, its prefs and config, the result csvs and their logs, and
+a run's files as docs/archive/formats.md describes them - full.json, its prefs and config, the result csvs and their logs, and
 background frames - and draws them; the physics stays in engine/, so nothing here works anything out beyond drawing
 (the one formula is a horizon's radius, 2GM/c^2)
 
@@ -81,7 +81,7 @@ function pairs(names) {
   return out;
 }
 
-/* the log lines a viewer reads (docs/formats.md) */
+/* the log lines a viewer reads (docs/archive/formats.md) */
 function parseLog(text) {
   const bodies = [];
   for (const m of text.matchAll(/^body \d+: mass (\S+) kg .*?x (\S+) m\s+y (\S+) m\s+(black|white)(?:\s+spin (\S+))?/gm))
@@ -92,7 +92,7 @@ function parseLog(text) {
   return {bodies, frames: frames && frames.trim(), direction, wave};
 }
 
-/* background frames (docs/formats.md): the flow and its acceleration on a grid at a run of times */
+/* background frames (docs/archive/formats.md): the flow and its acceleration on a grid at a run of times */
 function parseFrames(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   const n = lines.length - 1, raw = new Float64Array(n * 7);
