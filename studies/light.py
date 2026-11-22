@@ -273,7 +273,7 @@ def speedOfLightLowOutput(a, b, d0):
 
 
 #---- notes from earlier runs (calls and results kept from tests.py)
-#(SpecialFlowCalculator here meant the class now in legacy/ as OldSpecialFlowCalculator)
+#(SpecialFlowCalculator here meant the class later kept as OldSpecialFlowCalculator in legacy/, removed after af11f8d)
 #section 1.3.1
 ##studyDeflectionOfLight(NewtonianCalculator(), AU, 7.0E8, 0.001)
 ##studyDeflectionOfLight(SpecialCalculator(), AU, 7.0E8, 0.001)
