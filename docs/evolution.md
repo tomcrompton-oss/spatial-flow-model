@@ -20,7 +20,7 @@ each other.
 | 3.2 | Post-Newtonian flow | the flow slowed by (U + u²/2)/c², less ∇χ/c² | GR's first post-Newtonian metric in this time; Einstein's evolution equation (its trace) | the Moon's orbit, with de Sitter's precession |
 | **4. Bodies moving each other** | | | | |
 | 4.1 | Self-moving bodies | each body moves with the regular part of its own space | Hadamard regularization, as in post-Newtonian theory | none: it makes a binary runnable, and the binary fails |
-| 4.2 | Moving potentials | the flow plus each body's potential carried at its velocity, 4U_j/c² | the first post-Newtonian metric's vector potential; Einstein's momentum constraint | a circular binary of any masses, exactly GR's |
+| 4.2 | Moving potentials | the flow plus each body's potential carried at its velocity, 4U_j/c² | a body's static field Lorentz-boosted (the first post-Newtonian vector potential); Einstein's momentum constraint | a circular binary of any masses, exactly GR's |
 | 4.3 | Spinning bodies | 1.3's spin for several bodies, through 4.2's 4U_j of each body's own rotation | GR's first post-Newtonian frame dragging; Einstein's momentum constraint | not yet run (Lense–Thirring round the Earth) |
 
 Model 4.2 is GR's whole first post-Newtonian metric, written in the slicing whose observers fall freely with the flow.
@@ -218,7 +218,8 @@ where $\mathbf U_j = \sum_b G m_b\mathbf v_b/d_b$ is the potential of the bodies
 
 **Feature added.** The field of a moving source: a body's motion moves its space.
 
-**Source.** The vector potential of GR's first post-Newtonian metric (its $g_{0i}$, gravitomagnetism). It is also
+**Source.** The vector potential of GR's first post-Newtonian metric (its $g_{0i}$, gravitomagnetism), which is a
+body's static field Lorentz-boosted to its velocity ([what comes from outside](from-outside.md#a-bodys-own-field-moving-and-among-others)). It is also
 Einstein's momentum constraint. With 3.2's slowing of the flow and this term together the constraint is met exactly, and without $4\mathbf U_j$
 it misses by the moving potential's term $2\nabla\partial_t U$.
 

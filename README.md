@@ -14,7 +14,7 @@ flow has to be like to stay GR for several bodies, tested against exact GR, post
 - `web/` — the browser viewer: static HTML and JavaScript
 - `docs/` — the website's pages, the file formats both viewers follow, and the published runs
 
-Python 3.9 or later with numpy (`requirements.txt`; sympy for three studies); tkinter for the desktop viewer.
+Python 3.9 or later with numpy (`requirements.txt`; sympy for four studies); tkinter for the desktop viewer.
 
 ```bash
 python3 studies/grav_wave.py
