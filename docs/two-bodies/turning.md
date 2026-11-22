@@ -74,7 +74,7 @@ The Sun at the centre, the Earth on its orbit (`engine/turning.py`, `studies/tur
 | Lunar laser ranging: the synodic term | (2.8 ± 4.1) mm | 2 × 10⁻⁸ m | ✅ Pass |
 | **Light past the Sun at 2 solar radii** | GR's bending; Cassini: to 0.01 mas | 9.6 mas less (1.1%) | ❌ Fail |
 | Einstein's constraint round the Sun | 0 | $4J/r^2$ | ❌ Fail |
-| The flow in three dimensions, along the orbit's axis | a flow everywhere | none beyond 2/3 AU from the Sun ($|\mathbf w|^2 < 0$) | ❌ Fail |
+| The flow in three dimensions, along the orbit's axis | a flow everywhere | none beyond 2/3 AU from the Sun ($\lvert\mathbf w\rvert^2 < 0$) | ❌ Fail |
 | J = 0 instead, which suits the Sun | the Earth's flow its own | the stretch round the Earth, half as big again as the eikonal flow's | ❌ Fail |
 | Letting the flow curl, so J can differ from line to line | empty space outside matter | needs matter streaming at 10²³–10²⁶ × the solar wind's flux, and pushes the Moon at 0.024 m/s², 9 × the Earth's pull | ❌ Fail |
 
@@ -99,3 +99,8 @@ ones swirling in from far away.
 *Space paths out of the Sun (turning back at 2/3 AU) and out of the Earth (curling round past its Hill sphere), in
 the frame turning with the Earth.* [Open full
 screen](../../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json){ target=_blank }
+
+**What fixes it.** The squeeze comes from the Jacobi constant chosen for the Earth. With **J = 0** the Sun's paths
+reach every point, the bodies' flows are one potential over the whole plane, and with space stretched across the flow
+and the flow's first post-Newtonian corrections it is GR: the Moon, light past a moving Jupiter, a circular binary
+([Lapse and curved space](../lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0)).

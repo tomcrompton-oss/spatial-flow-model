@@ -1,5 +1,5 @@
 site_name: Spatial Flow Model
-site_description: Gravity as a flow of space - simulations, studies against GR, and a browser viewer
+site_description: Gravity as a flow of space, a view of general relativity - simulations, studies against GR, and a browser viewer
 site_url: https://tomcrompton-oss.github.io/spatial-flow-model/
 repo_url: https://github.com/tomcrompton-oss/spatial-flow-model
 repo_name: tomcrompton-oss/spatial-flow-model
@@ -29,7 +29,8 @@ nav:
       - 1.2 Mechanics of spatial flow: part1/mechanics.md
       - 1.3 The four tests: part1/tests.md
       - 1.4 Conclusion: part1/conclusion.md
-  - Part 2 – Placeholder:
+  - Part 2 – More than one body:
+      - Part 2 in brief: part2.md
       - Two bodies:
           - Introduction: two-bodies/index.md
           - Vector addition: two-bodies/vectors.md

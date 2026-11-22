@@ -348,3 +348,8 @@ That last failure is the clue. GR's cross terms are written for one spacetime in
 ones). The split model's one-body flows are each in their own river coordinates, and the difference between the two is
 as large as the cross terms themselves. Cross terms between the bodies only make sense once the bodies share one
 spacetime, solved together – the binary's lesson again. No frame rule placed on separate one-body flows gives that.
+
+That shared spacetime is what the turning flow with Jacobi constant 0 gives: one potential for all the bodies, solved
+together. With space stretched across it and its first post-Newtonian corrections, each body moving with the regular
+part of its own space, the circular binary is GR's
+([Lapse and curved space](../lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0)).

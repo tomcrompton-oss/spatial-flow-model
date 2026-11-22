@@ -1,6 +1,6 @@
 # Scorecard
 
-Every model and variation so far, scored out of 10 on eight measures. These are judgements from the test results on
+Every construction tried, scored out of 10 on eight measures. These are judgements from the test results on
 the other pages, not computed numbers. A dash means the model can't take that test (its bodies are at rest, or held
 on their paths), not that it failed it.
 
@@ -67,22 +67,29 @@ on their paths), not that it failed it.
 | [GR transformed exactly](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) to the time of the Earth's carried river | 10 | 10 | 10 | 10 | – | 10 | 2 | **1** | GR with a 30 km/s flow: the Moon fits as GR does (k +0.017, 0.027 m), so the engine and the mapping are right. The flow is the Earth's river alone, the rest of gravity in the clocks. |
 | GR in the carried flow's free-fall time, tide transported | 7 | 10 | 10 | 10 | 3 | 3 | 7 | **3** | The Moon is GR's (k +0.010, 0.018 m), so the carried flow's half of de Sitter is its own. Moved as the carried bodies are, the binary gets 0.83 of GR's advance at equal masses: each body feels only the others' field. |
 | GR in the carried flow's free-fall time, [N = 1 by χ](lapse-curved-space.md#checking-the-moon-test-with-gr-in-a-moving-time) | 7 | 10 | 10 | 9 | – | 3 | 7 | **5** | The lapse's first post-Newtonian part moved into the flow by a shift of time χ/c⁴ carried along it, so the clocks are Part 1's. The Moon GR's to 0.15 m (k +0.11), de Sitter whole. Needs GR's curved space: flat, the Moon is 580 m off. The Earth held on a circle. |
-| GR in the [turning flow's time, J = 0](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0), N = 1 by χ | 9 | 10 | 10 | 9 | – | 3 | 9 | **6** | One potential over the whole plane, Part 1's clocks, and GR's curved space and first post-Newtonian pieces in its time: the Moon GR's to 0.6 m (k −0.18), light as GR's. The flow decides the slicing; GR's pieces still decide the moving bodies' dynamics. |
-| [The J = 0 flow's own rules](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0): N = 1, Einstein's space, the flow slowed by (U + u²/2)/c², χ | 9 | 10 | 10 | 9 | – | 4 | 9 | **6** | No moving bodies' term. The Moon 0.49 m; χ's source needs the bodies' 1PN potential ψ (1.6 m without) and U at harmonic time (14.5 m without). All Newtonian quantities, but it is GR's metric rearranged, not derived. |
+| GR in the [turning flow's time, J = 0](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0), N = 1 by χ | 9 | 10 | 10 | 9 | 9 | 10 | 9 | **6** | One potential over the whole plane, Part 1's clocks, and GR's curved space and first post-Newtonian pieces in its time: the Moon GR's to 0.6 m (k −0.18), light as GR's. The flow decides the slicing; GR's pieces still decide the moving bodies' dynamics. Each body moving with the regular part of its space (its own singular terms removed), the circular binary is GR's exactly (Nordtvedt not worked out). |
+| [The J = 0 flow's own rules](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0): N = 1, Einstein's space, the flow slowed by (U + u²/2)/c², χ, the flow plus 4U_j/c² | 9 | 10 | 10 | 9 | 9 | 10 | 9 | **7** | The moving bodies' term is the fifth rule, added for the binary. The Moon 0.60 m (k −0.18), light as GR's; each body moving with the regular part of its space, the circular binary is GR's exactly (Nordtvedt not worked out). χ's source needs the bodies' 1PN potential ψ and U at harmonic time. All Newtonian quantities, but with rule 5 it is GR's whole 1PN metric in the J = 0 time – the same spacetime as the χ row above. Rules 3–5 [are Einstein's equations](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0) in the free-fall slicing (the momentum constraint fixes the correction's curl, the trace of the evolution equation its divergence), with ψ's 1/r parts from the bodies' energy: derived, but from GR's field equations. Premise 7, not 6: those rules are no longer put in by hand; space is still curved, not flat. |
+| … without rule 5 (no moving bodies' term) | 9 | 10 | 10 | 9 | 1 | 10 | 9 | **6** | The Moon 0.49 m; without ψ in χ's source 1.6 m, without U at harmonic time 14.5 m. Its circular binary's ω has −3 + 5η for GR's −3 + η, and the periastron advance (from its Lagrangian) is a third of GR's at equal masses: the binary needs the 4U_j the Moon didn't. |
 
 Notes:
 
 - **The four GR parts separate the models.** Every flow model has GR's one body; the flat flows fail when fields
-  combine; space from u fixes that for the eikonal flow; every moving flow has half of de Sitter (Moving 4); and every
+  combine; space from u fixes that for the eikonal flow; every flow carried with its body has half of de Sitter (Moving 4), and
+  the J = 0 flow with its corrections doesn't (Moving 9); and every
   model whose bodies move by the others' fields fails the binary and Nordtvedt (Self-motion 0–2) – including GR's own
-  metric moved that way (the second check), so that part is about how the bodies are moved, not the flow.
+  metric moved that way (the second check), so that part is about how the bodies are moved, not the flow. Moved
+  instead as geodesics of the whole metric with their own singular terms removed, GR's metric gives GR's circular
+  binary exactly: at first post-Newtonian order that keeps the binding term in the others' source, which "the
+  others' fields alone" leaves out ([its bodies](lapse-curved-space.md#one-potential-for-the-whole-plane-the-turning-flow-with-j-0)).
 - **A dash is not a pass.** The eikonal flow with space from u has 10 on both the parts it can take, and nothing on
   the two it can't: its bodies are at rest. The lapse family's λ = 1 holds its bodies on their paths.
 - **The split frames' Combined scores** are the free-fall and heavier-only frames' static checks (Newton's g, clocks,
   light past Jupiter, causality, the lunar range to a held mirror), which are the same for every frame rule built on
   Lorentz frames.
 - **Conserved, for the lapse and curved-space models**: each is one steady spacetime, and the engine keeps its energy
-  (E and L to 3 × 10⁻⁸ in its checks). They have not been through the four-orbit study.
+  (E and L to 3 × 10⁻⁸ in its checks). They have not been through the four-orbit study. The J = 0 time is steady in
+  the turning frame, and keeps the Jacobi constant: the Moon's J drifts by −6.2, −1.6 and −0.39 m²/s² in 30 days at
+  steps of 240, 120 and 60 s (the step's, going as its square), about 10⁻⁴ of a 1PN unit at zero step.
 - **Flow = g, for the λ models**: the flow carries only 1 − λ of g, and the clocks the rest. The check as defined
   doesn't apply, though Newton's g comes out right.
 - **Space curved across the flow**: every version keeps N = 1, so it loses one premise point for no longer being flat.
@@ -108,16 +115,16 @@ Notes:
 
 ## What the scores show
 
-- **The trade-off.** Every gain on GR has cost on the premise: the split model reaches Moving 8 by dropping the single
-  flow, and the lapse family reaches 10 by dropping the flow altogether.
-- **Where the flow model stands.** With space stretched across its own motion by u²/c², the flow model is GR for one
-  body and for bodies at rest together (the eikonal flow: 10 and 10, premise 7). The gaps are the two moving parts.
-  Every moving flow – turning or carried, flat or curved – has half of de Sitter's precession (Moving 4); the carried
-  flows, made of regions whose times jump at the seams, also turn light past a moving Jupiter by 1.7″ (Moving 2); and bodies
-  moved by the others' flows fail the binary and Nordtvedt (Self-motion 2 at best), as GR's own metric does when its
-  bodies are moved that way.
-- **What would close them.** The carried flow needs one time: one potential continuous across its seams. De Sitter needs the Sun's curved space carried round with the Earth; the binary and
-  Nordtvedt need each body's field to act on its own source. Both point to the bodies' flows solved together – a
-  field equation for the flow – not each one carried separately.
+- **Each part of GR picks out what the flow needs.** Every construction has GR's one body. The flat flows fail when
+  fields combine, until space is stretched across the flow (the eikonal flow with space from u: Combined 10). The flows
+  that carry each body's river with it fail moving sources – half of de Sitter's precession, and seams that turn light
+  past a moving Jupiter by 1.7″ – until the bodies' flows are one potential (J = 0). And bodies moved by the others'
+  fields alone fail the binary, until each moves with the regular part of its own space.
+- **Where it ends.** The J = 0 flow's rules – N = 1, Einstein's space, one potential, and its first post-Newtonian
+  corrections from Einstein's equations – score 9–10 on every part run (Nordtvedt not yet worked out) with premise 7:
+  GR for several bodies, written as one flow with Part 1's clocks. What it gives up is flat space.
+- **The trade-off along the way.** The constructions in between traded premise for GR: the split model reached
+  Moving 8 by dropping the single flow, and the lapse family reached 10 by dropping the flow altogether. The J = 0
+  rules don't trade: they keep the single flow and the clocks, and curve space instead.
 - **The two checks pull opposite ways.** Every single-flow model keeps its conserved quantities; every split model's
   flows give g exactly, and none keeps its energy.

@@ -1,7 +1,8 @@
 # Spatial Flow Model
 
-Gravity as a flow of space: a simulation that moves particles and light through flat space that is itself flowing
-(the "river model" picture of general relativity), with studies that test it against exact GR and Newtonian gravity.
+Gravity as a flow of space, as a view of general relativity: a simulation that moves particles and light through
+flowing space (for one body the "river model", GR in Gullstrand–Painlevé coordinates), with studies that find what the
+flow has to be like to stay GR for several bodies, tested against exact GR, post-Newtonian GR and measurement.
 
 **Website, with live viewers of the results: https://tomcrompton-oss.github.io/spatial-flow-model/**
 
@@ -13,7 +14,7 @@ Gravity as a flow of space: a simulation that moves particles and light through 
 - `web/` — the browser viewer: static HTML and JavaScript
 - `docs/` — the website's pages, the file formats both viewers follow, and the published runs
 
-Python 3.9 or later with numpy (`requirements.txt`); tkinter for the desktop viewer.
+Python 3.9 or later with numpy (`requirements.txt`; sympy for two studies); tkinter for the desktop viewer.
 
 ```bash
 python3 studies/grav_wave.py

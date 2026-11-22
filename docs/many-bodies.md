@@ -1,22 +1,23 @@
 # Many bodies
 
-With one body, spatial flow is general relativity exactly ([1.4](part1/conclusion.md)). With more than one, it has
-to say how the bodies' flows combine, and that is where it could part from GR. This page tests that in the
-simulation, in five steps. Each runs the flow model itself: particles, clocks and light, not formulas.
+With one body, spatial flow is general relativity exactly ([1.4](part1/conclusion.md)). With more than one, the
+picture has to say how the bodies' flows combine. This page tries the simplest answers – a single flow through flat
+space – in the simulation, in five steps. Each runs the flow model itself: particles, clocks and light, not formulas.
 
 | Question | Result |
 | --- | --- |
-| [How do the flows combine?](#1-how-the-flows-combine) | By their squares, $|\mathbf u|^2 = \sum 2GM/d$: g is Newton's |
+| [How do the flows combine?](#1-how-the-flows-combine) | By their squares, $\lvert\mathbf u\rvert^2 = \sum 2GM/d$: g is Newton's |
 | [Clocks](#2-clocks) | Clocks on the Earth and in GPS orbit keep GR's rates |
 | [Moving bodies](#3-moving-bodies) | A moving body must carry its flow with it. If not, g is out by 26–52 m/s² |
-| [Beyond Newton](#4-beyond-newton) | By squares, the Sun's potential stretches space round the Earth and Jupiter: ruled out by lunar laser ranging (27σ), and very likely by VLBI past Jupiter |
+| [Beyond Newton](#4-beyond-newton) | By squares, the Sun's potential stretches space round the Earth and Jupiter: fails lunar laser ranging (27σ), and very likely VLBI past Jupiter |
 | [Carrying the flow](#5-carrying-the-flow) | Each body carrying its own flow fixes the Earth but squeezes space round the Sun: 9.6 mas off its light bending, 1000 × Cassini's limit. Curl doesn't help |
 
-The simulation's rule for many bodies passes every Newtonian test and fails at the next order, through something new.
-Round each body, the other bodies' potential speeds up its inflow. GR has no such effect, and it goes as
-$\sqrt{M_1 M_2}$, which no post-Newtonian (PPN) theory can have. The obvious fix, each body carrying its own flow, works
-round the Earth but moves the problem to the Sun ([5](#5-carrying-the-flow)). So with more than one body the model
-differs from GR measurably ([Where this leaves the model](#where-this-leaves-the-model)).
+The squares rule passes every Newtonian test and misses at the next order: round each body, the other bodies'
+potential speeds up its inflow, and in flat space that stretches the space round it. GR has no such effect – it goes
+as $\sqrt{M_1 M_2}$, which no post-Newtonian (PPN) theory can have. The obvious fix, each body carrying its own flow,
+works round the Earth but moves the problem to the Sun ([5](#5-carrying-the-flow)). So a single flow through *flat*
+space can't be GR with more than one body ([What it takes](#what-it-takes)); [Lapse and curved space](lapse-curved-space.md)
+finds the flow that is.
 
 ## 1. How the flows combine
 
@@ -31,15 +32,9 @@ A particle let go from rest with the Sun 1 AU away (`studies/multi_body_rules.py
 10⁻⁶ m/s² at the Earth's surface, the calculation's precision, and to under 2 × 10⁻⁶ m/s² at the Moon's distance.
 Balls dropped 100 km up all round the Earth fall straight down in 145 s, as Newton's do.
 
-!!! warning "Correction to Part 3"
-    Part 3 has space stop at P, between the Earth and the Moon. Under the simulation's rule there is no point where
-    space stops. At P a clock at rest ticks at GR's rate. The flow is 1.6 km/s there, and $\sqrt{1-u^2/c^2}$ is GR's
-    $1 - U/c^2$ to first order everywhere on the line. So the "irreconcilable" difference in 3.2 does not arise.
-
-!!! tip "Suggestion"
-    Replace 3.2–3.3 with this test. The theory's claim becomes: *the speeds of the flows add as squares*, because
-    the potentials add, and the flow has no curl. Part 3's question can stay: does a theory with this flow differ
-    from GR with more than one body? Section 4 answers it, and the answer is yes.
+Space doesn't stop anywhere between the Earth and the Moon. At P, where their pulls cancel, the flow is 1.6 km/s, a
+clock at rest there ticks at GR's rate, and $\sqrt{1-u^2/c^2}$ is GR's $1 - U/c^2$ to first order everywhere on the
+line.
 
 ## 2. Clocks
 
@@ -223,28 +218,22 @@ $-\mathbf w\times\mathbf\omega$ (`studies/curl_flows.py`):
 GR's own curl, frame dragging, is of order $GMw_m/(c^2r^2)$: 3 × 10⁻¹² /s round the Earth. That's 10⁷ times too small
 to help.
 
-## Where this leaves the model
+## What it takes
 
-For two or more bodies, the flow can't match GR at first post-Newtonian order while keeping everything the model is
-built on: flat space, clocks that tick by the flow alone (unit lapse), space falling at g, and one connected flow.
-Without curl, one Bernoulli constant must serve every body, and no value suits both the Sun and a planet. With
-curl, Einstein's constraints forbid the vorticity outside matter. Each version tried here is ruled out by
-measurement:
+For two or more bodies, a flow through flat space can't be GR at first post-Newtonian order while also keeping clocks
+that tick by the flow alone (unit lapse), space falling at g, and one connected flow. Without curl, one Bernoulli
+constant must serve every body, and no value suits both the Sun and a planet. With curl, Einstein's constraints forbid
+the vorticity outside matter. Each version tried here fails a measurement:
 
-| Version | Ruled out by |
+| Version | Fails |
 | --- | --- |
 | flows taken along by moving bodies | Newton (26–52 m/s²) |
 | by squares, bodies at rest | lunar laser ranging (27σ); very likely VLBI past Jupiter |
 | turning, the Earth carrying its flow | Cassini and VLBI on the Sun's light bending (1000×) |
 | with curl | Einstein's momentum constraint; the Moon's orbit |
 
-Matching GR would mean giving up one of the model's assumptions. For example, clocks could tick by more than the
-flow (a lapse, as in GR's general form), or space could be curved as well as flowing. Either changes the hypothesis
-of Part 1, which is for the author to decide.
-
-!!! tip "For Part 3"
-    A revised Part 3 could say: with more than one body, the flows' speeds add as squares (so
-    gravity is Newton's), and the bodies must carry their flows (or there is a preferred frame). Even so, one flowing space
-    cannot carry a planet's flow and the Sun's at once: whichever body's flow is right, the other's space is stretched or
-    squeezed, by about 10⁻⁸. Lunar laser ranging and the bending of light past the Sun measure far finer than that. So
-    spatial flow as a complete theory differs from GR, measurably, with more than one body: it is GR for one body.
+What gives way is flat space. [Lapse and curved space](lapse-curved-space.md) keeps the clocks (N = 1) and one flow –
+the turning flow with Jacobi constant 0, one potential over the whole plane – and lets space be stretched across the
+flow, as Einstein's constraint says it must be. With the flow's first post-Newtonian corrections, which come from
+Einstein's equations too, that is GR for the Sun, the Earth, the Moon, light past Jupiter and a binary: a flow view of
+GR for many bodies, as Gullstrand–Painlevé's is for one.

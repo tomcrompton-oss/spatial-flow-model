@@ -8,10 +8,12 @@ $$ds^2 = -N^2c^2\,dt^2 + \gamma_{ij}\,(dx^i - u^i dt)(dx^j - u^j dt)$$
 - **u, the flow**: those observers' velocity through the coordinates (GR's shift, turned round).
 - **γ, the metric of space**: lengths within each moment.
 
-The flow model is N = 1 and γ flat. Those two choices are the hypothesis of Part 1. With N = 1, observers moving with
-space are in free fall, and every clock's slowing is its speed through space. With flat γ, space is Euclidean and all
-of gravity is motion. For one body both hold exactly (Painlevé). With two or more, every rule tried has failed
-somewhere, so this page relaxes them, one or both, to see what that does.
+Part 1's picture is N = 1 and γ flat. With N = 1, observers moving with space are in free fall, and every clock's
+slowing is its speed through space. With flat γ, space is Euclidean and all of gravity is motion. For one body both
+hold exactly (Painlevé). With two or more, no flow through flat space is GR ([Many bodies](many-bodies.md)), so this
+page relaxes the two choices, one or both, to find which has to go. The clocks can stay: with N = 1, one potential
+over the whole plane, space stretched across the flow, and the flow's first post-Newtonian corrections – all of which
+come from Einstein's equations – the flow is GR for several bodies.
 
 ## What was built
 
@@ -227,7 +229,8 @@ has GR's precession, 1 none) and the coordinates' stretch along and across the E
   sums that over three months. With metres left over, k – a 0.2 m effect – can't be read.
 - **Nordtvedt and the binary pulsars can't be run on it.** Both need the bodies to move by the model's own field (a
   self-gravitating pair falling towards the Sun; an eccentric binary of comparable masses), and the turning flow puts
-  its bodies on fixed circles at one angular speed.
+  its bodies on fixed circles at one angular speed. (A circular binary can be worked out: see
+  [its bodies](#one-potential-for-the-whole-plane-the-turning-flow-with-j-0), for the J = 0 flow.)
 
 (A first fit held GR's Earth at 1 AU, off its free-fall circle by GM/c² = 1.5 km, and the Moon drifting from it
 left 200 m in every model; the GR row, whose metric holds the Earth at 1 AU, is fitted that way too.)
@@ -541,8 +544,8 @@ $|\mathbf w|^2 = 2GM/r + 3GM_\odot/a$ – and Einstein's space is right only tog
 post-Newtonian corrections and the lapse's (χ). Without them the error grows with the flow's speed, and the Earth,
 held on its circle, doesn't share it. Every flow obeying Newton's equation is a slicing of GR's time at Newton's order
 (N = 1 + O(c⁻⁴)), so with those pieces any of them – the carried flow's, or this one – gives GR; the flow then decides
-only the slicing. What the flow itself decides is the Newtonian order and, through one potential, light; the moving
-bodies' first post-Newtonian dynamics still come from GR's pieces.
+only the slicing. What the flow decides at Newton's order is the slicing and, through one potential, light; its first
+post-Newtonian corrections are what the moving bodies need, and (below) Einstein's equations give them.
 
 **GR in this flow's time.** `FreeFallTurning` puts GR's first post-Newtonian metric in the turning flow's time (its
 potential is −S), as `FreeFallPN` does in the carried flow's, with χ to take the lapse to 1. χ for the J = 0 flow
@@ -573,23 +576,27 @@ fast. The flow model with Einstein's space and J = 0 (98 km) is the row without 
 own must supply beyond Einstein's space is a flow slowed by $(U + u^2/2)/c^2$ and the lapse's part moved into it,
 $-\nabla\chi/c^2$.
 
-**The J = 0 flow as a model of its own.** Without the moving bodies' term, what is left is a flow model with these
-rules, each built from Newton's U, the bodies' Newtonian motion, and the flow (u = ∇φ, J = 0):
+**The J = 0 flow as a model of its own.** A flow model with these rules, each built from Newton's U, the bodies'
+Newtonian motion, and the flow (u = ∇φ, J = 0):
 
 1. clocks keep T (N = 1);
 2. space stretched by the potential and contracted along the flow, $\gamma = (1 + 2U/c^2)\delta - \mathbf u\mathbf u/c^2$
    (Einstein's constraint);
 3. the flow slowed by $(U + u^2/2)/c^2$;
 4. the flow less $\nabla\chi/c^2$, χ carried along the flow (in the turning frame) from the source
-   $Q = c^4(N^2 - 1)/2$ that rules 1–3 would leave in the clocks – the flow's and the potential's terms, the shift of
-   U to harmonic time ($\partial_T U\,\varphi/c^2$), and the bodies' first post-Newtonian potential ψ (their kinetic
-   and binding energy and their field's motion).
+   $Q = c^4(N^2 - 1)/2$ that the other rules would leave in the clocks – the flow's and the potential's terms, the
+   shift of U to harmonic time ($\partial_T U\,\varphi/c^2$), the bodies' first post-Newtonian potential ψ (their
+   kinetic and binding energy and their field's motion), and rule 5's share;
+5. the flow plus each body's potential carried at its velocity, $4U_j/c^2$ with $U_j = \sum GMv_j/r$ (added to
+   $\gamma\mathbf u$) – the moving bodies' term.
 
-The Moon is GR's to 0.49 m. Taking parts out of χ's source shows what each is worth: without ψ, 1.6 m (k +1.0); without
-the shift to harmonic time, 14.5 m (k −15.6). Every part of the source is Newtonian – U, its rate, the bodies'
-velocities and accelerations, and φ – but ψ is a correction to the source the flow comes from, not something the flow
-makes. And the rules are GR's 1PN metric rearranged: they say GR can be written as a flow with Part 1's clocks, not
-that the flow model derives it.
+With all five the Moon is GR's to 0.60 m (k −0.18), light is GR's, and the circular binary (below) is GR's exactly. Rule 5 was added for the binary: without it the Moon is 0.49 m (k +0.77), as good, but the binary's
+ω has −3 + 5η for GR's −3 + η. Taking parts out of χ's source (measured without rule 5) shows what each is worth:
+without ψ, 1.6 m (k +1.0); without the shift to harmonic time, 14.5 m (k −15.6). Every part is Newtonian – U, its
+rate, the bodies' velocities and accelerations, and φ – but ψ is a correction to the source the flow comes from, and
+4U_j a correction to the flow. With rule 5 the rules are GR's whole first post-Newtonian metric in the J = 0 time – the
+same spacetime as the χ row above: GR written as one flow with Part 1's clocks. Where rules 3–5 come from in
+Einstein's equations is below.
 
 Two things had to be right for this. GR's time at the Earth runs at $dt/dT = 1 + \kappa/c^2$, κ = dφ/dT along the
 Earth: for the carried flow (and the carried J) κ = −J = 1.5 GM☉/a, and the Earth held at Ω in T is GR's free fall at
@@ -600,46 +607,117 @@ maps T to GR's time with the integral of the model's own flow from the Earth to 
 steps and fitted smoothly in angle and ln r) falls at g to 5×10⁻¹² m/s² at the Moon; the ray table's does to 10⁻⁹
 (a check with too wide a finite difference had made that look like 10⁻⁶), and the Moon is the same with either.
 
+**Its bodies: a circular binary** (`studies/binary_regularized.py`). To move the bodies by the J = 0 flow, each
+needs a rule for how it moves in a flow that holds its own field. Round the Earth the flow moves through the turning
+frame at about 51 km/s, but it streams out from the Earth equally every way: its average round a circle about the
+Earth is under 10⁻⁹ m/s at 1,000 and 10,000 km and 3×10⁻⁵ m/s at 300,000 km (the Sun's tide). So the flow's regular
+part at a body is the body's own velocity, and a body at rest in the turning frame moves with its space. The rule
+that says this is the one GR's two-body motion is derived with: each body a geodesic of the whole metric with its
+own singular terms removed (Hadamard's finite part, the r⁰ part of its acceleration on a small sphere round it,
+averaged over the sphere).
+
+The J = 0 rules are GR's first post-Newtonian metric in another time, less the moving bodies' 4U_j/c² – which,
+taken back to harmonic time, is GR's $g_{ti}$ and nothing else at this order. That time runs at rate 1 at each body
+(κ = 0), and its singular parts leave nothing in the finite part (half powers of r, or odd in the direction), so
+the J = 0 rules' bodies move as GR's harmonic metric less 4U_j moves them. That is worked out exactly (sympy), for
+two bodies on circles at a, η = m₁m₂/M²:
+
+| Each body a regularized geodesic of | k in ω² = (GM/a³)(1 + k GM/(ac²)) | equal masses |
+|---|---|---|
+| GR's whole metric: the J = 0 rules, all five | −3 + η | −2.75 |
+| the J = 0 rules without rule 5 (GR less 4U_j) | −3 + 5η | −1.75 |
+| the other body's field alone | −3 + 3η | −2.25 |
+| … with its binding term (−GM_A/r_AB in the other's ψ) | −3 + η | −2.75 |
+| … less 4U_j | −3 + 7η | −1.25 |
+
+Nothing pushes along the orbit in any of them. The periastron advance follows from the two-body Lagrangian each
+gives (first-order perturbation; it is 3 GM/(c²p) per orbit over 2π for a test body and for GR at any η). Leaving
+out 4U_j takes $-4Gm_1m_2\,\mathbf v_1\cdot\mathbf v_2/(rc^2)$ out of GR's (EIH's), and the advance becomes
+(3 − 8η) GM/(c²p): a third of GR's at equal masses, which the double pulsar measures to about 10⁻⁴.
+
+- **The rule works.** GR's own metric moved this way is GR's binary exactly. At this order removing a body's own
+  terms leaves the other body's field together with its binding term – the one place a body's field acts on the
+  other's source. That is what "each body in the others' fields alone" leaves out – the rule the carried flow's
+  bodies were moved by, which with GR's own metric gave 0.83 of GR's advance (the scorecard's second check). So that
+  check's failure is the missing binding term; the carried flow's own errors haven't been split up this way.
+- **Without rule 5 the J = 0 rules fail it by 4η**, the moving bodies' term. The Moon didn't need it (0.49 m
+  without, 0.60 m with); the binary does: it is one body's velocity in its field felt by the other's velocity.
+- **With rule 5** – the flow plus each body's potential carried at its velocity, $4U_j/c^2$ – the binary is GR's.
+  That term is Newtonian, like the rest (U and the bodies' velocities), but with it the rules are GR's whole first
+  post-Newtonian metric, rearranged.
+- This is the circular binary only; eccentric orbits can't be run in the turning flow, whose bodies go round on
+  circles. The advance comes from the Lagrangian, not a run, and Nordtvedt hasn't been worked out.
+
+**Where rules 3–5 come from** (`studies/flow_field_equations.py`). Rules 3–5 are the flow's first post-Newtonian
+correction, $\gamma\mathbf u = \mathbf u_0 + \mathbf A/c^2 - \nabla\chi/c^2$ with $\mathbf A = -(U + u_0^2/2)\mathbf u_0 + 4\mathbf U_j$.
+With N = 1 and Einstein's space, two of Einstein's equations involve that correction and nothing else new at this
+order (not space's next order, $c^{-4}$):
+
+- **the momentum constraint**, which on a correction acts as $-\tfrac12\nabla\times\nabla\times$: it fixes the
+  correction's curl;
+- **the trace of the evolution equation** – Raychaudhuri's, for the observers moving with the flow, who with N = 1 fall
+  freely – which fixes its divergence.
+
+Both were checked exactly (sympy) for every flow that keeps Bernoulli's equation – an arbitrary φ, its rates from
+Bernoulli, two bodies on general curved paths – at points away from the bodies:
+
+| Einstein's equation, first post-Newtonian order | What the rules give |
+|---|---|
+| momentum constraint, rules 3 and 5 | 0 (10⁻¹³⁹) |
+| … rule 3 alone | misses by exactly $2\nabla\,\partial_T U$, the potential's motion |
+| … rule 5 alone, or neither | misses |
+| trace of the evolution equation, rules 3 and 5, χ left out | misses by exactly $-\nabla^2 Q/c^2$, Q the lapse χ takes away |
+| … the same with ψ's 1/r parts (the bodies' kinetic and binding energy) left out of Q | the same number |
+
+So:
+
+- **Rules 3 and 5 are the momentum constraint.** Together they are its solution; each alone fails. The constraint fixes
+  only their curl, so they could be any split with the same curl, the rest a gradient – which rule 4 absorbs. Rule 5's
+  4U_j is the part the bodies' momentum needs: without it the constraint misses by the moving potential's term.
+- **Rule 4 is the trace of the evolution equation.** With N = 1 that equation asks of the flow's gradient part exactly
+  what χ does, so "χ carried along the flow from Q" is that equation, not a separate rule.
+- **What the vacuum equations can't fix is ψ's 1/r parts.** Away from the bodies they are harmonic and drop out; they
+  are set by the bodies themselves – each body's kinetic and binding energy as the source, as its mass is Newton's.
+  Rule 4's source is the one place a fact about the bodies, not the field, goes in.
+
+The rules then come down to: N = 1; Bernoulli's equation for the flow at Newton's order; and Einstein's equations –
+the Hamiltonian constraint for space (rule 2), the momentum constraint and the trace of the evolution equation for
+the flow's correction (rules 3–5) – with the bodies' mass, momentum and energy as their sources. That is GR in the
+slicing whose observers fall freely with the flow: a field equation for the flow, but Einstein's. It isn't run here:
+these are pointwise checks away from the bodies, not a solve, and the Hamiltonian constraint and the rest of the
+evolution equations at this order bring in space's next order, which the rules don't give.
+
 ## What it means
 
-The lapse and curved space are now in the engine for every model, and it reproduces GR in any of its coordinates.
-What they show about the flow model:
+The lapse and curved space are in the engine for every model, and it reproduces GR in any of its coordinates. What
+they show about writing GR as a flow:
 
-- One body doesn't mind how gravity is split: any share can go into the clocks, with space curved to match.
-- With two bodies, putting gravity into the clocks fixes the flow model's failures only in proportion – by taking
-  gravity out of the flow, which ends at conventional GR.
-- Keeping the clocks as Part 1 has them (N = 1) and curving space across the flow fixes them outright for bodies at
-  rest. This is the first multi-body version that passes lunar ranging's synodic term and the
-  Jupiter bending while keeping "clocks tick by their speed through space". Part 1's hypothesis then changes from
-  "space flows and is flat" to "space flows, and is stretched across its flow by the potential".
-- Writing that space with the flow alone, stretched across its motion by $u^2/c^2$ (u relative to its body, so that
-  it is the same in every frame), makes the flow decide the geometry as well as the motion. It keeps the eikonal
-  flow's results, and it fixes the turning flow's light past the Sun (9.6 mas to 0.001), because light then doesn't
-  feel the turning flow's Jacobi constant.
-- For moving bodies, the turning flow and the carried flow (each body's river carried at its velocity, the bodies
-  moved by it) both pass light past the Sun. With their Newtonian errors taken out, both have half of de Sitter's
-  precession and leave 0.26 m on the Moon's orbit. And the carried flow's bodies fail the binary and Nordtvedt as the
-  split model's did: each body moves in the others' fields alone.
-- Einstein's constraints give the space the flow needs: stretched by the potential, contracted along the lab's flow by
-  $u^2/c^2$, for any flow with no curl. On its own it makes the moving-body tests worse; it needs the flow's own
-  first-order corrections with it, which are GR's.
-- GR itself, put in the carried flow's time, passes the Moon test once the flow meets Newton's equation exactly (its
-  tide transported along the river). The carried flow with the same tide still has half of de Sitter's precession:
-  the shortfall is the flow's, not the test's.
-- The carried flow's regions each keep their own time, and it jumps at the seams: light past a Jupiter on its orbit
-  is turned by 1.7″. A flow made of separate regions needs one potential across all of them. Measured as VLBI does,
-  the turning flow – one potential – is within 3–22 µas of GR near Jupiter, and the carried flow 0.2″ off.
-- With a further shift of time (χ, carried along the flow), GR for the Sun, the Earth and the Moon has N = 1 exactly
-  and the Moon's whole de Sitter precession (0.15 m left): GR is a flow with Part 1's clocks. Its space must still be
-  curved – flat, the Moon is 580 m off.
-- The turning flow with Jacobi constant 0 is one potential over the whole plane (the bodies' flows solved together,
-  for bodies on circles). With Einstein's space, light past a moving Jupiter is within 2–12 µas of GR. The Moon fails
-  (98 km; flat, 197 m): Einstein's space needs the flow's first post-Newtonian corrections with it, and with J = 0 the
-  flow round the Earth is 50 km/s. With those corrections – GR in this flow's time, the lapse taken to 1 by χ – the
-  Moon passes (0.6 m) as well as light: one potential, Part 1's clocks, and GR's curved space and moving-body pieces.
-- So the next step isn't another rule for carrying flows. GR's de Sitter precession needs the Sun's curved space carried
-  round with the Earth, and the binary and Nordtvedt need each body's field to act on the others'. Both point to the
-  bodies' flows solved together – a field equation for the flow – not each one carried separately.
+- **One body doesn't mind how gravity is split**: any share can go into the clocks, with space curved to match.
+  Part 1's choice, all of it in the flow (N = 1), is one of these.
+- **With several bodies the clocks can stay as Part 1 has them** (N = 1). Putting gravity into the clocks instead
+  helps only in proportion, by taking it out of the flow, and ends at GR's usual form.
+- **Space has to be curved across the flow.** Einstein's constraint gives the space for any flow with no curl:
+  stretched by the potential and contracted along the flow by $u^2/c^2$. Flat, the Moon is 197–580 m off GR
+  (the J = 0 and the carried flows' times). With the
+  bodies at rest this space alone makes the eikonal flow GR (lunar ranging's synodic term, the Jupiter bending).
+- **There has to be one flow, one potential over the whole plane.** A flow made of separate regions, each body's river
+  carried with it, keeps a separate time in each, which jumps at the seams: light past a Jupiter on its orbit turns by
+  1.7″. The turning flow with Jacobi constant 0 is one potential everywhere (the bodies' flows solved together, for
+  bodies on circles), and light past a moving Jupiter is within 2–12 µas of GR, as VLBI measures it.
+- **The flow needs its first post-Newtonian corrections**: slowed by $(U + u^2/2)/c^2$, plus each body's potential
+  carried at its velocity, $4U_j/c^2$, and less $\nabla\chi/c^2$, the lapse's part moved into the flow. With them the
+  J = 0 flow passes the Moon (0.60 m, the floor of GR's own exact transform to this time), light, and a circular binary, each body
+  moving with the regular part of its space. Without them the flow at 50 km/s round the Earth puts the Moon 98 km off;
+  without $4U_j$ alone the Moon passes but the binary gets a third of GR's periastron advance. The flows that move
+  each body in the others' fields alone miss the binding term in the others' source, and fail the binary.
+- **Those corrections are Einstein's equations.** With N = 1 and Einstein's space, the momentum constraint fixes the
+  correction's curl and the trace of the evolution equation its divergence. Only ψ's 1/r parts – the bodies' kinetic
+  and binding energy – come from the bodies rather than the field, as each body's mass does in Newton's.
+
+So GR for several bodies can be written as Part 1 writes it for one: one flow, clocks that tick by their speed
+through it, particles moving through it – with space stretched across the flow, and the flow obeying Einstein's
+equations in this free-fall slicing. It is GR in the coordinates of its free-falling observers, as
+Gullstrand–Painlevé's are for one body.
 
 ## Run it
 
@@ -669,4 +747,12 @@ python3 studies/carried_bodies.py
 
 ```bash
 python3 studies/constraints.py
+```
+
+```bash
+python3 studies/binary_regularized.py
+```
+
+```bash
+python3 studies/flow_field_equations.py
 ```
