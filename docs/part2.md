@@ -43,4 +43,5 @@ come from the bodies themselves – as a body's mass does in Newton's gravity.
 
 So it is GR, written in the coordinates of observers falling freely with the flow – for several bodies what
 Gullstrand–Painlevé's coordinates are for one. The picture of Part 1 keeps its clocks and its single flow; what it
-gives up is flat space. The [scorecard](scorecard.md) scores every version against GR's tests and Part 1's premises.
+gives up is flat space. The [scorecard](scorecard.md) scores every version against GR's tests and Part 1's premises. [The model, step by step](evolution.md)
+builds the same flow one feature at a time.

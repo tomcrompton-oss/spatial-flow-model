@@ -646,7 +646,8 @@ out 4U_j takes $-4Gm_1m_2\,\mathbf v_1\cdot\mathbf v_2/(rc^2)$ out of GR's (EIH'
   That term is Newtonian, like the rest (U and the bodies' velocities), but with it the rules are GR's whole first
   post-Newtonian metric, rearranged.
 - This is the circular binary only; eccentric orbits can't be run in the turning flow, whose bodies go round on
-  circles. The advance comes from the Lagrangian, not a run, and Nordtvedt hasn't been worked out.
+  circles ([off circles](#off-circles-the-j-0-flow-for-an-eccentric-binary), below, builds the flow for them). The advance comes from the Lagrangian, not a run, and Nordtvedt hasn't been run (GR's first
+  post-Newtonian equations, which these rules are, give η = 0).
 
 **Where rules 3–5 come from** (`studies/flow_field_equations.py`). Rules 3–5 are the flow's first post-Newtonian
 correction, $\gamma\mathbf u = \mathbf u_0 + \mathbf A/c^2 - \nabla\chi/c^2$ with $\mathbf A = -(U + u_0^2/2)\mathbf u_0 + 4\mathbf U_j$.
@@ -686,6 +687,50 @@ the flow's correction (rules 3–5) – with the bodies' mass, momentum and ener
 slicing whose observers fall freely with the flow: a field equation for the flow, but Einstein's. It isn't run here:
 these are pointwise checks away from the bodies, not a solve, and the Hamiltonian constraint and the rest of the
 evolution equations at this order bring in space's next order, which the rules don't give.
+
+## Off circles: the J = 0 flow for an eccentric binary
+
+The turning flow needs bodies on circles: only then is there a frame in which the flow is steady. Off circles the
+J = 0 flow has to be built in time (`studies/eccentric_flow.py`, at Newton's order). Bernoulli's equation with
+J = 0, $\partial_t\phi + |\nabla\phi|^2/2 = U$, is a Hamilton–Jacobi equation whose paths are free fall. So each body's
+flow is the set of free-fall paths that end in it, run backwards in time from the body, with φ falling by
+$\int(U + u^2/2)\,dt$ along each. A point belongs to the body whose φ there is largest, so φ is continuous across the
+seam. The bodies' two constants differ by one number, set once so that the seam goes through the saddle between them
+at periastron.
+
+The check: on circles the flow built this way is steady in the turning frame, to 1 × 10⁻³ of φ (the scatter of the
+measurement). Then, for mass ratios 0.1 and 1 and eccentricities 0, 0.3 and 0.6, at periastron, a quarter of a
+period on, and apastron, within 2.5 a of the centre of mass:
+
+| Mass ratio, e | Won past a fold: periastron / quarter / apastron | Nearest such point to a body (separations) | Seam on the line between the bodies (from the lighter, saddle in brackets): periastron / apastron |
+| --- | --- | --- | --- |
+| 0.1, circles | 6.7% at every phase | 0.72 | 0.283 (0.282) at every phase |
+| 0.1, e = 0.3 | 15% / 1.2% / 2.3% | 1.30 / 0.57 / 0.62 | 0.297 (0.296) / 0.421 (0.269) |
+| 0.1, e = 0.6 | 25% / 0.5% / 1.0% | 1.36 / 1.85 / 1.18 | 0.309 (0.310) / 0.535 (0.256) |
+| 1, circles | 9.2% at every phase | 0.97 | 0.500 (0.500) |
+| 1, e = 0.3 | 19% / 1.2% / 2.3% | 1.12 / 1.32 / 0.85 | 0.500 (0.500) / 0.500 (0.500) |
+| 1, e = 0.6 | 25% / 0.6% / 0.3% | 2.03 / 1.15 / 1.07 | 0.500 (0.500) / 0.500 (0.500) |
+
+"Won past a fold" is the share of the square where the winning body's flow comes only from paths that have crossed
+others: there the flow has a kink. Every point is reached by some body's flow (the share reached by neither is at
+most 0.1%).
+
+- **It is still one potential.** Off circles, as on them, the flow reaches the whole plane, φ is continuous, and each
+  body sits in flow that is one-valued round it: the nearest fold is more than half a separation away at every phase.
+- **The seam is the same kind of seam.** Across it the two bodies' inflows meet head on, the jump in the flow about
+  twice its speed, as on circles. With equal masses it stays at the midpoint by symmetry. With a mass ratio of 0.1 it
+  can't follow the saddle: the constants are fixed, and by apastron the seam has moved from the saddle (0.26–0.27 of
+  the way from the lighter body) to 0.42 at e = 0.3 and 0.54 at e = 0.6.
+- **Folds come and go with the orbit.** At periastron, where the bodies move fastest, the flow folds far out, at
+  1.1–2 separations from the bodies, over 15–25% of the square. A quarter of a period on and at apastron the share is
+  0.3–2.3%, under the circles' 7–9%. (Some of the circles' share is the measurement's own noise: it marks a point as
+  folded when every nearby sample comes from a path that passed close to the other body.)
+
+So an eccentric binary still has one J = 0 flow, a free-fall slicing that reaches everywhere, smooth near the bodies.
+Its kinks move round the orbit, and far out at periastron they cover a quarter of the region. That is a known
+property of slicing by free fall, where the free-fall paths focus and cross, and not a difference from GR: the
+spacetime is GR's whatever the slicing, and only the flow's description of it has kinks. Nothing has been run in
+this flow yet – the bodies, the Moon or light – and the corrections of rules 3–5 haven't been built on it.
 
 ## What it means
 
@@ -755,4 +800,8 @@ python3 studies/binary_regularized.py
 
 ```bash
 python3 studies/flow_field_equations.py
+```
+
+```bash
+python3 studies/eccentric_flow.py
 ```
