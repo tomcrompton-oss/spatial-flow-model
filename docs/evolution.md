@@ -21,10 +21,10 @@ each other.
 | **4. Bodies moving each other** | | | | |
 | 4.1 | Self-moving bodies | each body moves with the regular part of its own space | Hadamard regularization, as in post-Newtonian theory | none: it makes a binary runnable, and the binary fails |
 | 4.2 | Moving potentials | the flow plus each body's potential carried at its velocity, 4U_j/c² | a body's static field Lorentz-boosted (the first post-Newtonian vector potential); Einstein's momentum constraint | a circular binary of any masses, exactly GR's |
-| 4.3 | Spinning bodies | 1.3's spin for several bodies, through 4.2's 4U_j of each body's own rotation | GR's first post-Newtonian frame dragging; Einstein's momentum constraint | not yet run (Lense–Thirring round the Earth) |
+| 4.3 | Spinning bodies | 1.3's spin for several bodies, through 4.2's 4U_j of each body's own rotation | GR's first post-Newtonian frame dragging; Einstein's momentum constraint | frame dragging: orbits with and against the spin as exact Kerr's |
 
 Model 4.2 is GR's whole first post-Newtonian metric, written in the slicing whose observers fall freely with the flow.
-Spin is built and tested for one body (1.3), and not yet for several (4.3). [Prior work](prior-work.md) compares each
+Spin is built two ways: 1.3's twist, and 4.3's curl, which keeps to the many-body model's rules; both match Kerr. [Prior work](prior-work.md) compares each
 piece with the published literature. [What comes from outside](from-outside.md) asks which of the
 sources could come from the flow itself.
 
@@ -240,21 +240,32 @@ first post-Newtonian metric: one flow, clocks that tick by their speed through i
 rotating matter, which far from the body is a curl in the flow, $2G\,\mathbf J\times\mathbf x/c^2r^3$.
 
 **Source.** GR's first post-Newtonian frame dragging, and Einstein's momentum constraint with the bodies' angular
-momentum as its source. For one body this curl should be the first post-Newtonian form of 1.3's twist – the link
-isn't checked.
+momentum as its source. For one body it does what 1.3's twist does: both give exact Kerr's equatorial orbits (below,
+and [1.3](#13-spinning-body)).
 
-**New tests passed.** None yet: it hasn't been run. The test would be Lense–Thirring frame dragging round the Earth:
-LAGEOS's nodes, and Gravity Probe B's 37 mas/yr.
+**New tests passed** (`studies/frame_dragging.py`). One spinning body with 4.3's flow (Part 1's river plus the curl,
+N = 1, flat space, no twist), in its equatorial plane. Going round with the spin, the periapsis moves on less; against
+it, more. Half the difference is the part odd in the spin:
+
+| Orbit | Spin | Odd part per orbit (rad) | / exact Kerr's | / Lense–Thirring's leading term |
+| --- | --- | --- | --- | --- |
+| 55–100 M | 0.1 | −4.974 × 10⁻³ | 1.0000 | 1.186 |
+| 55–100 M | 0.5 | −2.488 × 10⁻² | 0.9997 | 1.191 |
+| 233–400 M | 0.1 | −5.164 × 10⁻⁴ | 1.0000 | 1.040 |
+| 233–400 M | 0.5 | −2.582 × 10⁻³ | 1.0000 | 1.040 |
+
+With no spin the orbits precess as exact Schwarzschild's, to 10⁻⁶. The odd part is exact Kerr's. Lense–Thirring's
+formula, $-8\pi\chi(GM/c^2a)^{3/2}/(1 - e^2)^{3/2}$, is only its leading term, and the ratio closes on 1 as the orbit
+widens. So frame dragging comes out of 4.2's term with no twist. In the plane this is the equatorial form of what
+LAGEOS and Gravity Probe B measure round the Earth; the engine can't tilt an orbit, so their nodes aren't run.
 
 ## Not yet tested
 
 - **Bodies off circles.** 3.1's flow is built for bodies on circles, in the frame turning with them. For an
-  eccentric binary there is no such frame, and the flow has to be built in time. Built at Newton's order, it is still
-  one potential reaching the whole plane, smooth near the bodies, with kinks far out at periastron
-  ([off circles](lapse-curved-space.md#off-circles-the-j-0-flow-for-an-eccentric-binary)); nothing has been run in it
-  yet, and 3.2–4.2 haven't been built on it. The other tests of a binary's general motion wait on that:
-  its centre of mass staying put, and the Nordtvedt effect. GR's first post-Newtonian equations already give both
-  (η = 0), so for 4.2 they would check the simulation, not the model.
-- **Spin with several bodies (4.3).** Lense–Thirring frame dragging round the Earth (LAGEOS, Gravity Probe B).
-  4.2's 4U_j already holds it, as GR's first post-Newtonian frame dragging, so a run would check the engine's curl
-  term.
+  eccentric binary it is built in time: still one potential reaching the whole plane, smooth near the bodies, with
+  kinks far out at periastron, and each body moving with its own space to 10⁻⁸ of its speed
+  ([off circles](lapse-curved-space.md#off-circles-the-j-0-flow-for-an-eccentric-binary)). So by 4.1–4.2's reasoning
+  the bodies move by EIH, with GR's advance, centre of mass and no Nordtvedt effect – argued, not run: no eccentric
+  orbit, the Moon or light has been run in this flow.
+- **Spin off the plane.** The engine is planar, so frame dragging's tilt of an orbit's nodes (LAGEOS, Gravity Probe
+  B) isn't run; 4.3's equatorial orbits are exact Kerr's.

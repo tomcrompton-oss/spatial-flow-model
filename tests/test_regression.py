@@ -780,6 +780,43 @@ class Studies(unittest.TestCase):
     self.assertNotIn('orbit 1: t ', text)      #a straight fall turns no angle round the body
 
 
+try:
+  import sympy
+except ImportError:
+  sympy = None
+
+
+@unittest.skipUnless(sympy, 'needs sympy (pip install sympy)')
+class FieldEquations(unittest.TestCase):
+  """the flow's exact checks against Einstein's equation (sympy, a few seconds): studies/ball_law.py and the boost and
+  binding parts of studies/field_from_bodies.py"""
+
+  def testBallLawFlatFlow(self):
+    """flat space, N = 1, u = grad phi: R_nn = -div(Du/Dt), R_ni = 0, G_nn = (K^2 - K:K)/2, for any phi"""
+    from studies import ball_law as b
+    phi = sympy.Function('phi')(*b.X)
+    R, scalar, n, u = b.ricci(phi)
+    Rnn = sum(n[i]*n[j]*R[i, j] for i in range(4) for j in range(4))
+    acc = [sympy.diff(u[i], b.t) + sum(u[j]*sympy.diff(u[i], b.X[j+1]) for j in range(3)) for i in range(3)]
+    self.assertEqual(sympy.simplify(sympy.expand(Rnn + sum(sympy.diff(acc[i], b.X[i+1]) for i in range(3)))), 0)
+    for i in range(3):
+      self.assertEqual(sympy.simplify(sympy.expand(sum(n[j]*R[j, i+1] for j in range(4)))), 0)
+    H = [[sympy.diff(phi, b.X[i+1], b.X[j+1]) for j in range(3)] for i in range(3)]
+    K2 = sum(H[i][i] for i in range(3))**2 - sum(H[i][j]**2 for i in range(3) for j in range(3))
+    self.assertEqual(sympy.simplify(sympy.expand(Rnn + scalar/2 - K2/2)), 0)
+
+  def testBoostedBodyAndBinding(self):
+    """one body's static field: boosted, GR's metric for a moving body (4 U_j, psi's 3/2 v^2); in another's clocks
+    and rulers, psi's binding part"""
+    from studies import field_from_bodies as f
+    for label, n, worst in f.boosted():
+      self.assertEqual(worst, 0, label)
+    d00, dxx, cross = f.inField()
+    self.assertEqual(d00, 0)
+    self.assertEqual(dxx, 0)
+    self.assertEqual(cross, -6)
+
+
 class Viewer(unittest.TestCase):
 
   def testViewerReadsAStudy(self):
