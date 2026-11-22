@@ -519,9 +519,9 @@ class FreeFallPN(Spacetime):
 
   timedSeams = True
 
-  def __init__(self, bodies, lapse=True, retarded=True, tides=True, keep=('space', 'scale', 'moving'), chi=None):
+  def __init__(self, bodies, lapse=True, retarded=True, tides=True, keep=('space', 'scale', 'moving', 'psi'), chi=None):
     """keep: GR's pieces kept beyond the carried flow, to see what each does - 'space' (gamma), 'scale' (u0's
-    (phi_T - 2U)/c^2) and 'moving' (the moving bodies' 4 U_j/c^2). chi: the index of a body round which the time is
+    (phi_T - 2U)/c^2) 'moving' (the moving bodies' 4 U_j/c^2) and 'psi' (GR's psi in the lapse). chi: the index of a body round which the time is
     shifted by chi/c^4 (ChiTable), taking the lapse to 1 there and its 1PN part into the flow; lapse then keeps only
     what the table leaves"""
     from engine.metric import PostNewtonian
@@ -577,7 +577,7 @@ class FreeFallPN(Spacetime):
     u = u0 + a + k @ (u0 + a)
     #u . gamma u - |u0|^2 = u0 . k u0 + 2 a . gamma^-1 u0 + a . gamma^-1 a
     extra = u0 @ k @ u0 + 2*(a @ (u0 + k @ u0)) + a @ a
-    s = (extra + (phiT*phiT - 4*U*phiT - 2*psi + 2*U*U)/C**2)/C**2
+    s = (extra + (phiT*phiT - 4*U*phiT - (2*psi if 'psi' in self.keep else 0.0) + 2*U*U)/C**2)/C**2
     if self.retarded:
       s -= 2*self.shift(x, t, region)/C**2
     if self.chiBody is not None and region == self.chiBody:
@@ -627,7 +627,7 @@ class FreeFallTurning(FreeFallPN):
   with chi (ChiTable carries Q along this flow in the turning frame) the lapse is 1
   """
 
-  def __init__(self, bodies, lapse=True, retarded=True, keep=('space', 'scale', 'moving'), chi=None, jacobi=0.0,
+  def __init__(self, bodies, lapse=True, retarded=True, keep=('space', 'scale', 'moving', 'psi'), chi=None, jacobi=0.0,
                fine=None):
     """fine: round the lighter body (out to 3e9 m), the flow from LocalTurningFlow - the ray table's is off by a
     near-uniform ~1e-9 m/s^2 round the Moon's orbit with J = 0, which drives the Moon by ~100 m. by default, for J = 0

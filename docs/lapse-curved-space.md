@@ -573,6 +573,24 @@ fast. The flow model with Einstein's space and J = 0 (98 km) is the row without 
 own must supply beyond Einstein's space is a flow slowed by $(U + u^2/2)/c^2$ and the lapse's part moved into it,
 $-\nabla\chi/c^2$.
 
+**The J = 0 flow as a model of its own.** Without the moving bodies' term, what is left is a flow model with these
+rules, each built from Newton's U, the bodies' Newtonian motion, and the flow (u = ∇φ, J = 0):
+
+1. clocks keep T (N = 1);
+2. space stretched by the potential and contracted along the flow, $\gamma = (1 + 2U/c^2)\delta - \mathbf u\mathbf u/c^2$
+   (Einstein's constraint);
+3. the flow slowed by $(U + u^2/2)/c^2$;
+4. the flow less $\nabla\chi/c^2$, χ carried along the flow (in the turning frame) from the source
+   $Q = c^4(N^2 - 1)/2$ that rules 1–3 would leave in the clocks – the flow's and the potential's terms, the shift of
+   U to harmonic time ($\partial_T U\,\varphi/c^2$), and the bodies' first post-Newtonian potential ψ (their kinetic
+   and binding energy and their field's motion).
+
+The Moon is GR's to 0.49 m. Taking parts out of χ's source shows what each is worth: without ψ, 1.6 m (k +1.0); without
+the shift to harmonic time, 14.5 m (k −15.6). Every part of the source is Newtonian – U, its rate, the bodies'
+velocities and accelerations, and φ – but ψ is a correction to the source the flow comes from, not something the flow
+makes. And the rules are GR's 1PN metric rearranged: they say GR can be written as a flow with Part 1's clocks, not
+that the flow model derives it.
+
 Two things had to be right for this. GR's time at the Earth runs at $dt/dT = 1 + \kappa/c^2$, κ = dφ/dT along the
 Earth: for the carried flow (and the carried J) κ = −J = 1.5 GM☉/a, and the Earth held at Ω in T is GR's free fall at
 harmonic r = AU − GM☉/c²; for J = 0 the potential is steady at the Earth, κ = 0, and GR's Earth is at AU. Fitted at
