@@ -18,8 +18,14 @@ $$
 \frac{\ddot V}{V}\Big|_{t=0} = -4\pi G\,(\rho + p_x + p_y + p_z),
 $$
 
-in that observer's frame. For one observer this is one equation (Raychaudhuri's). Holding it for every observer, moving
-at every speed, is all of Einstein's equation.
+in that observer's frame, for a small ball and at the instant it starts (with a cosmological constant there is one more
+term). For one observer this is one equation (Raychaudhuri's). Holding it for every observer, moving at every speed,
+is all of Einstein's equation.
+
+"The ball law" is this site's short name for Baez and Bunn's form, not a term in general use: it isn't a law beside
+Einstein's but his equation, stated another way. It is accepted wherever GR is. Its one-observer part, Raychaudhuri's
+equation (1955), is standard in GR texts and behind the singularity theorems. The source being ρ plus the pressures is
+GR's own prediction that pressure gravitates.
 
 In the flow picture the law is natural, because free fall is moving with space. A ball carried along with the flow is a
 small piece of the flowing space itself, so the law says how falling space converges. A ball moving through the flow
