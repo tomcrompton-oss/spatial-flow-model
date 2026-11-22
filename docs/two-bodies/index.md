@@ -34,7 +34,7 @@ and goes through one test in detail, with the simulation's runs in the viewer.
 | Approach | The rule | Verdict |
 | --- | --- | --- |
 | [Vector addition](vectors.md) | add the bodies' flows as vectors, $\mathbf u = \sum \mathbf u_i$ | ❌ fails Newton's g by 37–74 m/s² at the Earth's surface |
-| [Along g](along-g.md) | speed from the potential, $|\mathbf u|^2 = \sum 2GM_i/d_i$, pointing along g | ❌ space doesn't fall at g: off the axes g is out by up to 174% |
+| [Along g](along-g.md) | speed from the potential, $\lvert\mathbf u\rvert^2 = \sum 2GM_i/d_i$, pointing along g | ❌ space doesn't fall at g: off the axes g is out by up to 174% |
 | [The eikonal flow](eikonal.md) | that speed, pointing down the paths of things falling from rest far away | ✅ Newton and clocks; ❌ lunar laser ranging (27σ) |
 | [Each body carrying its flow](turning.md) | the eikonal flow turning with the bodies, the Earth carrying its own | ✅ lunar ranging; ❌ light past the Sun (1000 × Cassini's limit) |
 | [Each body separately](split.md) | each body's own one-body flow, its effects on a particle applied one after the other | ✅ most tests with one body much heavier, and with each body's flow carried by the heavier body's space, lunar ranging and de Sitter precession; ❌ then the Nordtvedt effect, and a binary of comparable masses: the orbit turns 17% too slowly, and the pair accelerates by itself |

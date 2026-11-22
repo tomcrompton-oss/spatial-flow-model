@@ -6,7 +6,7 @@ space – in the simulation, in five steps. Each runs the flow model itself: par
 
 | Question | Result |
 | --- | --- |
-| [How do the flows combine?](#1-how-the-flows-combine) | By their squares, $|\mathbf u|^2 = \sum 2GM/d$: g is Newton's |
+| [How do the flows combine?](#1-how-the-flows-combine) | By their squares, $\lvert\mathbf u\rvert^2 = \sum 2GM/d$: g is Newton's |
 | [Clocks](#2-clocks) | Clocks on the Earth and in GPS orbit keep GR's rates |
 | [Moving bodies](#3-moving-bodies) | A moving body must carry its flow with it. If not, g is out by 26–52 m/s² |
 | [Beyond Newton](#4-beyond-newton) | By squares, the Sun's potential stretches space round the Earth and Jupiter: fails lunar laser ranging (27σ), and very likely VLBI past Jupiter |

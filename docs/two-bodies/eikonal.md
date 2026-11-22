@@ -110,3 +110,8 @@ Earth's distance from the Sun changes.
 
 The effect goes as $c_0$, so as $G\sqrt{M_{\text{Sun}}M_{\text{Earth}}}$ in all, because the flow is the square root
 of the potential. No post-Newtonian (PPN) theory has a term like that, so no choice of PPN parameters describes it.
+
+**What fixes it.** The stretch is in the flow; the fix is in space. With space stretched across the flow by
+Einstein's constraint, $\gamma = \delta + (2U\delta - \mathbf u\mathbf u)/c^2$, the eikonal flow passes lunar
+ranging's synodic term and the Jupiter bending with the bodies at rest ([Lapse and curved
+space](../lapse-curved-space.md#the-clocks-left-alone-space-curved-across-the-flow)).

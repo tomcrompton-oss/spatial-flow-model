@@ -21,7 +21,8 @@ Press Play; choose "All environments" under Background to see every ring's flow.
 | | [1.2 Mechanics of spatial flow](part1/mechanics.md) | v = u + w, the step-by-step procedure, Newton's apple, and light crossing regions of moving space |
 | | [1.3 The four tests](part1/tests.md) | redshift, light bending, Mercury's precession and the Shapiro delay, against general relativity |
 | | [1.4 Conclusion](part1/conclusion.md) | for one body spatial flow is general relativity; the mechanics as the simulation has them |
-| Part 2 – More than one body | [Two bodies](two-bodies/index.md) | ways to build two bodies' flow, each tested in the simulation against GR and measurement: those that don't give GR, and the one that does |
+| Part 2 – More than one body | [Part 2 in brief](part2.md) | the result in a page: what the flow needs for several bodies, and the flow that is GR |
+| | [Two bodies](two-bodies/index.md) | ways to build two bodies' flow, each tested in the simulation against GR and measurement: those that don't give GR, and the one that does |
 | | [Gravitational waves](waves.md) | a wave as a flow of space that changes with time: exact through the plane, approximate across it |
 | | [Many bodies](many-bodies.md) | how bodies' flows combine, clocks, moving bodies, beyond Newton, and carrying the flow: why a flow through flat space can't be GR for several bodies |
 | | [Lapse and curved space](lapse-curved-space.md) | clocks, curved space and one potential: the flow that is GR for the Sun, the Earth, the Moon, light and a binary, and where its pieces come from in Einstein's equations |
