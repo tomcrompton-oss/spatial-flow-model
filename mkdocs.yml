@@ -9,7 +9,6 @@ docs_dir: docs
 theme:
   name: material
   features:
-    - navigation.sections
     - navigation.top
     - content.code.copy
     - search.highlight
