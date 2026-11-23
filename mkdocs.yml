@@ -24,8 +24,20 @@ theme:
 nav:
   - Synopsis: index.md
   - Preface: preface.md
-  - Part 1 – Flow around a Single Body: part1.md
-  - Part 2 – Two Stationary Bodies: part2.md
+  - Part 1 – Flow around a Single Body:
+      - Hypothesis: part1/hypothesis.md
+      - Mechanics of Spatial Flow: part1/mechanics.md
+      - The 4 Tests: part1/tests.md
+      - Black Holes: part1/black-holes.md
+      - Rotating Black Holes: part1/rotating-black-holes.md
+      - White Holes: part1/white-holes.md
+      - Conclusion: part1/conclusion.md
+  - Part 2 – Two Stationary Bodies:
+      - The Two Body Problem: part2/two-body-problem.md
+      - Hollow Spheres: part2/hollow-spheres.md
+      - Potential Flow: part2/potential-flow.md
+      - Curved Space: part2/curved-space.md
+      - Conclusion: part2/conclusion.md
   - Part 3 – Dynamic Bodies (Fixed Paths): part3.md
   - Part 4 – Dynamic Bodies: part4.md
   - Part 5 – Gravitational Waves: part5.md
