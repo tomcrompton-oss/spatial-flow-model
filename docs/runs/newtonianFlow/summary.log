@@ -1,0 +1,15 @@
+the apple, 11 m up, at rest, falling 10 m (landing interpolated between the last two steps)
+dt (s)         time (s)          u (m/s)          w (m/s)          v (m/s)
+1              2.008498      -11185.9770       11166.2277       -19.749335
+0.1            1.477287      -11185.9770       11171.4682       -14.508792
+0.01           1.432113      -11185.9770       11171.9135       -14.063468
+0.001          1.427619      -11185.9770       11171.9578       -14.019166
+0.0001         1.427170      -11185.9770       11171.9623       -14.014738
+Newtonian gravity (steps of 1e-5 s): 1.427115 s, -14.014197 m/s; g at 11 m up 9.8199 m/s^2, sqrt(2d/g) 1.427120 s, g t 14.014235 m/s
+
+an orbit of the Earth from apogee 20,000 km at 3214.62 m/s (the Newtonian ellipse: perigee 7,000 km, period 15610.53 s), three times round
+the procedure, first order, steps of 0.1 s: perigees 7001.3715, 7005.3463, 7009.3184 km
+the procedure, first order, steps of 0.05 s: perigees 7000.6858, 7002.6737, 7004.6610 km
+Part 1's Newtonian flow procedure (order 2, plain addition) (steps of 0.5 s): perigees 7000.0014, 7000.0030, 7000.0047 km
+Newtonian gravity (steps of 0.05 s): perigees 7000.0000, 7000.0000, 7000.0000 km
+at apogee: v = (0.0, 3214.6) m/s, u = (-6313.4, 0.0) m/s, w = (6313.4, 3214.6) m/s

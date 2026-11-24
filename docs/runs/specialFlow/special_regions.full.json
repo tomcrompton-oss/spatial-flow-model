@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "special_regions.prefs.json",
+  "config": "special_regions.config.json"
+}

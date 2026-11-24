@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "newtonian_apple.prefs.json",
+  "config": "newtonian_apple.config.json"
+}

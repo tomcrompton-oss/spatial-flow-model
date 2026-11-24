@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 5.972000e+24 kg (3.00251e-06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+an Earth orbit from apogee 20,000 km, perigee 7,000 km: Part 1's Newtonian flow procedure (order 2, plain addition)
+background frames: background_newtonian_orbit.csv

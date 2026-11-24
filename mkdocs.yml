@@ -10,6 +10,7 @@ theme:
   name: material
   features:
     - navigation.top
+    - navigation.indexes
     - content.code.copy
     - search.highlight
   palette:
@@ -25,8 +26,16 @@ nav:
   - Preface: preface.md
   - Part 1 – Flow around a Single Body:
       - Hypothesis: part1/hypothesis.md
-      - Mechanics of Spatial Flow: part1/mechanics.md
-      - The 4 Tests: part1/tests.md
+      - Mechanics of Spatial Flow:
+          - part1/mechanics/index.md
+          - Newtonian: part1/mechanics/newtonian.md
+          - Special Relativistic: part1/mechanics/special-relativistic.md
+      - The Four Tests:
+          - part1/tests/index.md
+          - The Gravitational Redshift of Light: part1/tests/redshift.md
+          - The Bending of Light: part1/tests/bending.md
+          - The Precession of Mercury: part1/tests/precession.md
+          - The Shapiro Time Delay: part1/tests/shapiro.md
       - Black Holes: part1/black-holes.md
       - Rotating Black Holes: part1/rotating-black-holes.md
       - White Holes: part1/white-holes.md
