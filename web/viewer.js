@@ -19,8 +19,8 @@ const MARGIN = {left: 78, right: 18, top: 16, bottom: 44};
 const ARROW_SPACING = 40;   //pixels between background arrows
 const REPLAY_SECONDS = 20;  //a whole run at 1x
 const ALL = 'All environments', SELECTED = "Selected result's environment";
-const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showBodies: true,
-               showSchwarzschild: true, showPathLegend: true, showFieldKey: true, replaySpeed: '1'};
+const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showScalar: true, showBodies: true,
+               showSchwarzschild: true, showPathLegend: true, showFieldKey: true, replaySpeed: '1', replayLoop: false};
 
 const state = {
   results: [],         //{name, file, data, paths, log, env, visible, color}
@@ -29,7 +29,7 @@ const state = {
   view: null,          //[x0, x1, y0, y1] in metres
   prefs: {...PREFS},
   background: SELECTED,
-  replay: {state: 'stopped', t: null, last: 0},
+  replay: {state: 'stopped', t: null, last: 0, mode: 'together'},   //mode 'together' or 'sequence' (in turn)
 };
 
 const $ = id => document.getElementById(id);
@@ -89,25 +89,36 @@ function parseLog(text) {
   const frames = (text.match(/^background frames: (.+)$/m) || [])[1];
   const direction = (text.match(/^flow direction: (.+)$/m) || [])[1];
   const wave = (text.match(/^gravitational wave: (.+)$/m) || [])[1];
-  return {bodies, frames: frames && frames.trim(), direction, wave};
+  const scalar = (text.match(/^background scalar: (.+)$/m) || [])[1];
+  return {bodies, frames: frames && frames.trim(), direction, wave, scalar: scalar && scalar.trim()};
 }
 
-/* background frames (docs/archive/formats.md): the flow and its acceleration on a grid at a run of times */
+/* background frames (docs/archive/formats.md): the flow and its acceleration on a grid at a run of times - or, with
+   the columns t, x, y, s, a scalar (a wave's strain, say), drawn as a colour map */
 function parseFrames(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
-  const n = lines.length - 1, raw = new Float64Array(n * 7);
+  const header = lines[0].split(',').map(c => c.trim());
+  const width = header.length, scalar = header[3] === 's';
+  const n = lines.length - 1, raw = new Float64Array(n * width);
   for (let i = 0; i < n; i++) {
     const cells = lines[i + 1].split(',');
-    for (let j = 0; j < 7; j++) raw[i * 7 + j] = +cells[j];
+    for (let j = 0; j < width; j++) raw[i * width + j] = +cells[j];
   }
-  const unique = k => [...new Set(Array.from({length: n}, (_, i) => raw[i * 7 + k]))].sort((a, b) => a - b);
+  const unique = k => [...new Set(Array.from({length: n}, (_, i) => raw[i * width + k]))].sort((a, b) => a - b);
   const times = unique(0), xs = unique(1), ys = unique(2);
   const u = new Float32Array(n * 2), a = new Float32Array(n * 2);
-  for (let i = 0; i < n; i++) {
-    u[2 * i] = raw[i * 7 + 3]; u[2 * i + 1] = raw[i * 7 + 4];
-    a[2 * i] = raw[i * 7 + 5]; a[2 * i + 1] = raw[i * 7 + 6];
-  }
   const frames = {times, xs, ys, u, a, size: xs.length * ys.length};
+  if (scalar) {
+    const values = new Float32Array(n * 2);                  //two per point, so frameSample reads it as it does u
+    for (let i = 0; i < n; i++) values[2 * i] = raw[i * width + 3];
+    frames.s = values;
+    frames.reference = {u: null, a: null, s: percentileOfSizes(values, 98)};
+    return frames;
+  }
+  for (let i = 0; i < n; i++) {
+    u[2 * i] = raw[i * width + 3]; u[2 * i + 1] = raw[i * width + 4];
+    a[2 * i] = raw[i * width + 5]; a[2 * i + 1] = raw[i * width + 6];
+  }
   frames.reference = {u: percentileOfSizes(u, 90), a: percentileOfSizes(a, 90)};   //one scale for the whole run
   return frames;
 }
@@ -227,7 +238,7 @@ function environmentFor(log, frameCache) {
   let env = state.environments.find(e => e.key === key);
   if (env) return env;
   const frames = log.frames ? frameCache.get(log.frames) || null : null;
-  env = {key, bodies: log.bodies, frames, name: describe(log, frames)};
+  env = {key, bodies: log.bodies, frames, scalar: log.scalar || 's', name: describe(log, frames)};
   state.environments.push(env);
   return env;
 }
@@ -238,7 +249,8 @@ function describe(log, frames) {
     : 'No bodies';
   if (log.direction && log.direction.startsWith('down zero-energy paths'))
     name += log.direction.includes('exact two-body solution') ? ', eikonal flow (exact)' : ', eikonal flow';
-  if (log.frames) name += (frames && frames.times.length > 1 ? ', flow changing with time (' : ', flow frame (') +
+  if (log.frames) name += (frames && frames.s ? ', ' + (log.scalar || 'a field') + ' (' :
+                          frames && frames.times.length > 1 ? ', flow changing with time (' : ', flow frame (') +
                           studyName(log.frames.replace(/\.csv$/, '')) + ')';
   return name;
 }
@@ -322,7 +334,10 @@ function draw() {
   drawAxes(true);
   const keys = [];
   for (const env of fieldEnvironments()) keys.push(...drawField(env));
-  for (const result of state.results.filter(r => r.visible)) for (const p of result.paths) drawPath(result, p);
+  for (const result of state.results.filter(r => r.visible)) {
+    const until = drawUntil(result);
+    if (until !== false) for (const p of result.paths) drawPath(result, p, until);
+  }
   flushDots();
   for (const env of fieldEnvironments()) drawBodies(env);
   ctx.restore();
@@ -367,8 +382,8 @@ function drawAxes(grid) {
 function line(x0, y0, x1, y1) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
 
 /* a path: up to the replay time while replaying (with a dot where it is), else all of it; broken at empty rows */
-function drawPath(result, p) {
-  const colour = p.color || result.color, until = replayTime();
+function drawPath(result, p, until = replayTime()) {
+  const colour = p.color || result.color;
   ctx.strokeStyle = colour; ctx.lineWidth = 1.6; ctx.setLineDash(DASHES[p.style] || []);
   ctx.beginPath();
   let pen = false;
@@ -430,8 +445,13 @@ function fieldEnvironments() {
 function drawField(env) {
   const keys = [], frames = env.frames;
   if (!frames) return keys;
-  const t = replayTime() ?? frames.times[0];
+  const t = fieldTime() ?? frames.times[0];
   const named = fieldEnvironments().length > 1 ? '  (' + env.name + ')' : '';
+  if (frames.s && state.prefs.showScalar && frames.reference.s) {
+    drawScalar(frames, t, frames.reference.s);
+    const moment = frames.times.length > 1 ? '  at t = ' + fmt(t) + ' s' : '';
+    keys.push([SCALAR_PLUS, env.scalar + ': red +' + fmt(frames.reference.s) + ', blue \u2212' + fmt(frames.reference.s) + moment + named]);
+  }
   for (const [show, field, colour, label, offset] of [
       [state.prefs.showFlow, 'u', css('--muted'), 'u', 0],
       [state.prefs.showGravity, 'a', css('--g-arrow'), 'g, the acceleration of space', 0.5]]) {
@@ -442,6 +462,22 @@ function drawField(env) {
     keys.push([colour, label + '  ' + (field === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment + named]);
   }
   return keys;
+}
+
+/* a scalar field as a colour map: cells of SCALAR_CELL pixels, red where it is positive, blue negative, their strength
+   its size over the run's scale (capped); nothing off the grid or where it is not a number */
+const SCALAR_CELL = 5, SCALAR_PLUS = '#d6452a', SCALAR_MINUS = '#2a6fd6';
+function drawScalar(frames, t, reference) {
+  const {l, t: top, r, b} = plotRect();
+  for (let sy = top; sy < b; sy += SCALAR_CELL)
+    for (let sx = l; sx < r; sx += SCALAR_CELL) {
+      const [x, y] = toData(sx + SCALAR_CELL / 2, sy + SCALAR_CELL / 2), v = frameSample(frames, 's', x, y, t);
+      if (!v || !isFinite(v[0]) || v[0] === 0) continue;
+      ctx.globalAlpha = Math.min(1, Math.abs(v[0]) / reference) * 0.85;
+      ctx.fillStyle = v[0] > 0 ? SCALAR_PLUS : SCALAR_MINUS;
+      ctx.fillRect(sx, sy, SCALAR_CELL, SCALAR_CELL);
+    }
+  ctx.globalAlpha = 1;
 }
 
 function speed(v) { return v >= 1e3 ? fmt(v / 1e3) + ' km/s' : fmt(v) + ' m/s'; }
@@ -499,33 +535,93 @@ function drawLegend() {
 function drawKey(keys) { drawBox(keys, 'bottom-left'); }
 
 //---------------------------------------------------------------- replay
+/* the replay runs a clock across a timeline. played together (mode 'together') the timeline is the shown results'
+   own times, all drawn up to the clock. played in turn ('sequence') each shown result's time range follows the last:
+   the results before the clock's one are drawn whole, the current one up to its own time, the later ones not at all.
+   with loop on, reaching the end clears the plot and starts again */
 
-function replayRange() {
+function timeRange(result) {
   let lo = Infinity, hi = -Infinity;
-  for (const r of state.results.filter(r => r.visible))
-    for (const p of r.paths) if (p.t) for (const v of p.t) if (isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  for (const p of result.paths) if (p.t) for (const v of p.t) if (isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
   return isFinite(lo) ? [lo, hi] : null;
+}
+
+/* the shown results with times, end to end: {result, lo, hi, start} on the in-turn timeline */
+function segments() {
+  const out = [];
+  let start = 0;
+  for (const result of state.results.filter(r => r.visible)) {
+    const range = timeRange(result);
+    if (!range) continue;
+    out.push({result, lo: range[0], hi: range[1], start});
+    start += range[1] - range[0];
+  }
+  return out;
+}
+
+/* the clock's range: the shown results' times together, or their durations end to end */
+function replayRange(mode = state.replay.mode) {
+  const segs = segments();
+  if (!segs.length) return null;
+  if (mode === 'sequence') return [0, segs.reduce((sum, g) => sum + g.hi - g.lo, 0)];
+  return [Math.min(...segs.map(g => g.lo)), Math.max(...segs.map(g => g.hi))];
+}
+
+/* in turn: the segment the clock is in, and the time within its result */
+function currentSegment(clock = state.replay.t) {
+  const segs = segments();
+  let g = segs.find(g => clock < g.start + (g.hi - g.lo)) || segs[segs.length - 1];
+  return g && {...g, index: segs.indexOf(g), count: segs.length, t: Math.min(g.hi, g.lo + Math.max(0, clock - g.start))};
 }
 
 function replayTime() { return state.replay.state === 'stopped' ? null : state.replay.t; }
 
-function play() {
+/* how much of a result to draw: null for all of it, a time to draw it up to, or false for none of it yet */
+function drawUntil(result) {
+  const t = replayTime();
+  if (t === null || state.replay.mode !== 'sequence') return t;
+  const now = currentSegment(t);
+  if (!now) return null;
+  const mine = segments().find(g => g.result === result);
+  if (!mine) return null;
+  if (mine.start < now.start) return null;
+  return mine.result === now.result ? now.t : false;
+}
+
+/* the time the background arrows are drawn at: the clock, or in turn the current result's own time */
+function fieldTime() {
+  const t = replayTime();
+  if (t === null || state.replay.mode !== 'sequence') return t;
+  const now = currentSegment(t);
+  return now ? now.t : null;
+}
+
+function canPlayInTurn() { return segments().length > 1; }
+
+function play(mode = 'together') {
+  const rp = state.replay;
+  if (rp.state === 'playing' && rp.mode === mode) { rp.state = 'paused'; showReplay(); return; }
+  if (rp.mode !== mode) { rp.mode = mode; rp.state = 'stopped'; }
   const range = replayRange();
   if (!range) return;
-  const rp = state.replay;
-  if (rp.state === 'playing') { rp.state = 'paused'; showReplay(); return; }
   if (rp.state === 'stopped' || rp.t >= range[1]) rp.t = range[0];
   rp.state = 'playing'; rp.last = performance.now();
   requestAnimationFrame(tick);
   showReplay();
 }
 
-function tick(now) {
+function tick() {
   const rp = state.replay, range = replayRange();
   if (rp.state !== 'playing' || !range) return;
-  rp.t += +state.prefs.replaySpeed * (range[1] - range[0]) / REPLAY_SECONDS * (now - rp.last) / 1000;
+  //the clock, not the frame's own timestamp: that can be earlier than play()'s start (in a background or embedded
+  //frame), which ran the replay backwards out of the run
+  const now = performance.now();
+  rp.t = Math.max(range[0], rp.t + +state.prefs.replaySpeed * (range[1] - range[0]) / REPLAY_SECONDS * Math.max(0, now - rp.last) / 1000);
   rp.last = now;
-  if (rp.t >= range[1]) { rp.t = range[1]; rp.state = 'paused'; }
+  if (rp.t >= range[1]) {
+    if (state.prefs.replayLoop) rp.t = range[0];      //clear, and go round again
+    else { rp.t = range[1]; rp.state = 'paused'; }
+  }
   showReplay();
   if (rp.state === 'playing') requestAnimationFrame(tick);
 }
@@ -540,15 +636,49 @@ function seek(f) {
   showReplay();
 }
 
+const STOPPED_LABEL = 'stopped - 1× plays the whole run in ' + REPLAY_SECONDS + ' s';
+
+/* the label for a state at a clock time: in turn, which result and the time within it */
+function replayLabel(word, clock, range, mode = state.replay.mode) {
+  if (mode !== 'sequence') return word + '  t = ' + fmt(clock) + ' of ' + fmt(range[1]) + ' s';
+  const g = currentSegment(clock);
+  return word + '  ' + (g.index + 1) + '/' + g.count + '  t = ' + fmt(g.t) + ' of ' + fmt(g.hi) + ' s';
+}
+
+/* the label's width: the widest text it can show for these results (every state and mode, t across the run), measured in its own
+   font - fixed, so the controls don't change size or wrap as t's digits change during a replay */
+let labelFit = {key: null, width: 0};
+function fitReplayLabel() {
+  const label = $('replayLabel');
+  const key = segments().map(g => g.result.file + ':' + g.lo + ':' + g.hi).join();
+  if (labelFit.key === key) return;
+  const ctx = document.createElement('canvas').getContext('2d'), style = getComputedStyle(label);
+  ctx.font = style.fontSize + ' ' + style.fontFamily;
+  const texts = [STOPPED_LABEL];
+  for (const mode of canPlayInTurn() ? ['together', 'sequence'] : ['together']) {    //both, so switching doesn't resize it
+    const range = replayRange(mode);
+    if (range) for (let i = 0; i <= 400; i++)
+      for (const word of ['playing', 'paused']) texts.push(replayLabel(word, range[0] + i / 400 * (range[1] - range[0]), range, mode));
+  }
+  const width = Math.ceil(Math.max(...texts.map(s => ctx.measureText(s).width)) * 1.04) + 2;
+  label.style.width = width + 'px';
+  labelFit = {key, width};
+}
+
 function showReplay() {
   const rp = state.replay, range = replayRange();
-  $('play').textContent = rp.state === 'playing' ? 'Pause' : 'Play';
+  fitReplayLabel();
+  $('play').textContent = rp.state === 'playing' && rp.mode === 'together' ? 'Pause' : 'Play';
+  $('playInTurn').textContent = rp.state === 'playing' && rp.mode === 'sequence' ? 'Pause' : 'Play in turn';
+  $('playInTurn').style.display = canPlayInTurn() ? '' : 'none';
+  if (rp.mode === 'sequence' && !canPlayInTurn()) { rp.mode = 'together'; if (rp.state !== 'stopped') stopReplay(); }
   if (rp.state === 'stopped' || !range) {
-    $('seek').value = 0; $('replayLabel').textContent = 'stopped - 1× plays the whole run in ' + REPLAY_SECONDS + ' s';
+    $('seek').value = 0; $('replayLabel').textContent = STOPPED_LABEL;
   } else {
     $('seek').value = Math.round((rp.t - range[0]) / (range[1] - range[0] || 1) * 1000);
-    $('replayLabel').textContent = rp.state + '  t = ' + fmt(rp.t) + ' of ' + fmt(range[1]) + ' s';
+    $('replayLabel').textContent = replayLabel(rp.state, rp.t, range);
   }
+  $('replayLabel').title = $('replayLabel').textContent;
   draw();
 }
 
@@ -557,9 +687,10 @@ function showReplay() {
 function message(text) { $('message').textContent = text; }
 
 function syncControls() {
-  for (const id of ['showFlow', 'showGravity', 'showBodies', 'showSchwarzschild', 'equalAspect', 'showGrid', 'showPathLegend', 'showFieldKey'])
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'equalAspect', 'showGrid', 'showPathLegend', 'showFieldKey'])
     $(id).checked = !!state.prefs[id];
   $('unit').value = state.prefs.unit;
+  $('loop').checked = !!state.prefs.replayLoop;
   $('speed').value = SPEEDS.includes(String(state.prefs.replaySpeed)) ? String(state.prefs.replaySpeed) : '1';
   const background = $('background');
   background.innerHTML = '';
@@ -574,7 +705,7 @@ function syncControls() {
     row.title = r.file + '\n' + r.env.name;
     const box = document.createElement('input');
     box.type = 'checkbox'; box.checked = r.visible;
-    box.onclick = e => { e.stopPropagation(); r.visible = box.checked; draw(); };
+    box.onclick = e => { e.stopPropagation(); r.visible = box.checked; showReplay(); };
     const swatch = document.createElement('div');
     swatch.className = 'swatch'; swatch.style.background = (r.paths[0] && r.paths[0].color) || r.color;
     const name = document.createElement('span'); name.textContent = r.name;
@@ -588,14 +719,16 @@ function syncControls() {
 function setup() {
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
   SPEEDS.forEach(s => $('speed').add(new Option(s + '×', s)));
-  for (const id of ['showFlow', 'showGravity', 'showBodies', 'showSchwarzschild', 'showGrid', 'showPathLegend', 'showFieldKey'])
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'showGrid', 'showPathLegend', 'showFieldKey'])
     $(id).onchange = () => { state.prefs[id] = $(id).checked; draw(); };
   $('equalAspect').onchange = () => { state.prefs.equalAspect = $('equalAspect').checked; equalise(); draw(); };
   $('unit').onchange = () => { state.prefs.unit = +$('unit').value; draw(); };
   $('speed').onchange = () => { state.prefs.replaySpeed = $('speed').value; };
   $('background').onchange = () => { state.background = $('background').value; draw(); };
   $('fit').onclick = fit;
-  $('play').onclick = play;
+  $('play').onclick = () => play('together');
+  $('playInTurn').onclick = () => play('sequence');
+  $('loop').onchange = () => { state.prefs.replayLoop = $('loop').checked; };
   $('stop').onclick = () => { stopReplay(); showReplay(); };
   $('seek').oninput = () => seek($('seek').value / 1000);
   $('openFolder').onclick = () => $('folderInput').click();

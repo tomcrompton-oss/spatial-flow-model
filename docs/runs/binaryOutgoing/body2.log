@@ -1,0 +1,4 @@
+binary: 1.4 + 1.4 solar masses, a = 100000 m, e = 0, with radiation reaction
+body 2: 1.40 solar masses
+background frames: background_strain.csv
+background scalar: h+ (strain, scaled up 4.91e+03 times)
