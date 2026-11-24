@@ -23,6 +23,8 @@ when the spacetime is steady; x cross p about a body is kept when it looks the s
 the spacetimes:
   FlowSpacetime        any flow calculator's flow (engine/flow.py: one body, vectors, along g, eikonal, turning,
                        waves), with a lapse and a curved space added - its own functions, or the two shares below
+  WaveSpacetime        a plane gravitational wave with N = 1 and a curved space: exact in the plane as well as
+                       through it - as the model's flow with space curved by it, or in GR's TT form
   IsotropicSchwarzschild  one body in isotropic coordinates: N = (1 - m/2r)/(1 + m/2r), gamma = (1 + m/2r)^4 delta, no
                        flow - the same spacetime as the one-body flow, in other coordinates (a check of the engine)
   PostNewtonian        GR's first post-Newtonian metric of bodies moving on given paths (harmonic coordinates): the
@@ -268,6 +270,52 @@ class FlowSpacetime(Spacetime):
     if region is None:
       region = int(np.argmin([length(x - b.at(t)) for b in self.bodies]))
     return bodyVelocityAt(self.bodies[region], t)
+
+
+class WaveSpacetime(Spacetime):
+  """
+  a plane gravitational wave (engine/waves.py PlaneWave), to first order in its strain, with the flow model's clocks
+  (N = 1) and a curved space - so a wave travelling WITHIN the plane is held exactly, where the flat-space flow alone
+  (PlaneWave's flow) is only its nearest version. two forms of the same spacetime:
+
+  'flow'  the model's: lengths measured properly across the wave, M = m.X (1 + h/2), so
+            ds^2 = -c^2 dt^2 + dN^2 + (dM - (1/2) h' M dt + (1/2c) h' M dN)^2
+          which is N = 1, the flow u = (1/2) h' (m.X) m - PlaneWave's flow, unchanged - and space with the term the
+          flat model had to drop: gamma = delta + a (n m + m n) + a^2 n n, a = h' (m.X)/2c, h' at t - n.X/c. the
+          wave is a flow of space still; space is curved by how the flow changes along the wave
+  'tt'    GR's TT coordinates: N = 1, no flow, gamma = delta + h+ m m (in the plane z = 0 the wave's cross
+          polarization moves nothing). the same spacetime; here a free particle keeps its coordinates
+
+  for a wave along z, through the plane: 'flow' is PlaneWave's flow in flat space (exact already), 'tt' the strain
+  matrix as space, no flow
+  """
+  static = False
+
+  def __init__(self, wave, form='flow'):
+    self.wave = wave
+    self.form = form
+
+  def describe(self):
+    return '%s, held as %s' % (self.wave.describe(), 'a flow with space curved by it (N = 1)' if self.form == 'flow'
+                               else "space alone, GR's TT coordinates")
+
+  def flow(self, x, t, region=None):
+    return self.wave.flow(x, t) if self.form == 'flow' else ZERO
+
+  def space(self, x, t, region=None):
+    w = self.wave
+    X = np.asarray(x) - w.centre
+    if w.along is None:
+      if self.form == 'flow':
+        return None
+      hp, hx = w.strain(t)
+      return np.array([[hp, hx], [hx, -hp]])
+    n, m = w.along, w.across
+    tau = w.when(x, t)
+    if self.form == 'tt':
+      return w.strain(tau)[0]*np.outer(m, m)
+    a = w.rate(tau)[0]*float(m @ X)/(2*C)
+    return a*(np.outer(n, m) + np.outer(m, n)) + a*a*np.outer(n, n)
 
 
 class IsotropicSchwarzschild(Spacetime):
