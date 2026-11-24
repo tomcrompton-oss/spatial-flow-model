@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "binaryWaves.prefs.json",
+  "config": "binaryWaves.config.json"
+}

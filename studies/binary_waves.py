@@ -17,9 +17,9 @@ waves as GR does:
             0.1 s as the chirp sweeps up: free particles keep their TT coordinates, and light round trips to free
             mirrors take GR's time, 2 L_TT/c + (1/2) integral of h_ee dt
 
-viewer: the binary spiralling in from 150 km, and beside it (though in truth far away along its axis) a ring of 24
-free particles in its waves, scaled so the strain reaches 0.3 at the end: the ring's stretching grows and quickens
-- the chirp. (binaryWaves.full.json)
+viewer: the binary spiralling in from 150 km (the last 0.4 s kept), and beside it (though in truth far away along its
+axis) a ring of 16 free particles in its waves, scaled so the strain reaches 0.3 at the end: the ring's stretching
+grows and quickens - the chirp. (binaryWaves.full.json)
 
 writes logs/binaryWaves/binaryWaves_<datetime>/: checks.log; csvs of the two bodies' paths and the ring's particles;
 the viewer files
@@ -188,10 +188,14 @@ def detectorChecks(lines, b, tEnd):
   return {'free': worst, 'light': wl}
 
 
+SHOW = 0.4                    #the viewer's run: the last 0.4 s, as the chirp sweeps up (the whole run is 1.9 s)
+
+
 def viewer(folder):
-  """the binary spiralling in from 150 km, and a ring of free particles in its waves"""
+  """the binary spiralling in from 150 km, and a ring of free particles in its waves: the last SHOW seconds kept"""
   a0, aEnd = 1.5e5, 4e4
   tEnd = coalescence(a0)*(1 - (aEnd/a0)**4)
+  tStart = tEnd - SHOW
   b = Binary(M1, M2, a0, 0.0).run(tEnd, 1000)
   made = []
   for n, (sign, mass) in enumerate(((1, M2), (-1, M1))):
@@ -199,7 +203,7 @@ def viewer(folder):
     with open(path, 'w', newline='') as f:
       out = csv.writer(f)
       out.writerow(['t', 'pos_x', 'pos_y', 'v_x', 'v_y'])
-      t = 0.0
+      t = tStart
       while t <= tEnd:
         s = b.state(t)
         k = sign*mass/b.M
@@ -209,7 +213,7 @@ def viewer(folder):
       f.write('%s\nbody %d: %.2f solar masses\n' % (b.describe(), n + 1, mass/MS))
     made.append((path, '#2a78d6' if n == 0 else '#eb6834', 'solid'))
   #the ring
-  centre, radius, shown, particles = np.array([4.5e5, 0.0]), 1.2e5, 0.3, 24
+  centre, radius, shown, particles = np.array([4.5e5, 0.0]), 1.2e5, 0.3, 16
   peak = math.hypot(*BinaryWave(b, DISTANCE, delay=0.0).strain(tEnd))
   wave = BinaryWave(b, DISTANCE, centre=centre, delay=0.0, scale=shown/peak)
   calc = SpecialFlowCalculator([], 2, wave=wave)
@@ -227,7 +231,7 @@ def viewer(folder):
     s = b.state(t)
     fgw = 2*math.sqrt(b.GM/b.semiMajorAxis(s)**3)/(2*math.pi)
     dt = min(1/fgw/200, tEnd - t)
-    if step % 10 == 0:
+    if step % 10 == 0 and t >= tStart:          #20 rows a wave period
       for p, r in zip(ps, rows):
         r.append([p.t, p.pos[0], p.pos[1], p.v[0], p.v[1], p.u[0], p.u[1]])
     for p in ps:

@@ -1,0 +1,78 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "body1.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "body2.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ring.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#1baf7a",
+          "dotted",
+          "#1baf7a"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}
