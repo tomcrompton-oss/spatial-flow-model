@@ -1,0 +1,53 @@
+the four tests in the flow model (second order, adaptive steps) against exact general relativity
+
+BENDING: light from 10 AU before to 10 AU after, step fraction 0.0003
+
+  the Sun, b = 1 solar radius:
+    flow model 8.4407892e-06 rad (1.7410 arcsec); GR exact at its impact parameter 8.4407891e-06; ratio - 1 1.54e-08
+    Newtonian gravity at c 4.2201803e-06 rad (0.8705 arcsec), 0.49997 of GR; 4GM/c^2 b 8.4403616e-06
+    (closest approach 699967419 m; GR's impact parameter 0.999956 of b: u/c at the start)
+
+  a 1 solar-mass hole (r_s = 2954.1 m):
+         b (m)      b/r_s    closest (m)     flow model       GR exact    ratio - 1    finer - 1
+         7e+08   236956.7    6.99967e+08  8.4407892e-06  8.4407891e-06     1.54e-08     1.78e-09
+         7e+07    23695.7    6.99954e+07  8.4412614e-05  8.4412613e-05     1.51e-08     1.63e-09
+         7e+06     2369.6    6.99821e+06  8.4459867e-04  8.4459866e-04     1.65e-08     1.78e-09
+        700000      237.0         698487  8.4936004e-03  8.4936002e-03     2.13e-08     2.33e-09
+         70000       23.7        68470.2  9.0091235e-02  9.0091232e-02     3.62e-08     3.94e-09
+       20678.9        7.0        19002.8  3.6776649e-01  3.6776647e-01     5.91e-08     6.57e-09
+  (finer: a third of the step. 4GM/c^2 b, the weak-field bend, is 22.3% short at 7 r_s)
+
+PRECESSION: Mercury's orbit scaled down, 6 orbits; against GR exact for the orbit's own periapsis and apoapsis
+     scale    a/r_s   fraction     flow model       GR exact      ratio - 1   time s
+     10000     1960      0.001  5.0274984e-03  5.0279757e-03      -9.49e-05      4.4
+     10000     1960     0.0003  5.0279321e-03  5.0279750e-03      -8.54e-06     14.6
+     10000     1960     0.0001  5.0279702e-03  5.0279749e-03      -9.51e-07     43.7
+    100000      196      0.001  5.0933995e-02  5.0934484e-02      -9.61e-06      4.4
+    100000      196     0.0003  5.0934433e-02  5.0934477e-02      -8.64e-07     14.3
+    100000      196     0.0001  5.0934471e-02  5.0934476e-02      -9.50e-08     43.3
+    300000       65      0.001  1.5740662e-01  1.5740715e-01      -3.32e-06      4.3
+    300000       65     0.0003  1.5740707e-01  1.5740712e-01      -2.99e-07     14.5
+    300000       65     0.0001  1.5740711e-01  1.5740712e-01      -3.33e-08     43.7
+  (the difference falls as the step squared: the second-order step)
+
+ORBIT: 20 to 60 r_s, twelve times round, written for the viewer (orbit.full.json)
+
+SHAPIRO: radar from the Earth (1 AU) past the Sun to Venus (0.723 AU) and back; each planet placed where GR's exact ray with this closest approach takes it; step fraction 0.0001
+  times in seconds; delay = round trip less the straight-line distance there and back at c
+  r0/Rsun         out        back   delay model      delay GR   ratio - 1     finer - 1       Shapiro  GR/Shapiro
+       1  859.751523  859.793514 2.1268590e-04 2.1268601e-04   -5.18e-07     -5.45e-08 2.3240819e-04     0.91514
+       2  859.712451  859.754442 1.8535383e-04 1.8535392e-04   -4.49e-07     -7.97e-08 2.0506408e-04     0.90388
+       5  859.438974  859.480965 1.4923425e-04 1.4923457e-04   -2.11e-06     -4.88e-07 1.6893507e-04     0.88338
+      10  858.461536  858.503527 1.2191119e-04 1.2191326e-04   -1.70e-05     -1.36e-06 1.4158975e-04     0.86103
+      20  854.539439  854.581429 9.4587290e-05 9.4592106e-05   -5.09e-05     -6.49e-06 1.1417380e-04     0.82849
+      30  847.957876  847.999867 7.8590553e-05 7.8609505e-05   -2.41e-04     -2.36e-05 9.8032237e-05     0.80187
+  out - back is the two ends' clocks: the model runs on Gullstrand-Painleve time, which differs from Schwarzschild time by 0.140245 s at the Earth and 0.119249 s at Venus, so out - back = 2 x 0.020995 s plus the (small) asymmetry of the Shapiro delay itself; measured -0.041991 s at 1 solar radius
+  Shapiro's formula, (4GM/c^3) ln((rE + rV + R)/(rE + rV - R)), with R the straight distance in these (Schwarzschild) coordinates, is GR's delay plus a constant 2 r_s/c = 1.971e-05 s: 1.972e-05, 1.971e-05, 1.970e-05, 1.968e-05, 1.958e-05, 1.942e-05
+  the pattern the 1960s experiment measured, the delay's change from 30 solar radii in:
+       1 Rsun: model 1.3409535e-04 s, GR 1.3407651e-04 s, Shapiro 1.3437596e-04 s
+       2 Rsun: model 1.0676328e-04 s, GR 1.0674441e-04 s, Shapiro 1.0703184e-04 s
+       5 Rsun: model 7.0643698e-05 s, GR 7.0625061e-05 s, Shapiro 7.0902830e-05 s
+      10 Rsun: model 4.3320639e-05 s, GR 4.3303757e-05 s, Shapiro 4.3557509e-05 s
+      20 Rsun: model 1.5996737e-05 s, GR 1.5982601e-05 s, Shapiro 1.6141564e-05 s
+      30 Rsun: model 0.0000000e+00 s, GR 0.0000000e+00 s, Shapiro 0.0000000e+00 s
+

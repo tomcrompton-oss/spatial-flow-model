@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "orbit.prefs.json",
+  "config": "orbit.config.json"
+}

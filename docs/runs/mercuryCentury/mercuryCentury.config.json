@@ -1,0 +1,55 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "perihelion_flow.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "years (yr) / advance (arcsec)": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "years (yr)",
+          "advance (arcsec)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "perihelion_gr.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "years (yr) / advance (arcsec)": [
+          "#eb6834",
+          "dashed",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "years (yr)",
+          "advance (arcsec)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}
