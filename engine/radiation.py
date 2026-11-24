@@ -66,13 +66,44 @@ def kepler_jet(x, v, GM, order):
   return X
 
 
-def quadrupole_derivatives(x, v, GM, mu, orders):
+def eih_jet(x, v, GM, eta, order):
+  """
+  kepler_jet for the relative orbit under GR's first post-Newtonian (EIH) acceleration, harmonic coordinates:
+    a = -(GM/r^2) [n (1 + ((1 + 3 eta) v^2 - (3/2) eta rdot^2 - 2 (2 + eta) GM/r)/c^2) - 2 (2 - eta) rdot v/c^2]
+  (n = x/r, rdot = n . v, eta = m1 m2/M^2). the velocity's series is the position's differentiated, so each order's
+  acceleration needs the position to one order more than kepler_jet's: x_{k+2} from a_k, a_k from x up to k+1
+  """
+  X = [[x[0], v[0]], [x[1], v[1]]]
+  c2 = C*C
+  for k in range(order - 1):
+    n = k + 1
+    V = [[(j + 1)*X[i][j + 1] for j in range(n)] for i in range(2)]
+    r2 = [a + b for a, b in zip(series_mul(X[0], X[0], n), series_mul(X[1], X[1], n))]
+    v2 = [a + b for a, b in zip(series_mul(V[0], V[0], n), series_mul(V[1], V[1], n))]
+    xv = [a + b for a, b in zip(series_mul(X[0], V[0], n), series_mul(X[1], V[1], n))]
+    ir = series_pow(r2, -0.5, n)
+    ir2 = series_mul(ir, ir, n)
+    ir3 = series_mul(ir2, ir, n)
+    rdot = series_mul(xv, ir, n)
+    A = [1 + ((1 + 3*eta)*a - 1.5*eta*b - 2*(2 + eta)*GM*c)/c2 if j == 0 else
+         ((1 + 3*eta)*a - 1.5*eta*b - 2*(2 + eta)*GM*c)/c2
+         for j, (a, b, c) in enumerate(zip(v2, series_mul(rdot, rdot, n), ir))]
+    radial = series_mul(A, ir3, n)                    #(1 + A/c^2)/r^3, for x
+    along = series_mul(rdot, ir2, n)                  #rdot/r^2, for v
+    for i in range(2):
+      a = -GM*series_mul(X[i], radial, n)[k] + GM*2*(2 - eta)/c2*series_mul(V[i], along, n)[k]
+      X[i].append(a/((k + 1)*(k + 2)))
+  return X
+
+
+def quadrupole_derivatives(x, v, GM, mu, orders, jet=None):
   """
   the in-plane quadrupole Q_ij = mu (x_i x_j - delta_ij r^2/3) of a binary with relative position x and velocity v
-  (reduced mass mu), and its zz part, differentiated: {k: (Qxx, Qxy, Qyy, Qzz)} for each k in orders
+  (reduced mass mu), and its zz part, differentiated: {k: (Qxx, Qxy, Qyy, Qzz)} for each k in orders. jet: the
+  relative orbit's Taylor series (x, v, order) -> coefficients, kepler_jet (Newton) by default
   """
   top = max(orders) + 1
-  X = kepler_jet(x, v, GM, top)
+  X = (jet or (lambda x, v, n: kepler_jet(x, v, GM, n)))(x, v, top)
   xx = series_mul(X[0], X[0], top)
   xy = series_mul(X[0], X[1], top)
   yy = series_mul(X[1], X[1], top)
@@ -105,16 +136,21 @@ class Binary:
     self.states = [np.array([rp, 0.0, 0.0, vp])]        #relative x, y, vx, vy
     self.merged = None                                   #the time the bodies touch (r below rMin), if they do
     self.rMin = 6*self.GM/C**2                           #stop at the innermost stable circular orbit, roughly
+    self.jet = None                                      #the orbit's series for Q's derivatives: Newton's
+
+  def conservative(self, s):
+    """the relative acceleration without the reaction: Newton's"""
+    x = s[:2]
+    return -self.GM*x/math.hypot(*x)**3
 
   def period(self):
     return 2*math.pi*math.sqrt(self.semiMajorAxis(self.states[-1])**3/self.GM)
 
   def acceleration(self, s):
     x = s[:2]
-    r = math.hypot(*x)
-    acc = -self.GM*x/r**3
+    acc = self.conservative(s)
     if self.reaction:
-      Q5 = quadrupole_derivatives(x, s[2:], self.GM, self.mu, (5,))[5]
+      Q5 = quadrupole_derivatives(x, s[2:], self.GM, self.mu, (5,), self.jet)[5]
       Qx = np.array([Q5[0]*x[0] + Q5[1]*x[1], Q5[1]*x[0] + Q5[2]*x[1]])
       acc = acc - 2*G/(5*C**5)*Qx                       #each body: -(2G/5c^5) Q5 x_body; relative: x1 - x2 = x
     return acc
@@ -178,9 +214,9 @@ class Binary:
     would drift apart
     """
     s = self.state(t)
-    out = quadrupole_derivatives(s[:2], s[2:], self.GM, self.mu, orders)
+    out = quadrupole_derivatives(s[:2], s[2:], self.GM, self.mu, orders, self.jet)
     if self.reaction and 3 in orders:
-      r = self.acceleration(s) + self.GM*s[:2]/math.hypot(*s[:2])**3       #the reaction's part of the acceleration
+      r = self.acceleration(s) - self.conservative(s)                     #the reaction's part of the acceleration
       v = s[2:]
       dxx, dxy, dyy = 4*r[0]*v[0], 2*(r[0]*v[1] + v[0]*r[1]), 4*r[1]*v[1]
       tr = (dxx + dyy)/3
@@ -210,6 +246,43 @@ class Binary:
   def describe(self):
     return ('binary: %.4g + %.4g solar masses, a = %g m, e = %g, %s radiation reaction'
             % (self.m1/1.989e30, self.m2/1.989e30, self.a0, self.e0, 'with' if self.reaction else 'no'))
+
+
+class EIHBinary(Binary):
+  """
+  a binary moving as the flow model moves it: each body with the regular part of its space in the J = 0 flow, which
+  is GR's first post-Newtonian motion, EIH (studies/binary_regularized.py, eccentric_bodies.py) - plus the radiation
+  reaction, which rides in the flow (ReactionFlow): Bernoulli's equation holds for the J = 0 flow, so a body moving
+  with its space feels -grad Phi_RR at itself, whatever the masses. Q's derivatives follow the EIH orbit (eih_jet).
+  harmonic coordinates; started at periastron with the Newtonian speed for a and e (the 1PN orbit's a and e then
+  differ from them by GM/c^2 a)
+  """
+
+  def __init__(self, m1, m2, a, e=0.0, reaction=True):
+    super().__init__(m1, m2, a, e, reaction)
+    self.eta = m1*m2/self.M**2
+    self.jet = lambda x, v, n: eih_jet(x, v, self.GM, self.eta, n)
+
+  def conservative(self, s):
+    x, v = s[:2], s[2:]
+    r = math.hypot(*x)
+    n = x/r
+    rdot = n @ v
+    eta, GM, c2 = self.eta, self.GM, C*C
+    A = ((1 + 3*eta)*(v @ v) - 1.5*eta*rdot*rdot - 2*(2 + eta)*GM/r)/c2
+    return -GM/r**2*((1 + A)*n - 2*(2 - eta)*rdot*v/c2)
+
+  def energy(self, s):
+    """the orbit's conserved energy at first post-Newtonian order (harmonic coordinates; J)"""
+    x, v = s[:2], s[2:]
+    r = math.hypot(*x)
+    rdot = (x @ v)/r
+    v2, GM, eta = v @ v, self.GM, self.eta
+    e = 0.5*v2 - GM/r + (3/8*(1 - 3*eta)*v2*v2 + GM/(2*r)*((3 + eta)*v2 + eta*rdot*rdot + GM/r))/C**2
+    return self.mu*e
+
+  def describe(self):
+    return Binary.describe(self).replace('binary:', 'binary moving by EIH:')
 
 
 def peters(a, e, m1, m2):
