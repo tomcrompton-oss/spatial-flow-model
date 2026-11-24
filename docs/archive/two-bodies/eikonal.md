@@ -62,7 +62,7 @@ acceleration matches g to about 2 × 10⁻⁹.
 <iframe src="../../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json" width="100%" height="560" loading="lazy" title="Falls towards two holes"></iframe>
 
 *Thirty paths falling from 10 AU towards two 1-solar-mass holes 1 AU apart, with the eikonal flow behind them.*
-[Open full screen](../../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json){ target=_blank }
+[Open full screen](../../../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json){ target=_blank }
 
 **Where it goes wrong.** Round a body in another's field, the other's potential is in $|\mathbf u|^2$ too: round the
 Earth space falls in at $\sqrt{2GM/r + 2c_0}$, where $c_0 = GM_{\text{Sun}}/\text{AU}$ – 43.6 km/s at the surface, not
@@ -106,7 +106,7 @@ Earth's distance from the Sun changes.
 <iframe src="../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json" width="100%" height="440" loading="lazy" title="The extra lunar range by the Moon's angle from the Sun"></iframe>
 
 *The extra lunar range (m) the Sun's potential makes in the eikonal flow, by the Moon's angle from the Sun (degrees).*
-[Open full screen](../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json){ target=_blank }
+[Open full screen](../../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json){ target=_blank }
 
 The effect goes as $c_0$, so as $G\sqrt{M_{\text{Sun}}M_{\text{Earth}}}$ in all, because the flow is the square root
 of the potential. No post-Newtonian (PPN) theory has a term like that, so no choice of PPN parameters describes it.

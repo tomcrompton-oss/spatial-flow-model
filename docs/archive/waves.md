@@ -24,7 +24,7 @@ Checked against GR at h = 10⁻⁶ (studies/grav_wave.py), each error as a fract
 
 <iframe src="../viewer/index.html?run=../runs/gravWave/gravWave.full.json" width="100%" height="560" loading="lazy" title="Rings in a wave through the plane"></iframe>
 
-[Open full screen](../viewer/index.html?run=../runs/gravWave/gravWave.full.json){ target=_blank }
+[Open full screen](../../viewer/index.html?run=../runs/gravWave/gravWave.full.json){ target=_blank }
 
 ## Across the plane: approximate
 
@@ -47,4 +47,4 @@ default is now the momentum step, the metric's own path, which leaves only the f
 <iframe src="../viewer/index.html?run=../runs/gravWaveAcross/gravWaveAcross.full.json" width="100%" height="560" loading="lazy" title="A wave sweeping across the plane"></iframe>
 
 *The front enters at t = 0 and sweeps right at c; the large ring ripples as the wave's phase changes across it.*
-[Open full screen](../viewer/index.html?run=../runs/gravWaveAcross/gravWaveAcross.full.json){ target=_blank }
+[Open full screen](../../viewer/index.html?run=../runs/gravWaveAcross/gravWaveAcross.full.json){ target=_blank }

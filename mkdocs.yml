@@ -9,7 +9,6 @@ docs_dir: docs
 theme:
   name: material
   features:
-    - navigation.sections
     - navigation.top
     - content.code.copy
     - search.highlight
@@ -22,35 +21,59 @@ theme:
       toggle: {icon: material/weather-sunny, name: Light mode}
 
 nav:
-  - Overview: index.md
+  - Synopsis: index.md
   - Preface: preface.md
-  - The model, step by step: evolution.md
-  - What comes from outside: from-outside.md
-  - Part 1 – The Flow of Space:
-      - 1.1 Hypothesis: part1/hypothesis.md
-      - 1.2 Mechanics of spatial flow: part1/mechanics.md
-      - 1.3 The four tests: part1/tests.md
-      - 1.4 Conclusion: part1/conclusion.md
-  - Part 2 – More than one body:
-      - Part 2 in brief: part2.md
-      - Two bodies:
-          - Introduction: two-bodies/index.md
-          - Vector addition: two-bodies/vectors.md
-          - Along g: two-bodies/along-g.md
-          - The eikonal flow: two-bodies/eikonal.md
-          - Each body carrying its flow: two-bodies/turning.md
-          - Each body separately: two-bodies/split.md
-          - Two checks on every model: two-bodies/checks.md
-      - Gravitational waves: waves.md
-      - Many bodies: many-bodies.md
-      - Lapse and curved space: lapse-curved-space.md
-      - Scorecard: scorecard.md
-  - Simulations:
-      - Viewers: viewers.md
-      - Results: results.md
-      - File formats: formats.md
-  - Prior work: prior-work.md
-  - References: references.md
+  - Part 1 – Flow around a Single Body:
+      - Hypothesis: part1/hypothesis.md
+      - Mechanics of Spatial Flow: part1/mechanics.md
+      - The 4 Tests: part1/tests.md
+      - Black Holes: part1/black-holes.md
+      - Rotating Black Holes: part1/rotating-black-holes.md
+      - White Holes: part1/white-holes.md
+      - Conclusion: part1/conclusion.md
+  - Part 2 – Two Stationary Bodies:
+      - The Two Body Problem: part2/two-body-problem.md
+      - Hollow Spheres: part2/hollow-spheres.md
+      - Potential Flow: part2/potential-flow.md
+      - Curved Space: part2/curved-space.md
+      - Conclusion: part2/conclusion.md
+  - Part 3 – Dynamic Bodies (Fixed Paths): part3.md
+  - Part 4 – Dynamic Bodies: part4.md
+  - Part 5 – Gravitational Waves: part5.md
+  - Conclusion: conclusion.md
+  - Appendix A – Simulations: appendix-a.md
+  - Appendix B – Rabbit Holes: appendix-b.md
+  - Appendix C – References: appendix-c.md
+  - Archive:
+      - Overview: archive/index.md
+      - Preface: archive/preface.md
+      - The model, step by step: archive/evolution.md
+      - What comes from outside: archive/from-outside.md
+      - Part 1 – The Flow of Space:
+          - 1.1 Hypothesis: archive/part1/hypothesis.md
+          - 1.2 Mechanics of spatial flow: archive/part1/mechanics.md
+          - 1.3 The four tests: archive/part1/tests.md
+          - 1.4 Conclusion: archive/part1/conclusion.md
+      - Part 2 – More than one body:
+          - Part 2 in brief: archive/part2.md
+          - Two bodies:
+              - Introduction: archive/two-bodies/index.md
+              - Vector addition: archive/two-bodies/vectors.md
+              - Along g: archive/two-bodies/along-g.md
+              - The eikonal flow: archive/two-bodies/eikonal.md
+              - Each body carrying its flow: archive/two-bodies/turning.md
+              - Each body separately: archive/two-bodies/split.md
+              - Two checks on every model: archive/two-bodies/checks.md
+          - Gravitational waves: archive/waves.md
+          - Many bodies: archive/many-bodies.md
+          - Lapse and curved space: archive/lapse-curved-space.md
+          - Scorecard: archive/scorecard.md
+      - Simulations:
+          - Viewers: archive/viewers.md
+          - Results: archive/results.md
+          - File formats: archive/formats.md
+      - Prior work: archive/prior-work.md
+      - References: archive/references.md
 
 markdown_extensions:
   - admonition

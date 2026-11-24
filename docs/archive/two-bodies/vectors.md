@@ -78,7 +78,7 @@ straight down, as Newton's do.
 <iframe src="../../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json" width="100%" height="560" loading="lazy" title="Balls dropped round the Earth, the Sun to the left"></iframe>
 
 *Balls let go 100 km above the Earth, the Sun 1 AU to the left: flows added as vectors (solid), by their squares
-(dashed).* [Open full screen](../../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json){ target=_blank }
+(dashed).* [Open full screen](../../../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json){ target=_blank }
 
 The same cross term shows in clocks. A clock ticks at $\sqrt{1-|\mathbf v-\mathbf u|^2/c^2}$, so the cross term
 $\mathbf u_{\text{Sun}}\cdot\mathbf u_{\text{Earth}}/c^2$ makes clocks run fast on the side facing the Sun and slow on
@@ -88,4 +88,4 @@ nanoseconds:
 <iframe src="../../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json" width="100%" height="480" loading="lazy" title="Clock rates against GR over a day"></iframe>
 
 *Each clock's rate against GR's over a day, in parts in 10⁹: flows added as vectors and by their squares.*
-[Open full screen](../../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json){ target=_blank }
+[Open full screen](../../../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json){ target=_blank }

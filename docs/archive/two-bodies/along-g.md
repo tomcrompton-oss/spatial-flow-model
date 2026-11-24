@@ -69,4 +69,4 @@ follow them.
 
 *Two holes of one solar mass 1 AU apart: flow lines of the flow along g (green, dashed) and space falling at g from the
 same starts (orange), with the flow behind them.* [Open full
-screen](../../viewer/index.html?run=../runs/twoBodyAlongG/twoBodyAlongG.full.json){ target=_blank }
+screen](../../../viewer/index.html?run=../runs/twoBodyAlongG/twoBodyAlongG.full.json){ target=_blank }
