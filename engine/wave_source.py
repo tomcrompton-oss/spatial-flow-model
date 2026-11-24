@@ -41,8 +41,12 @@ uses - and half of it (for a circular orbit) is the field's stress, not the bodi
 
 the field stress here is Newton's (Landau-Lifshitz) form. in the model's own slicing the second-order terms are
 the flow's - K K ~ (grad u)^2 and the Lie derivative - which differ from point to point (each body's alone sums to zero
-outside it: Gullstrand-Painleve is vacuum) but must integrate to the same, conservation fixing the integral; checking
-that needs the two bodies' flow in three dimensions, and is the next part
+outside it: Gullstrand-Painleve is vacuum). the far wave doesn't see the difference: it takes only the source's
+integral, and conservation fixes that at (1/2) Q'' in any slicing. where the terms are matters only near the bodies,
+for space's TT part there, of order G Q''/c^4 r - second post-Newtonian, beyond the model's space (built to first
+order, where its TT part is zero). nor is there a check with the bodies held at rest: in GR they need struts, and
+the whole source then integrates to zero; the model holds them by fiat, with no struts, so its integral has no single
+answer to compare with
 
 NUMERICS. the cross term is singular (as 1/r^2) at both bodies, so it is integrated in prolate spheroidal coordinates
 about them, x = mid + (d/2) cosh(mu) cos(nu) n + (d/2) sinh(mu) sin(nu) (cos(phi) e + sin(phi) z), in which the
