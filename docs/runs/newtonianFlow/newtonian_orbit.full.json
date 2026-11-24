@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "newtonian_orbit.prefs.json",
+  "config": "newtonian_orbit.config.json"
+}

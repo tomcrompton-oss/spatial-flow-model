@@ -1,1 +1,0 @@
-# Mechanics of Spatial Flow
