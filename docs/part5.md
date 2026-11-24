@@ -158,6 +158,21 @@ the other), and a ring of free particles in their waves (green, the strain scale
 Newton plus the reaction; the model's own motion adds GR's first post-Newtonian corrections.*
 [Open full screen](../viewer/index.html?run=../runs/binaryWaves/binaryWaves.full.json){ target=_blank }
 
+## The waves travelling outward
+
+Seen across the binary's own plane, its waves wind outward as two spiral arms: space stretched across the way the
+wave travels (red) and squeezed (blue), each arm leaving the binary twice an orbit, moving out at $c$ and fading as
+$1/r$. Rings of free particles sit at one and two wavelengths out, in two directions, each moved by the model in its
+own patch of the outgoing wave (a plane wave there, held exactly with curved space, as above). The further rings
+stretch half as much, and later; the rings at 135° stretch when the arms reach them.
+
+<iframe src="../viewer/index.html?run=../runs/binaryOutgoing/binaryOutgoing.full.json" width="100%" height="600" loading="lazy" title="A binary's waves travelling outward across its plane"></iframe>
+
+*Press Play: two 1.4 solar-mass bodies 100 km apart (the dot at the centre), their waves at 194 Hz (wavelength 1,545
+km) over eight wave periods, with the strain scaled up so the nearer rings stretch by about a quarter. Nothing is
+drawn within half a wavelength of the binary, where the waves haven't yet formed (the near zone).*
+[Open full screen](../viewer/index.html?run=../runs/binaryOutgoing/binaryOutgoing.full.json){ target=_blank }
+
 ## What is left
 
 - **The waves' next order.** For circular orbits GR's own rate is Peters' × $(1 - 2.9x)$, not $(1 + 1.5x)$. The

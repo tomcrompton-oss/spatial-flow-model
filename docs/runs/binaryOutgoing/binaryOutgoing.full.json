@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "binaryOutgoing.prefs.json",
+  "config": "binaryOutgoing.config.json"
+}

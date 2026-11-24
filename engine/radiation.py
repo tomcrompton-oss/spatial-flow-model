@@ -490,3 +490,87 @@ class ReactionFlow:
   def describe(self):
     return ('the radiation reaction in the flow: a %.4g solar-mass body on a near-circular orbit round a %.4g solar-mass'
             ' one' % (self.m/1.989e30, self.body.mass/1.989e30))
+
+
+# --- the binary's waves across its own plane (for the viewer's colour map and rings of particles) -------------------
+
+class OutgoingWave:
+  """
+  the binary's waves in its own plane, far from it: travelling outward along n = x/r, so their plus polarization
+  stretches the direction across n in the plane, e = z cross n, against z (their cross polarization moves nothing in the
+  plane). from the quadrupole formula at the retarded time t - r/c,
+
+    h+ = (G/c^4 r) (e Q'' e - Q''_zz)
+
+  valid in the wave zone, r of a wavelength or more. scale multiplies it, to make it large enough to see. the plane's
+  clock is the binary's (no offset), so the binary must have run for r/c before t
+  """
+
+  def __init__(self, binary, scale=1.0):
+    self.binary = binary
+    self.scale = scale
+
+  def plus(self, X, Y, t, rate=False):
+    """h+ (or its rate, h+') at the points (X, Y) (arrays) at t"""
+    X, Y = np.asarray(X, dtype=float), np.asarray(Y, dtype=float)
+    r = np.hypot(X, Y)
+    ex, ey = -Y/r, X/r
+    out = np.empty_like(r)
+    k = 3 if rate else 2
+    for i, (ri, a, b) in enumerate(zip(r.ravel(), ex.ravel(), ey.ravel())):
+      xx, xy, yy, zz = self.binary.quadrupole(t - ri/C, (k,))[k]
+      out.flat[i] = self.scale*G/(C**4*ri)*(a*a*xx + 2*a*b*xy + b*b*yy - zz)
+    return out
+
+
+class LocalPlaneWave:
+  """
+  the outgoing wave near a point P far out in the plane, as a plane wave (engine/waves.py PlaneWave's interface,
+  travelling within the plane): along n = P/|P|, across e, its strain the outgoing wave's at P, at the time
+  t - n.(x - P)/c. good for a patch small next to |P| (the wave's 1/r and the turning of n across it left out).
+  h+ and h+' at P are tabulated in time (cubic Hermite: h' is h's own rate, so the two agree), so particles in it move
+  quickly; tabulate(t0, t1) before use
+  """
+
+  def __init__(self, outgoing, P, points=4000):
+    self.outgoing = outgoing
+    self.centre = np.array(P, dtype=float)
+    self.along = self.centre/np.linalg.norm(self.centre)
+    self.across = np.array([-self.along[1], self.along[0]])
+    self.points = points
+    self.cross = 0.0
+
+  def tabulate(self, t0, t1):
+    self.ts = np.linspace(t0, t1, self.points)
+    P = self.centre
+    self.hs = np.array([self.outgoing.plus(P[0], P[1], t) for t in self.ts]).ravel()
+    self.ds = np.array([self.outgoing.plus(P[0], P[1], t, rate=True) for t in self.ts]).ravel()
+
+  def _at(self, tau):
+    i = int(np.clip(np.searchsorted(self.ts, tau) - 1, 0, len(self.ts) - 2))
+    h = self.ts[i + 1] - self.ts[i]
+    s = (tau - self.ts[i])/h
+    y0, y1, d0, d1 = self.hs[i], self.hs[i + 1], self.ds[i]*h, self.ds[i + 1]*h
+    value = (2*s**3 - 3*s*s + 1)*y0 + (s**3 - 2*s*s + s)*d0 + (-2*s**3 + 3*s*s)*y1 + (s**3 - s*s)*d1
+    rate = ((6*s*s - 6*s)*y0 + (3*s*s - 4*s + 1)*d0 + (-6*s*s + 6*s)*y1 + (3*s*s - 2*s)*d1)/h
+    return value, rate
+
+  def when(self, pos, t):
+    return t - float(np.dot(np.asarray(pos) - self.centre, self.along))/C
+
+  def strain(self, tau):
+    return self._at(tau)[0], 0.0
+
+  def rate(self, tau):
+    return self._at(tau)[1], 0.0
+
+  def flow(self, pos, t):
+    """the model's flow for the wave: (1/2) h' (e . X) e about P (engine/metric.py WaveSpacetime adds space's curve)"""
+    X = np.asarray(pos) - self.centre
+    p, _ = self.rate(self.when(pos, t))
+    m = self.across
+    return p*float(m @ X)/2*m
+
+  def describe(self):
+    return ('the outgoing wave of a %s at (%g, %g) m, as a plane wave along (%.3f, %.3f), strain x %g'
+            % (self.outgoing.binary.describe(), *self.centre, *self.along, self.outgoing.scale))

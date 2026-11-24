@@ -67,6 +67,27 @@ def writeRows(path, calc, xs, ys, times, h, steady, dt):
           out.writerow(['%.10g' % t, '%.10g' % x, '%.10g' % y] + ['%.8g' % v for v in (*u, *change)])
 
 
+def writeScalarFrames(path, field, box, times, cells=64):
+  """
+  a scalar field (a wave's strain, say) at a run of times: a csv of t, x, y, s - field(xs, ys, t) gives s on the
+  grid (arrays, (ny, nx)), nan where it has no value. the browser viewer draws it as a colour map; name the file in a
+  log with LOG_LINE as for frames, and what s is with SCALAR_LINE
+  """
+  x0, x1, y0, y1 = box
+  nx, ny = cells if isinstance(cells, tuple) else (cells, cells)
+  xs, ys = np.linspace(x0, x1, nx), np.linspace(y0, y1, ny)
+  X, Y = np.meshgrid(xs, ys)
+  with open(path, 'w', newline='') as f:
+    f.write('t,x,y,s\n')
+    for t in times:
+      values = field(X, Y, t)
+      f.write(''.join('%.7g,%.6g,%.6g,%s\n' % (t, x, y, ('%.4g' % v) if np.isfinite(v) else 'nan')
+                      for x, y, v in zip(X.ravel(), Y.ravel(), np.asarray(values).ravel())))
+
+
+SCALAR_LINE = 'background scalar:'   #the log line saying what a scalar frames file's s is
+
+
 def boxAround(csvPaths, margin=0.1):
   """(x0, x1, y0, y1): the pos_x / pos_y of the csvs' rows, with margin of the larger side added all round"""
   xs, ys = [], []
@@ -172,6 +193,8 @@ def isSteady(path):
 def readFrames(path):
   """the Frames in the csv at path (written by writeFrames)"""
   data = np.loadtxt(path, delimiter=',', skiprows=1, ndmin=2)
+  if data.shape[1] == 4:          #a scalar field's frames: no flow here (the desktop viewer draws no colour maps)
+    data = np.hstack([data[:, :3], np.zeros((data.shape[0], 4))])
   times = np.unique(data[:, 0])
   xs, ys = np.unique(data[:, 1]), np.unique(data[:, 2])
   shape = (times.size, ys.size, xs.size, 2)
