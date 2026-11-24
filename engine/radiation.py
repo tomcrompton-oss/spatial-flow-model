@@ -285,3 +285,135 @@ class BinaryWave:
   def describe(self):
     return ('the waves of a %s, on its axis %g m away (retarded by %g s), strain x %g, centred at (%g, %g) m'
             % (self.binary.describe(), self.distance, self.delay, self.scale, *self.centre))
+
+
+# --- the radiation reaction as part of the flow (Model to-do, Gravitational waves 3) -------------------------------------
+#
+# space accelerates by Bernoulli's equation, d phi/dt + |u|^2/2 = -Phi (u = grad phi), so a curl-free flow carries
+# everything in it, moving or not, at du/dt + grad(|u|^2/2) = -grad Phi: w drops out. put the Burke-Thorne potential,
+# Phi_RR = (G/5c^5) x_i x_j Q^(5)_ij, into Phi, and the flow changes by du = grad dphi, to first order in it
+#
+#   d dphi/dt + u . grad dphi = -Phi_RR
+#
+# so whatever moves in the flow feels -grad Phi_RR: the reaction is in space's motion, not a force on the bodies.
+# for a light body m on a near-circular orbit (angular speed Omega) round a heavy one M, Q^(5) turns at 2 Omega:
+# Q^(5)(t) = Re[Z exp(-2i Omega (t - t0))], Z = Q^(5) + i Q^(6)/(2 Omega) at t0. round M the flow is straight in at
+# s = sqrt(2GM/r), so with dphi = Re[k (n Z n) b(r) exp(...)], k = G/5c^5, n = x/r,
+#
+#   s b' + 2i Omega b = r^2,   and with r = r_O rho, b = (r_O^2/Omega) beta(rho), r_O = (GM/Omega^2)^(1/3):
+#   sqrt(2/rho) beta' + 2i beta = rho^2
+#
+# one profile for every orbit. far out (the flow slow next to the turning, s << Omega r) beta = rho^2/2i + rho^(1/2)/sqrt 2
+# + i/4 rho + sqrt 2/8 rho^(5/2) + ..., the solution that isn't carried in from far away by the flow (the homogeneous
+# one, a ripple of fixed size, would be); it is run inward from there. the flow's change is then
+#
+#   du = Re[k exp(...) (b' (n Z n) n + (2b/r) (Z n - (n Z n) n))]
+
+class ReactionProfile:
+  """beta(rho) and beta'(rho) of the module notes, run inward from RHO_FAR by RK4 and kept for cubic Hermite lookup"""
+  RHO_FAR, RHO_NEAR = 300.0, 0.05
+
+  def __init__(self):
+    f = lambda rho, b: (rho*rho - 2j*b)/math.sqrt(2/rho)
+    rho = self.RHO_FAR
+    b = rho*rho/2j + math.sqrt(rho/2) + 1j/(4*rho) + math.sqrt(2)/(8*rho**2.5)
+    rs, bs, ds = [rho], [b], [f(rho, b)]
+    while rho > self.RHO_NEAR:
+      h = -min(0.04/math.sqrt(2*rho), 0.02*rho, rho - self.RHO_NEAR + 1e-12)
+      k1 = f(rho, b)
+      k2 = f(rho + h/2, b + h/2*k1)
+      k3 = f(rho + h/2, b + h/2*k2)
+      k4 = f(rho + h, b + h*k3)
+      b += h/6*(k1 + 2*k2 + 2*k3 + k4)
+      rho += h
+      rs.append(rho)
+      bs.append(b)
+      ds.append(f(rho, b))
+    self.rho = np.array(rs[::-1])
+    self.beta = np.array(bs[::-1])
+    self.dbeta = np.array(ds[::-1])
+
+  def __call__(self, rho):
+    """(beta, beta') at rho"""
+    i = int(np.searchsorted(self.rho, rho)) - 1
+    if i < 0 or i >= len(self.rho) - 1:
+      raise ValueError('rho = %g is outside the profile (%g to %g)' % (rho, self.RHO_NEAR, self.RHO_FAR))
+    r0, r1 = self.rho[i], self.rho[i + 1]
+    h = r1 - r0
+    s = (rho - r0)/h
+    y0, y1, d0, d1 = self.beta[i], self.beta[i + 1], self.dbeta[i]*h, self.dbeta[i + 1]*h
+    h00, h10, h01, h11 = 2*s**3 - 3*s*s + 1, s**3 - 2*s*s + s, -2*s**3 + 3*s*s, s**3 - s*s
+    dh00, dh10, dh01, dh11 = 6*s*s - 6*s, 3*s*s - 4*s + 1, -6*s*s + 6*s, 3*s*s - 2*s
+    return (h00*y0 + h10*d0 + h01*y1 + h11*d1, (dh00*y0 + dh10*d0 + dh01*y1 + dh11*d1)/h)
+
+
+_PROFILE = None
+
+def reactionProfile():
+  global _PROFILE
+  if _PROFILE is None:
+    _PROFILE = ReactionProfile()
+  return _PROFILE
+
+
+class ReactionFlow:
+  """
+  the change the radiation reaction makes to the flow round a heavy body (engine/flow.py Body, at rest) carrying a
+  light one of mass m on a near-circular orbit (module notes above). it has a wave's interface - flow(pos, t) is
+  added to the bodies' flow - so SpecialFlowCalculator([body], wave=ReactionFlow(body, m)) moves things in the
+  corrected flow. prepare(p) takes the orbit's quadrupole from the light body p (x, v relative to the heavy one) at the
+  start of each step; within it the quadrupole turns at 2 Omega
+  """
+  along = None
+
+  def __init__(self, body, mass):
+    self.body = body
+    self.m = mass
+    self.GM = body.GM
+    self.k = G/(5*C**5)
+    self.profile = reactionProfile()
+    self.centre = np.array([body.x, body.y], dtype=float)
+    self.Z = None
+
+  def prepare(self, p):
+    x, v = p.pos - self.centre, p.v
+    r2 = x @ x
+    self.omega = (x[0]*v[1] - x[1]*v[0])/r2
+    q = quadrupole_derivatives(x, v, self.GM, self.m, (5, 6))
+    (a5, b5, c5, _), (a6, b6, c6, _) = q[5], q[6]
+    self.Z = np.array([[a5, b5], [b5, c5]]) + 1j*np.array([[a6, b6], [b6, c6]])/(2*self.omega)
+    self.t0 = p.t
+    self.rO = (self.GM/self.omega**2)**(1/3)
+
+  def turned(self, t):
+    return self.Z*np.exp(-2j*self.omega*(t - self.t0))
+
+  def potential(self, pos, t):
+    """Phi_RR at pos, t"""
+    x = np.asarray(pos) - self.centre
+    return float(np.real(self.k*(x @ self.turned(t) @ x)))
+
+  def phi(self, pos, t):
+    """the flow's change of potential, dphi"""
+    x = np.asarray(pos) - self.centre
+    r = math.sqrt(x @ x)
+    n = x/r
+    beta, _ = self.profile(r/self.rO)
+    return float(np.real(self.k*(n @ self.turned(t) @ n)*self.rO**2/self.omega*beta))
+
+  def flow(self, pos, t):
+    if self.Z is None:
+      return np.zeros(2)
+    x = np.asarray(pos) - self.centre
+    r = math.sqrt(x @ x)
+    n = x/r
+    beta, dbeta = self.profile(r/self.rO)
+    b, db = self.rO**2/self.omega*beta, self.rO/self.omega*dbeta
+    Z = self.turned(t)
+    Zn = Z @ n
+    nZn = n @ Zn
+    return np.real(self.k*(db*nZn*n + 2*b/r*(Zn - nZn*n)))
+
+  def describe(self):
+    return ('the radiation reaction in the flow: a %.4g solar-mass body on a near-circular orbit round a %.4g solar-mass'
+            ' one' % (self.m/1.989e30, self.body.mass/1.989e30))
