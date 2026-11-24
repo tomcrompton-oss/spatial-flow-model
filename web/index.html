@@ -29,6 +29,8 @@
   #replay input[type=range] { flex: 1; min-width: 60px; }
   #play { min-width: 5.5em; }
   #playInTurn { min-width: 7.5em; }
+  #pause { min-width: 5.5em; }      /* the same widths as Play and Play in turn, which they replace while playing */
+  #restart { min-width: 7.5em; }
   #replay label.check { white-space: nowrap; margin: 0; }
   /* one line at a fixed width (set from the run, showReplay), so playing never resizes or re-wraps the controls */
   #replayLabel { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink2); font-variant-numeric: tabular-nums; }
@@ -87,7 +89,8 @@
   <div id="replay">
     <button id="play">Play</button>
     <button id="playInTurn" title="Play the shown results one after another, each drawn over the last">Play in turn</button>
-    <button id="stop" title="Back to the whole run">Stop</button>
+    <button id="pause" title="Hold the replay where it is">Pause</button>
+    <button id="restart" title="Stop, and back to the start">Restart</button>
     <select id="speed"></select>
     <label class="check" title="Clear and start again at the end"><input type="checkbox" id="loop"> loop</label>
     <input id="seek" type="range" min="0" max="1000" value="0">

@@ -600,7 +600,7 @@ function canPlayInTurn() { return segments().length > 1; }
 
 function play(mode = 'together') {
   const rp = state.replay;
-  if (rp.state === 'playing' && rp.mode === mode) { rp.state = 'paused'; showReplay(); return; }
+  if (rp.state === 'playing' && rp.mode === mode) return;
   if (rp.mode !== mode) { rp.mode = mode; rp.state = 'stopped'; }
   const range = replayRange();
   if (!range) return;
@@ -668,9 +668,12 @@ function fitReplayLabel() {
 function showReplay() {
   const rp = state.replay, range = replayRange();
   fitReplayLabel();
-  $('play').textContent = rp.state === 'playing' && rp.mode === 'together' ? 'Pause' : 'Play';
-  $('playInTurn').textContent = rp.state === 'playing' && rp.mode === 'sequence' ? 'Pause' : 'Play in turn';
-  $('playInTurn').style.display = canPlayInTurn() ? '' : 'none';
+  //while playing, Pause and Restart stand in for Play and Play in turn; paused, Restart stays, to get back to the start
+  const playing = rp.state === 'playing';
+  $('play').style.display = playing ? 'none' : '';
+  $('playInTurn').style.display = !playing && canPlayInTurn() ? '' : 'none';
+  $('pause').style.display = playing ? '' : 'none';
+  $('restart').style.display = rp.state === 'stopped' ? 'none' : '';
   if (rp.mode === 'sequence' && !canPlayInTurn()) { rp.mode = 'together'; if (rp.state !== 'stopped') stopReplay(); }
   if (rp.state === 'stopped' || !range) {
     $('seek').value = 0; $('replayLabel').textContent = STOPPED_LABEL;
@@ -729,7 +732,8 @@ function setup() {
   $('play').onclick = () => play('together');
   $('playInTurn').onclick = () => play('sequence');
   $('loop').onchange = () => { state.prefs.replayLoop = $('loop').checked; };
-  $('stop').onclick = () => { stopReplay(); showReplay(); };
+  $('pause').onclick = () => { if (state.replay.state === 'playing') state.replay.state = 'paused'; showReplay(); };
+  $('restart').onclick = () => { stopReplay(); showReplay(); };
   $('seek').oninput = () => seek($('seek').value / 1000);
   $('openFolder').onclick = () => $('folderInput').click();
   $('folderInput').onchange = () => openFiles([...$('folderInput').files]);
