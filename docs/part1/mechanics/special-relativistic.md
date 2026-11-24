@@ -49,7 +49,7 @@ This is an example of Thomas precession (Wigner rotation). It is **not** a direc
 none of these regions is being accelerated by gravity — but an extra effect that applies only to particles moving
 at relativistic speeds.
 
-<iframe src="../../../viewer/index.html?run=../runs/specialFlow/special_regions.full.json" width="100%" height="480" loading="lazy" title="Light crossing regions of moving space"></iframe>
+<iframe src="../../../viewer/index.html?player&run=../runs/specialFlow/special_regions.full.json" width="100%" height="480" loading="lazy" title="Light crossing regions of moving space"></iframe>
 
 *Light crossing space that flows downwards ever faster to the right, up to 0.8c (the arrows), by the procedure above.
 Dashed: the change in the flow added as plain vectors — the path stays straight, but $|w|$ grows to 1.28c. Solid:
