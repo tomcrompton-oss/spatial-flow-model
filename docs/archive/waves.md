@@ -22,7 +22,7 @@ Checked against GR at h = 10⁻⁶ (studies/grav_wave.py), each error as a fract
 | particles starting at rest follow geodesic deviation | 1.1 × 10⁻⁵ |
 | light round trips to a free mirror, arms 0.01–1.3 wavelengths, any direction | 5.5 × 10⁻⁶ |
 
-<iframe src="../viewer/index.html?run=../runs/gravWave/gravWave.full.json" width="100%" height="560" loading="lazy" title="Rings in a wave through the plane"></iframe>
+<iframe src="../../viewer/index.html?run=../runs/gravWave/gravWave.full.json" width="100%" height="560" loading="lazy" title="Rings in a wave through the plane"></iframe>
 
 [Open full screen](../../viewer/index.html?run=../runs/gravWave/gravWave.full.json){ target=_blank }
 
@@ -44,7 +44,7 @@ $\dot{\mathbf w} = -(\mathbf w\cdot\nabla)\mathbf u$, which is the true geodesic
 and this flow has curl. A wave through the plane has neither problem. (These runs used that step; the simulation's
 default is now the momentum step, the metric's own path, which leaves only the flat-space part.)
 
-<iframe src="../viewer/index.html?run=../runs/gravWaveAcross/gravWaveAcross.full.json" width="100%" height="560" loading="lazy" title="A wave sweeping across the plane"></iframe>
+<iframe src="../../viewer/index.html?run=../runs/gravWaveAcross/gravWaveAcross.full.json" width="100%" height="560" loading="lazy" title="A wave sweeping across the plane"></iframe>
 
 *The front enters at t = 0 and sweeps right at c; the large ring ripples as the wave's phase changes across it.*
 [Open full screen](../../viewer/index.html?run=../runs/gravWaveAcross/gravWaveAcross.full.json){ target=_blank }

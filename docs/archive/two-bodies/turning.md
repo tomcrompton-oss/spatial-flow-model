@@ -94,7 +94,7 @@ $GM/|J| = 2/3$ AU. The viewer shows the flow's paths, run out from each body as 
 back at 2/3 AU, and the Earth's curl round past its Hill sphere. Beyond about 1.1 AU the only paths with this J are
 ones swirling in from far away.
 
-<iframe src="../../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json" width="100%" height="560" loading="lazy" title="Space paths in the frame turning with the Earth"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json" width="100%" height="560" loading="lazy" title="Space paths in the frame turning with the Earth"></iframe>
 
 *Space paths out of the Sun (turning back at 2/3 AU) and out of the Earth (curling round past its Hill sphere), in
 the frame turning with the Earth.* [Open full

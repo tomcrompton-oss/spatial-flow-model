@@ -78,7 +78,7 @@ approximation is 4% off at 24: close to the hole it is the approximation that fa
 
 **Test — passed**
 
-<iframe src="../../viewer/index.html?run=../runs/part1/part1_bending.full.json" width="100%" height="520" loading="lazy" title="Light bending round a black hole"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/part1/part1_bending.full.json" width="100%" height="520" loading="lazy" title="Light bending round a black hole"></iframe>
 
 *Light passing a black hole of one solar mass at 4, 6, 10, 20 and 30 Schwarzschild radii, in the flow model (solid)
 and under Newtonian gravity starting at $c$ (dashed); the arrows are the flow of space. Close to the hole the flow
@@ -128,7 +128,7 @@ relativity to 1.6 × 10⁻⁴, falling with the step size (`studies/gr_compariso
 
 **Test — passed**
 
-<iframe src="../../viewer/index.html?run=../runs/part1/part1_orbit.full.json" width="100%" height="520" loading="lazy" title="A precessing orbit"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/part1/part1_orbit.full.json" width="100%" height="520" loading="lazy" title="A precessing orbit"></iframe>
 
 *An orbit between about 20 and 60 Schwarzschild radii of a one-solar-mass hole, six times round. The flow model's orbit
 (solid) precesses about 20° an orbit — exact general relativity gives 19.5° for those apsides — while the Newtonian
@@ -196,7 +196,7 @@ between the same two points.
 
 **Test — passed**
 
-<iframe src="../../viewer/index.html?run=../runs/part1/part1_radar.full.json" width="100%" height="480" loading="lazy" title="A radar echo past a black hole"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/part1/part1_radar.full.json" width="100%" height="480" loading="lazy" title="A radar echo past a black hole"></iframe>
 
 *A radar echo past a one-solar-mass hole: from an "Earth" 150 Schwarzschild radii on one side, passing 15 from the
 hole, to a mirror 60 on the other side, and back — distance along the line against time. Out takes 2.032 ms, back

@@ -59,7 +59,7 @@ out from each body, for any number of bodies; and **`eikonal-exact`**, for exact
 elliptic coordinates (Euler's problem of two fixed centres) and each point's path comes from elliptic integrals. Its
 acceleration matches g to about 2 × 10⁻⁹.
 
-<iframe src="../../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json" width="100%" height="560" loading="lazy" title="Falls towards two holes"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json" width="100%" height="560" loading="lazy" title="Falls towards two holes"></iframe>
 
 *Thirty paths falling from 10 AU towards two 1-solar-mass holes 1 AU apart, with the eikonal flow behind them.*
 [Open full screen](../../../viewer/index.html?run=../runs/twoBodyFalls/twoBodyFalls.full.json){ target=_blank }
@@ -103,7 +103,7 @@ Sun), the flow points at the Sun instead of the Earth, and the range is shorter.
 synodic period into the range, 27 times LLR's uncertainty on it. The range also swings by ±6 cm over the year, as the
 Earth's distance from the Sun changes.
 
-<iframe src="../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json" width="100%" height="440" loading="lazy" title="The extra lunar range by the Moon's angle from the Sun"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json" width="100%" height="440" loading="lazy" title="The extra lunar range by the Moon's angle from the Sun"></iframe>
 
 *The extra lunar range (m) the Sun's potential makes in the eikonal flow, by the Moon's angle from the Sun (degrees).*
 [Open full screen](../../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json){ target=_blank }

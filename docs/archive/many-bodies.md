@@ -68,7 +68,7 @@ With the Sun as well, and only the Earth moving, the carried flow has to fade ou
 (`Calculator.carry` gives each body its share of g, or of $g^n$ to fade faster.) The eikonal flow is built for bodies
 at rest, so carrying it properly is the question of [section 5](#5-carrying-the-flow).
 
-<iframe src="../viewer/index.html?run=../runs/movingBodies/multiBody_moving.full.json" width="100%" height="560" loading="lazy" title="Balls dropped beside the moving Earth"></iframe>
+<iframe src="../../viewer/index.html?run=../runs/movingBodies/multiBody_moving.full.json" width="100%" height="560" loading="lazy" title="Balls dropped beside the moving Earth"></iframe>
 
 *Balls let go beside the Earth as it moves up the screen at 29.8 km/s, in the Earth's frame: flow taken along (solid),
 carried (dashed).* [Open full screen](../../viewer/index.html?run=../runs/movingBodies/multiBody_moving.full.json){ target=_blank }
@@ -116,7 +116,7 @@ points at the Sun rather than the Earth. That puts a term of 11 cm at the Moon's
 times LLR's uncertainty on exactly that term. The synodic term is how LLR tests the strong equivalence principle (the
 Nordtvedt effect).
 
-<iframe src="../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json" width="100%" height="440" loading="lazy" title="The extra lunar range by the Moon's angle from the Sun"></iframe>
+<iframe src="../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json" width="100%" height="440" loading="lazy" title="The extra lunar range by the Moon's angle from the Sun"></iframe>
 
 *The extra lunar range (m) the Sun's potential makes in the flow, by the Moon's angle from the Sun (degrees).*
 [Open full screen](../../viewer/index.html?run=../runs/multiBodyPN/multiBody_lunar.full.json){ target=_blank }
@@ -193,7 +193,7 @@ the only paths with this J are ones swirling in from far away with angular momen
 keep Einstein's constraint, which for paths of energy E is $2E/r^2$, so 0 for E = 0. Between 0.63 and 1.1 AU, though,
 every possible family has E < 0.
 
-<iframe src="../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json" width="100%" height="560" loading="lazy" title="Space paths in the frame turning with the Earth"></iframe>
+<iframe src="../../viewer/index.html?run=../runs/turningEikonal/turning_paths.full.json" width="100%" height="560" loading="lazy" title="Space paths in the frame turning with the Earth"></iframe>
 
 *Space paths out of the Sun (turning back at 2/3 AU) and out of the Earth (curling round past its Hill sphere), in
 the frame turning with the Earth, run back in time as the tables are built.*

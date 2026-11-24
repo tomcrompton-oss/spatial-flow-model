@@ -65,7 +65,7 @@ following g, swings round the holes, and 8 of the 12 pieces fly back out: what f
 at zero total energy can do that round two bodies, and Newton's paths do it. The flow along g points the wrong way to
 follow them.
 
-<iframe src="../../viewer/index.html?run=../runs/twoBodyAlongG/twoBodyAlongG.full.json" width="100%" height="560" loading="lazy" title="Flow lines along g against space falling at g"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/twoBodyAlongG/twoBodyAlongG.full.json" width="100%" height="560" loading="lazy" title="Flow lines along g against space falling at g"></iframe>
 
 *Two holes of one solar mass 1 AU apart: flow lines of the flow along g (green, dashed) and space falling at g from the
 same starts (orange), with the flow behind them.* [Open full

@@ -6,7 +6,7 @@ in Gullstrand–Painlevé coordinates – and the simulation moves particles and
 studies here find what the flow has to be like to stay GR: one flow, clocks that keep its time, and space stretched
 across it.
 
-<iframe src="viewer/index.html?run=../runs/gravWave/gravWave.full.json" width="100%" height="560" loading="lazy" title="Rings of free particles in a gravitational wave"></iframe>
+<iframe src="../viewer/index.html?run=../runs/gravWave/gravWave.full.json" width="100%" height="560" loading="lazy" title="Rings of free particles in a gravitational wave"></iframe>
 
 *Rings of free particles in a gravitational wave passing through the screen: plus, cross and circular polarization.
 Press Play; choose "All environments" under Background to see every ring's flow.*

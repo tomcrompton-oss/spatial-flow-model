@@ -75,7 +75,7 @@ the cross term's push outwards beats the Earth's own pull. The balls at the side
 cross term's gradient. With the flows added by their squares (dashed), the rule of the next pages, every ball falls
 straight down, as Newton's do.
 
-<iframe src="../../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json" width="100%" height="560" loading="lazy" title="Balls dropped round the Earth, the Sun to the left"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json" width="100%" height="560" loading="lazy" title="Balls dropped round the Earth, the Sun to the left"></iframe>
 
 *Balls let go 100 km above the Earth, the Sun 1 AU to the left: flows added as vectors (solid), by their squares
 (dashed).* [Open full screen](../../../viewer/index.html?run=../runs/multiBodyRules/multiBody_drops.full.json){ target=_blank }
@@ -85,7 +85,7 @@ $\mathbf u_{\text{Sun}}\cdot\mathbf u_{\text{Earth}}/c^2$ makes clocks run fast 
 the far side. As the Earth turns, a clock on the equator swings by ±69 µs a day against GR, where GPS keeps time to
 nanoseconds:
 
-<iframe src="../../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json" width="100%" height="480" loading="lazy" title="Clock rates against GR over a day"></iframe>
+<iframe src="../../../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json" width="100%" height="480" loading="lazy" title="Clock rates against GR over a day"></iframe>
 
 *Each clock's rate against GR's over a day, in parts in 10⁹: flows added as vectors and by their squares.*
 [Open full screen](../../../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json){ target=_blank }
