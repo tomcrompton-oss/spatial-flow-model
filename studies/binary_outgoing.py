@@ -4,8 +4,9 @@ a binary's waves travelling outward across its own plane, for the viewer (docs P
   colour map  the strain h+ over the plane, from the quadrupole formula at the retarded time t - r/c
               (engine/radiation.py OutgoingWave), as scalar background frames (engine/background_frames.py
               writeScalarFrames): two spiral arms, red where space is stretched across the wave's way, blue squeezed,
-              winding outward at c and fading as 1/r. inside half a wavelength (the near zone, where the formula
-              doesn't hold) nothing is drawn
+              winding outward at c and fading as 1/r. inside half a wavelength (towards the near zone, where the
+              formula doesn't hold) the arms are held at their strength there and fade smoothly out by FADED, so the
+              orbits at the centre stay clear
   rings       rings of free particles at one and two wavelengths out, in two directions, each moved by the flow model
               in its own patch of the outgoing wave: a plane wave along the way out (LocalPlaneWave), held exactly
               with curved space (engine/metric.py WaveSpacetime 'flow', MetricCalculator). the further rings stretch
@@ -43,6 +44,7 @@ PERIODS = 8                   #wave periods kept
 FRAMES = 8                    #colour-map frames a wave period
 CELLS = 64                    #colour-map grid points across
 SHOWN = 0.25                  #the strain at one wavelength, scaled up to this
+FADED = 1.5e5                 #the colour map fades to nothing by this radius (m), three times the bodies' orbit
 RING = 0.15                   #the rings' radius, in wavelengths
 PARTICLES = 16
 RINGS = [(1.0, 0), (2.0, 0), (1.0, 135), (2.0, 135)]   #(distance in wavelengths, direction in degrees)
@@ -68,8 +70,13 @@ def main():
   frames = 'background_strain.csv'
   label = 'h+ (strain, scaled up %.3g times)' % wave.scale
   def field(X, Y, t):
-    out = wave.plus(X, Y, t)
-    return np.where(np.hypot(X, Y) < lam/2, np.nan, out)
+    #inside half a wavelength the formula no longer holds: hold the arms' strength at what it is there (not rising as
+    #1/r) and fade them smoothly to nothing by FADED, so the spiral runs on in towards the binary and the orbits show
+    r = np.hypot(X, Y)
+    f = np.clip((r - FADED)/(lam/2 - FADED), 0, 1)
+    with np.errstate(divide='ignore', invalid='ignore'):
+      out = wave.plus(X, Y, t)*np.minimum(1, r/(lam/2))*f*f*(3 - 2*f)
+    return np.where(r > FADED, out, 0.0)
   writeScalarFrames(os.path.join(folder, frames), field, (-box, box, -box, box),
                     t0 + np.arange(PERIODS*FRAMES + 1)*period/FRAMES, CELLS)
   print('colour map written', flush=True)
