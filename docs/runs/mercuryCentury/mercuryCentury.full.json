@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "mercuryCentury.prefs.json",
+  "config": "mercuryCentury.config.json"
+}

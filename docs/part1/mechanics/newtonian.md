@@ -117,7 +117,7 @@ Newton's gravity at the apple's height is $g = GM/r^2 = 9.820$ m/s², so $d = \t
 $t = \sqrt{2d/g} = 1.4271$ s and $v = gt = 14.014$ m/s. With a small enough $dt$ the flowing-space procedure agrees:
 the procedure is first order, so each tenfold smaller step brings it ten times closer.
 
-<iframe src="../../../viewer/index.html?run=../runs/newtonianFlow/newtonian_apple.full.json" width="100%" height="460" loading="lazy" title="Newton's apple"></iframe>
+<iframe src="../../../viewer/index.html?player&run=../runs/newtonianFlow/newtonian_apple.full.json" width="100%" height="460" loading="lazy" title="Newton's apple"></iframe>
 
 *The apple's height against time, by the procedure (blue) and under Newtonian gravity (orange, dashed): the two lie
 on top of each other. The procedure has it fall 10 m in 1.4272 s, arriving at 14.015 m/s; Newtonian gravity takes
@@ -130,7 +130,7 @@ procedure is Newton's gravity whatever $\mathbf w$ is, so here is a case where t
 the Earth between 7,000 km and 20,000 km from its centre. At the far end the satellite moves sideways at 3,215 m/s,
 in space falling straight in at 6,313 m/s — so relative to its space it moves at 7,085 m/s, mostly outwards.
 
-<iframe src="../../../viewer/index.html?run=../runs/newtonianFlow/newtonian_orbit.full.json" width="100%" height="560" loading="lazy" title="An orbit of the Earth"></iframe>
+<iframe src="../../../viewer/index.html?player&run=../runs/newtonianFlow/newtonian_orbit.full.json" width="100%" height="560" loading="lazy" title="An orbit of the Earth"></iframe>
 
 *Three times round, by the procedure (blue, its second-order form, steps of 0.5 s) and under Newtonian gravity
 (orange, dashed). The closest approach stays at 7,000 km to within 5 m over the three orbits.*

@@ -12,15 +12,17 @@ http://localhost:8000/web/index.html?run=../logs/<study>/<run>/<view>.full.json)
 
 const G = 6.6743e-11, C = 299792458, AU = 1.495978707e11, MS = 1.989e30;
 const UNITS = [['m', 1], ['km', 1e3], ['AU', AU], ['light-seconds', C]];
-const SPEEDS = ['0.25', '0.5', '1', '2', '4'];
+const SPEEDS = ['0.1', '0.2', '0.5', '1', '2', '5', '10'];
+const speedName = s => '×' + s;   //×0.1 ... ×10
 const SERIES = ['#2a78d6', '#eb6834', '#1baf7a', '#8a5cd8', '#d6a21e', '#d64c7a', '#4fb3c8', '#7a7a74'];
 const DASHES = {solid: [], dashed: [8, 5], dotted: [2, 4]};
 const MARGIN = {left: 78, right: 18, top: 16, bottom: 44};
 const ARROW_SPACING = 40;   //pixels between background arrows
+const PLAYER = new URLSearchParams(location.search).has('player');   //the cut-down player, for embedding in pages
 const REPLAY_SECONDS = 20;  //a whole run at 1x
 const ALL = 'All environments', SELECTED = "Selected result's environment";
 const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showScalar: true, showBodies: true,
-               showSchwarzschild: true, showPathLegend: true, showFieldKey: true, replaySpeed: '1', replayLoop: false};
+               showSchwarzschild: true, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false};
 
 const state = {
   results: [],         //{name, file, data, paths, log, env, visible, color}
@@ -352,6 +354,7 @@ function axes() {
   const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
   const one = name => {
     if (/^(t|time|pt|proper_t|tau)$/.test(name || '')) return {label: name + ' (s)', scale: 1};
+    if (/\(.+\)\s*$/.test(name || '')) return {label: name, scale: 1};     //a column that names its own unit
     const [unit, scale] = UNITS[state.prefs.unit];
     return {label: ({pos_x: 'x', pos_y: 'y'}[name] || name || 'x') + ' (' + unit + ')', scale};
   };
@@ -381,10 +384,21 @@ function drawAxes(grid) {
 
 function line(x0, y0, x1, y1) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
 
-/* a path: up to the replay time while replaying (with a dot where it is), else all of it; broken at empty rows */
+/* a path: up to the replay time while replaying (with a dot where it is), else all of it; broken at empty rows. with
+   graduated orbits on, a path that goes round its body is drawn orbit by orbit: the current one (at the replay time, or
+   the last) in full colour, each earlier one fainter, so the orbits' build-up shows */
 function drawPath(result, p, until = replayTime()) {
   const colour = p.color || result.color;
   ctx.strokeStyle = colour; ctx.lineWidth = 1.6; ctx.setLineDash(DASHES[p.style] || []);
+  const orbit = state.prefs.graduateOrbits ? orbitsOf(result, p) : null;
+  let current = 0;
+  if (orbit) {
+    current = orbit[orbit.length - 1];
+    if (until !== null && p.t) for (let i = 0; i < p.x.length; i++) { if (p.t[i] > until) break; current = orbit[i]; }
+  }
+  const shade = k => k <= 0 ? 1 : Math.max(0.12, 0.55 * Math.pow(0.8, k - 1));
+  let stretch = orbit ? orbit[0] : 0;
+  ctx.globalAlpha = orbit ? shade(current - stretch) : 1;
   ctx.beginPath();
   let pen = false;
   for (let i = 0; i < p.x.length; i++) {
@@ -401,10 +415,39 @@ function drawPath(result, p, until = replayTime()) {
       continue;
     }
     const [sx, sy] = toScreen(p.x[i], p.y[i]);
+    if (orbit && orbit[i] !== stretch) {
+      //a new orbit: finish the last one at this point, then carry on in the new one's shade
+      if (pen) ctx.lineTo(sx, sy);
+      ctx.stroke();
+      stretch = orbit[i]; ctx.globalAlpha = shade(current - stretch);
+      ctx.beginPath(); ctx.moveTo(sx, sy); pen = true;
+      continue;
+    }
     if (pen) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
     pen = true;
   }
-  ctx.stroke(); ctx.setLineDash([]);
+  ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+}
+
+/* which orbit each point of a position path is in, counting whole turns round the result's first body from where it
+   starts (null for paths that aren't positions, or don't go round once) */
+function orbitsOf(result, p) {
+  if (p.orbits !== undefined) return p.orbits;
+  p.orbits = null;
+  if (p.xName !== 'pos_x' || p.yName !== 'pos_y') return null;
+  const body = (result.env && result.env.bodies && result.env.bodies[0]) || {x: 0, y: 0};
+  const out = new Int32Array(p.x.length);
+  let turned = 0, last = null;
+  for (let i = 0; i < p.x.length; i++) {
+    if (isFinite(p.x[i]) && isFinite(p.y[i])) {
+      const angle = Math.atan2(p.y[i] - body.y, p.x[i] - body.x);
+      if (last !== null) turned += ((angle - last + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+      last = angle;
+    } else last = null;
+    out[i] = Math.max(0, Math.floor(Math.abs(turned) / (2 * Math.PI) - 1e-3));   //a path ending on a whole turn ends its last orbit
+  }
+  if (out[out.length - 1] > 0) p.orbits = out;
+  return p.orbits;
 }
 
 const pendingDots = [];
@@ -636,7 +679,7 @@ function seek(f) {
   showReplay();
 }
 
-const STOPPED_LABEL = 'stopped - 1× plays the whole run in ' + REPLAY_SECONDS + ' s';
+const STOPPED_LABEL = 'stopped - ×1 plays the whole run in ' + REPLAY_SECONDS + ' s';
 
 /* the label for a state at a clock time: in turn, which result and the time within it */
 function replayLabel(word, clock, range, mode = state.replay.mode) {
@@ -682,19 +725,138 @@ function showReplay() {
     $('replayLabel').textContent = replayLabel(rp.state, rp.t, range);
   }
   $('replayLabel').title = $('replayLabel').textContent;
+  showPlayer();
   draw();
 }
+
+/* the player's icons */
+const ICONS = {
+  list: '<circle class="solid" cx="5" cy="6" r="1.6"/><circle class="solid" cx="5" cy="12" r="1.6"/><circle class="solid" cx="5" cy="18" r="1.6"/><path d="M10 6h10M10 12h10M10 18h10"/>',
+  restart: '<path d="M5 5v14"/><path d="M19 6.5v11L10.5 12z"/>',
+  play: '<path class="solid" d="M8.5 5.5c0-.8.9-1.3 1.6-.9l9 6.1c.6.4.6 1.3 0 1.7l-9 6.1c-.7.4-1.6-.1-1.6-.9z"/>',
+  pause: '<rect class="solid" x="6.5" y="5" width="4" height="14" rx="1.2"/><rect class="solid" x="13.5" y="5" width="4" height="14" rx="1.2"/>',
+  end: '<path d="M5 6.5v11L13.5 12z"/><path d="M19 5v14"/>',
+  loop: '<path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 4v5h-5"/>',
+  full: '<path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>',
+  close: '<path d="M6 6l12 12M18 6L6 18"/>'};
+
+let drawnButtons = '';
+function showPlayer() {
+  const rp = state.replay, playing = rp.state === 'playing';
+  const sequence = rp.mode === 'sequence', loop = !!state.prefs.replayLoop;
+  const svg = name => '<svg viewBox="0 0 24 24">' + ICONS[name] + '</svg>';
+  const key = [playing, PLAYER].join();
+  if (key !== drawnButtons) {
+    drawnButtons = key;
+    $('pMode').innerHTML = svg('list');
+    $('pRestart').innerHTML = svg('restart');
+    $('pPlay').innerHTML = svg(playing ? 'pause' : 'play');
+    $('pEnd').innerHTML = svg('end');
+    $('pLoop').innerHTML = svg('loop');
+    $('pFull').innerHTML = svg(PLAYER ? 'full' : 'close');
+  }
+  const tips = {
+    pMode: sequence ? 'Playing in turn, one result after another. Click to play them all together'
+                    : 'Playing all the results together. Click to play them in turn, one after another',
+    pRestart: 'Restart: stop, clear, and go back to the start',
+    pPlay: playing ? 'Pause' : 'Play',
+    pEnd: 'End: stop, and show the whole run',
+    pLoop: loop ? 'Looping: starts again at the end. Click to play once' : 'Playing once. Click to loop, starting again at the end',
+    pFull: PLAYER ? 'Full screen: open the full viewer, with every option' : 'Close the full viewer'};
+  for (const [id, tip] of Object.entries(tips)) { $(id).dataset.tip = tip; $(id).setAttribute('aria-label', tip); }
+  $('pMode').style.visibility = canPlayInTurn() ? '' : 'hidden';
+  $('pMode').setAttribute('aria-pressed', String(sequence));
+  $('pLoop').setAttribute('aria-pressed', String(loop));
+  showTrack();
+  showTime();
+  if (tipFor) showTip(tipFor);
+}
+
+/* the progress track's markers: playing together, one, at the clock's place in the run; in turn, one for each result in
+   its own colour, each crossing the whole track while its result plays (those before it at the end, those after at the
+   start). stopped, the whole run is shown, so they are all at the end */
+function showTrack() {
+  const track = $('pTrack'), rp = state.replay, range = replayRange();
+  const markers = [];
+  if (range) {
+    const at = rp.state === 'stopped' ? null : rp.t;
+    if (rp.mode === 'sequence') {
+      for (const g of segments()) {
+        const f = at === null ? 1 : Math.max(0, Math.min(1, (at - g.start) / (g.hi - g.lo || 1)));
+        const path = g.result.paths.find(p => p.color);
+        markers.push([f, (path && path.color) || g.result.color, at !== null && f > 0 && f < 1]);   //the colour it is drawn in
+      }
+    } else {
+      markers.push([at === null ? 1 : (at - range[0]) / (range[1] - range[0] || 1), css('--accent'), true]);
+    }
+  }
+  const have = track.querySelectorAll('.marker');
+  if (have.length !== markers.length) {
+    have.forEach(m => m.remove());
+    for (let i = 0; i < markers.length; i++) track.appendChild(Object.assign(document.createElement('div'), {className: 'marker'}));
+  }
+  track.querySelectorAll('.marker').forEach((m, i) => {
+    const [f, colour, moving] = markers[i];
+    m.style.left = 'calc(7px + ' + Math.max(0, Math.min(1, f)) + ' * (100% - 14px))';
+    m.style.background = colour;
+    m.style.zIndex = moving ? 2 : 1;
+  });
+}
+
+/* the player's time: where the replay is, of the whole run (in turn, of the current result's run, with which result it
+   is); stopped, the whole run is shown, so its end. its width is set from the widest it can be, so it doesn't jitter */
+function showTime() {
+  if (!PLAYER) return;
+  const rp = state.replay, range = replayRange(), el = $('pTime');
+  if (!range) { el.textContent = ''; return; }
+  const text = (clock, mode) => {
+    if (mode !== 'sequence') return fmt(clock) + ' / ' + fmt(range[1]) + ' s';
+    const g = currentSegment(clock);
+    return (g.index + 1) + '/' + g.count + '  ' + fmt(g.t) + ' / ' + fmt(g.hi) + ' s';
+  };
+  const key = rp.mode + ':' + range.join();
+  if (el.dataset.fitted !== key) {
+    el.dataset.fitted = key;
+    el.style.width = '';
+    let widest = 0;
+    for (let i = 0; i <= 200; i++) {
+      el.textContent = text(range[0] + i / 200 * (range[1] - range[0]), rp.mode);
+      widest = Math.max(widest, el.scrollWidth);
+    }
+    el.style.width = widest + 2 + 'px';
+  }
+  el.textContent = text(rp.state === 'stopped' ? range[1] : rp.t, rp.mode);
+}
+
+function trackSeek(e) {
+  const r = $('pTrack').getBoundingClientRect();
+  seek(Math.max(0, Math.min(1, (e.clientX - r.left - 7) / (r.width - 14))));
+}
+
+/* hover text for the player's controls, straight away, above the control and kept inside the window */
+let tipFor = null;
+function showTip(el) {
+  tipFor = el;
+  const tip = $('tip');
+  tip.textContent = el.dataset.tip;
+  tip.style.display = 'block';
+  const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, r.left + r.width / 2 - w / 2)) + 'px';
+  tip.style.top = (r.top - h - 6 < 4 ? r.bottom + 6 : r.top - h - 6) + 'px';
+}
+function hideTip() { tipFor = null; $('tip').style.display = 'none'; }
 
 //---------------------------------------------------------------- controls
 
 function message(text) { $('message').textContent = text; }
 
 function syncControls() {
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'equalAspect', 'showGrid', 'showPathLegend', 'showFieldKey'])
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'equalAspect', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
     $(id).checked = !!state.prefs[id];
   $('unit').value = state.prefs.unit;
   $('loop').checked = !!state.prefs.replayLoop;
   $('speed').value = SPEEDS.includes(String(state.prefs.replaySpeed)) ? String(state.prefs.replaySpeed) : '1';
+  $('pSpeed').value = $('speed').value;
   const background = $('background');
   background.innerHTML = '';
   for (const name of [SELECTED, ALL, ...state.environments.filter(e => e.bodies.length || e.frames).map(e => e.name)])
@@ -721,8 +883,9 @@ function syncControls() {
 
 function setup() {
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
-  SPEEDS.forEach(s => $('speed').add(new Option(s + '×', s)));
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'showGrid', 'showPathLegend', 'showFieldKey'])
+  SPEEDS.forEach(s => { $('speed').add(new Option(speedName(s), s)); $('pSpeed').add(new Option(speedName(s), s)); });
+  setupPlayer();
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
     $(id).onchange = () => { state.prefs[id] = $(id).checked; draw(); };
   $('equalAspect').onchange = () => { state.prefs.equalAspect = $('equalAspect').checked; equalise(); draw(); };
   $('unit').onchange = () => { state.prefs.unit = +$('unit').value; draw(); };
@@ -738,8 +901,9 @@ function setup() {
   $('openFolder').onclick = () => $('folderInput').click();
   $('folderInput').onchange = () => openFiles([...$('folderInput').files]);
 
-  //pan by dragging, zoom with the wheel at the pointer, fit with a double click
+  //pan by dragging, zoom with the wheel at the pointer, fit with a double click (not in the player, which stays fitted)
   let dragging = null;
+  if (!PLAYER) {
   canvas.onpointerdown = e => { if (state.view) { dragging = [e.offsetX, e.offsetY, state.view.slice()]; canvas.setPointerCapture(e.pointerId); } };
   canvas.onpointermove = e => {
     if (!dragging) return;
@@ -757,6 +921,7 @@ function setup() {
     state.view = [x + (v[0] - x) * factor, x + (v[1] - x) * factor, y + (v[2] - y) * factor, y + (v[3] - y) * factor];
     draw();
   }, {passive: false});
+  }
 
   //drop a run folder (or its files) on the plot
   const wrap = $('plotWrap');
@@ -766,7 +931,7 @@ function setup() {
     e.preventDefault(); $('drop').style.display = 'none';
     openFiles(await droppedFiles(e.dataTransfer));
   };
-  window.onresize = () => { equalise(); draw(); };
+  window.onresize = () => { if (PLAYER) fit(); else { equalise(); draw(); } };
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
 
   const run = new URLSearchParams(location.search).get('run');
@@ -776,6 +941,46 @@ function setup() {
   } else {
     syncControls(); draw();
   }
+}
+
+/* the player: icons for the replay, like a music player's, and a button to open the run in the full viewer */
+function setupPlayer() {
+  if (PLAYER) document.body.classList.add('player');
+  for (const el of document.querySelectorAll('#player [data-tip], #player button')) {
+    el.addEventListener('pointerenter', () => showTip(el));
+    el.addEventListener('pointerleave', hideTip);
+  }
+  showPlayer();
+  const rp = state.replay;
+  $('pPlay').onclick = () => {
+    if (rp.state === 'playing') { rp.state = 'paused'; showReplay(); }
+    else play(rp.mode);
+  };
+  $('pMode').onclick = () => {
+    const mode = rp.mode === 'sequence' ? 'together' : 'sequence', playing = rp.state === 'playing';
+    rp.mode = mode; stopReplay();
+    if (playing) play(mode); else showReplay();
+  };
+  $('pRestart').onclick = () => {
+    //stopped shows the whole run, so back to the start is paused at the start, with nothing drawn yet
+    const range = replayRange();
+    if (!range) return;
+    rp.state = 'paused'; rp.t = range[0]; showReplay();
+  };
+  $('pEnd').onclick = () => { stopReplay(); showReplay(); };
+  $('pLoop').onclick = () => { state.prefs.replayLoop = !state.prefs.replayLoop; $('loop').checked = state.prefs.replayLoop; showReplay(); };
+  $('pSpeed').onchange = () => { state.prefs.replaySpeed = $('pSpeed').value; $('speed').value = $('pSpeed').value; };
+  const track = $('pTrack');
+  track.onpointerdown = e => { track.setPointerCapture(e.pointerId); trackSeek(e); };
+  track.onpointermove = e => { if (track.hasPointerCapture(e.pointerId)) trackSeek(e); };
+  $('pFull').onclick = () => {
+    const url = new URL(location.href);
+    if (PLAYER) { url.searchParams.delete('player'); window.open(url.toString(), '_blank'); return; }
+    //opened from a player: close this tab; opened some other way (which a page may not close), go to the player
+    if (window.opener) { window.close(); return; }
+    url.searchParams.set('player', '');
+    location.href = url.toString();
+  };
 }
 
 function openFiles(files) {

@@ -81,6 +81,43 @@ def grPrecessionExact(rPeri, rApo, mass=MS):
   return 4*integral - 2*math.pi
 
 
+def grRayExact(r0, r, mass=MS):
+  """
+  GR's light ray with closest approach r0, from there out to r (Schwarzschild): the angle it turns through (rad) and
+  the coordinate time it takes (s), for the Shapiro delay. with b^2 = r0^2/(1 - rs/r0),
+    dphi/dr = b / (r sqrt(N)),   c dt/dr = r / ((1 - rs/r) sqrt(N)),   N = r^2 - b^2 (1 - rs/r)
+  and N = (r - r0) h(r), h = (r + r0) - r0 rs / (r (1 - rs/r0)), exactly; r = r0 + x^2 then takes the square root at
+  r0 out of both, with no small differences of large numbers:
+    dphi/dx = 2b / (r sqrt(h)),   c dt/dx = 2r / ((1 - rs/r) sqrt(h))
+  integrated by Gauss-Legendre on panels doubling in x from sqrt(r0), summed exactly (math.fsum): good to parts in
+  10^15 of the time, which the delay (10^-7 of it) needs. round trips in this time are the same in the flow model's
+  (Gullstrand-Painleve) time, the two differing only by a function of r at each end
+  """
+  import numpy as np
+  rs = schwarzschildRadius(mass)
+  b = r0/math.sqrt(1 - rs/r0)
+  X = math.sqrt(r - r0)
+  edges = [0.0]
+  while edges[-1] < X:
+    edges.append(min(X, max(math.sqrt(r0)/8, 2*edges[-1])))
+  nodes, weights = np.polynomial.legendre.leggauss(48)
+  phi, t = [], []
+  for lo, hi in zip(edges[:-1], edges[1:]):
+    x = (hi - lo)/2*nodes + (hi + lo)/2
+    w = (hi - lo)/2*weights
+    R = r0 + x*x
+    h = (R + r0) - r0*rs/(R*(1 - rs/r0))
+    phi.extend(w*2*b/(R*np.sqrt(h)))
+    t.extend(w*2*R/((1 - rs/R)*np.sqrt(h)))
+  return math.fsum(phi), math.fsum(t)/C
+
+
+def shapiroDelay(rE, rV, distance, mass=MS):
+  """the weak-field (Shapiro) round-trip delay between points at rE and rV a straight distance apart (s):
+  (4GM/c^3) ln((rE + rV + distance)/(rE + rV - distance))"""
+  return 4*G*mass/C**3*math.log((rE + rV + distance)/(rE + rV - distance))
+
+
 def impactParameter(pos, w, u):
   """
   GR's impact parameter b = cL/E of light at pos moving at w relative to the flow u (flow model / Painleve-Gullstrand

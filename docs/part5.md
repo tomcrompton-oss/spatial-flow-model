@@ -29,7 +29,7 @@ divergence. Free particles stay with the space, and a ring of them stretches and
 GR at $h = 10^{-6}$, free particles, particles started at rest, and light sent to a mirror and back all agree to about
 $10^{-5}$ of the wave's own effect.
 
-<iframe src="../viewer/index.html?run=../runs/gravWave/gravWave.full.json" width="100%" height="560" loading="lazy" title="Rings of free particles in a wave through the plane"></iframe>
+<iframe src="../viewer/index.html?player&run=../runs/gravWave/gravWave.full.json" width="100%" height="560" loading="lazy" title="Rings of free particles in a wave through the plane"></iframe>
 
 *Three rings of free particles in a 100 Hz wave passing through the plane, exaggerated to $h = 0.2$: plus polarization
 (left), cross (middle) and circular (right). Each moves with its space.*
@@ -151,7 +151,7 @@ The binary below spirals in from 150 km apart, two neutron stars in their last 0
 far away along its axis, a ring of free particles in its waves, exaggerated so the strain reaches 0.3: the ring's
 stretching grows and quickens – the chirp a detector hears.
 
-<iframe src="../viewer/index.html?run=../runs/binaryWaves/binaryWaves.full.json" width="100%" height="560" loading="lazy" title="A binary's inspiral and a ring in its waves"></iframe>
+<iframe src="../viewer/index.html?player&run=../runs/binaryWaves/binaryWaves.full.json" width="100%" height="560" loading="lazy" title="A binary's inspiral and a ring in its waves"></iframe>
 
 *Press Play: two 1.4 solar-mass bodies spiralling in (blue and orange – the same spiral, so until it plays one hides
 the other), and a ring of free particles in their waves (green, the strain scaled up). The binary here moves by
@@ -166,7 +166,7 @@ $1/r$. Rings of free particles sit at one and two wavelengths out, in two direct
 own patch of the outgoing wave (a plane wave there, held exactly with curved space, as above). The further rings
 stretch half as much, and later; the rings at 135° stretch when the arms reach them.
 
-<iframe src="../viewer/index.html?run=../runs/binaryOutgoing/binaryOutgoing.full.json" width="100%" height="600" loading="lazy" title="A binary's waves travelling outward across its plane"></iframe>
+<iframe src="../viewer/index.html?player&run=../runs/binaryOutgoing/binaryOutgoing.full.json" width="100%" height="600" loading="lazy" title="A binary's waves travelling outward across its plane"></iframe>
 
 *Press Play: two 1.4 solar-mass bodies 100 km apart (the dot at the centre), their waves at 194 Hz (wavelength 1,545
 km) over eight wave periods, with the strain scaled up so the nearer rings stretch by about a quarter. Within half

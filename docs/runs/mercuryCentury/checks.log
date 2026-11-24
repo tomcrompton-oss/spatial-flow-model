@@ -1,0 +1,5 @@
+MERCURY: its real orbit, 417 orbits (a century), step fraction 0.0001, 2561 s
+  periapsis 4.598955e+10 m, apoapsis 6.982000e+10 m, orbit 87.9463 days
+  perihelion advance (a straight line fitted orbit by orbit): 4.9732863e-07 rad an orbit, 42.6031 arcsec a century
+  GR exact for this orbit: 5.0208311e-07 rad an orbit, 43.0104 arcsec a century; ratio - 1 -9.47e-03
+  (scatter of the orbit-by-orbit angles about the line: 3.71e-11 rad)
