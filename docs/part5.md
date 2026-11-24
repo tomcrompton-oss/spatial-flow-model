@@ -169,8 +169,9 @@ stretch half as much, and later; the rings at 135° stretch when the arms reach 
 <iframe src="../viewer/index.html?run=../runs/binaryOutgoing/binaryOutgoing.full.json" width="100%" height="600" loading="lazy" title="A binary's waves travelling outward across its plane"></iframe>
 
 *Press Play: two 1.4 solar-mass bodies 100 km apart (the dot at the centre), their waves at 194 Hz (wavelength 1,545
-km) over eight wave periods, with the strain scaled up so the nearer rings stretch by about a quarter. Nothing is
-drawn within half a wavelength of the binary, where the waves haven't yet formed (the near zone).*
+km) over eight wave periods, with the strain scaled up so the nearer rings stretch by about a quarter. Within half
+a wavelength of the binary the waves haven't fully formed (the near zone), so there the arms fade out towards the
+centre.*
 [Open full screen](../viewer/index.html?run=../runs/binaryOutgoing/binaryOutgoing.full.json){ target=_blank }
 
 ## What is left
