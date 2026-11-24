@@ -26,8 +26,12 @@
   aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink2); margin: 14px 0 6px; }
   aside h2:first-child { margin-top: 0; }
   #replay { grid-column: 1 / 2; display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--grid); }
-  #replay input[type=range] { flex: 1; }
-  #replayLabel { min-width: 170px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  #replay input[type=range] { flex: 1; min-width: 60px; }
+  #play { min-width: 5.5em; }
+  #playInTurn { min-width: 7.5em; }
+  #replay label.check { white-space: nowrap; margin: 0; }
+  /* one line at a fixed width (set from the run, showReplay), so playing never resizes or re-wraps the controls */
+  #replayLabel { flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink2); font-variant-numeric: tabular-nums; }
   button, select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--axis); border-radius: 4px; padding: 3px 8px; }
   button:hover { border-color: var(--ink2); }
   label.check { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
@@ -67,6 +71,7 @@
     <select id="background"></select>
     <label class="check"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
     <label class="check"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
+    <label class="check"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
     <label class="check"><input type="checkbox" id="showBodies"> bodies</label>
     <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons</label>
     <p class="note">Arrows come from a run's background frames; runs without frames show bodies only.</p>
@@ -81,8 +86,10 @@
   </aside>
   <div id="replay">
     <button id="play">Play</button>
+    <button id="playInTurn" title="Play the shown results one after another, each drawn over the last">Play in turn</button>
     <button id="stop" title="Back to the whole run">Stop</button>
     <select id="speed"></select>
+    <label class="check" title="Clear and start again at the end"><input type="checkbox" id="loop"> loop</label>
     <input id="seek" type="range" min="0" max="1000" value="0">
     <span id="replayLabel">stopped</span>
   </div>
