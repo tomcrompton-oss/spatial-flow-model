@@ -1,6 +1,6 @@
 bodies: 0
 gravitational wave: plane wave along z: h+ 0.2, hx 0.2, 100 Hz (phases 0, -1.5708 rad), from t = 0 s, centred at (300000, 0) m
 24 free particles (w = 0) on a ring of 100000 m round (300000, 0) m, 2 periods, 400 steps a period
-background frames: background_circular_2026-11-13_07-37-23.csv
+backgrounds: gravWave.backgrounds.json
 the ring stretched and squeezed by up to 0.1023 of its radius (h/2 = 0.1)
 its shape at 8 moments in the last period: shapes_circular_2026-11-13_07-37-23.csv

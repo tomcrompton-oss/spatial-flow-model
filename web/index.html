@@ -37,6 +37,7 @@
   button, select { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--axis); border-radius: 4px; padding: 3px 8px; }
   button:hover { border-color: var(--ink2); }
   label.check { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+  label.check:has(input:disabled) { opacity: 0.45; }
   .result { display: flex; gap: 6px; align-items: center; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
   .result.selected { background: var(--grid); }
   .swatch { width: 18px; height: 3px; flex: none; }
@@ -112,12 +113,14 @@
     <div id="results"></div>
     <h2>Background</h2>
     <select id="background"></select>
+    <p id="bgDescription" class="note"></p>
     <label class="check"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
     <label class="check"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
     <label class="check"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
+    <label class="check"><input type="checkbox" id="showSeam"> lines (the seam, where the bodies' regions of flow meet)</label>
     <label class="check"><input type="checkbox" id="showBodies"> bodies</label>
     <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons</label>
-    <p class="note">Arrows come from a run's background frames; runs without frames show bodies only.</p>
+    <p class="note">Arrows, colour maps and seams come from a run's background frames; options greyed out have no data for the background shown.</p>
     <h2>View</h2>
     <select id="unit"></select>
     <label class="check"><input type="checkbox" id="equalAspect"> equal aspect</label>

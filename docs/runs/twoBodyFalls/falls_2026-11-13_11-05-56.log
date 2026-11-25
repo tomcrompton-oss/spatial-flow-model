@@ -40,4 +40,4 @@ stop: within 4431.19 m (1.5 Schwarzschild radii) of a body, back out past 10 AU,
 28 back out past 10 AU
 1 reached body 1
 1 reached body 2
-background frames: background_twoBodyFalls.csv
+backgrounds: twoBodyFalls.backgrounds.json
