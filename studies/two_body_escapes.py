@@ -25,7 +25,8 @@ from engine.flow import Body, Calculator
 from engine.logger import Log, LOG_DIR
 from engine.constants import *
 from engine.flow_lines import line
-from engine.background_frames import staticFrame, boxAround, LOG_LINE
+from engine.background_frames import boxAround
+from engine.backgrounds import Backgrounds, steadyBackground, LOG_LINE as BACKGROUNDS_LINE
 
 SEP = 0.5*AU          #holes at (-SEP, 0) and (+SEP, 0)
 PATHS = 30            #paths from each hole
@@ -75,22 +76,26 @@ def escapes(folder, calc, i):
   return path
 
 
-def writeViewerFiles(folder, name, made, selection=(('pos_x', 'pos_y'),), styles=None, preferences=None, frames=None):
+def writeViewerFiles(folder, name, made, selection=(('pos_x', 'pos_y'),), styles=None, preferences=None, frames=None,
+                     background=None):
   """
   a full config for the viewer in folder: <name>.full.json naming its .prefs.json and .config.json, for the
   csvs in made, [(path, colour)] or [(path, colour, line style)]; selection is the column pairs to plot, styles (colour -> the viewer's path styles)
   how they are drawn - by default one solid line, pos_x against pos_y - and preferences any changes to the viewer's
   (x / y, equal aspect, no flow or markers); prints how to open it
-  frames: a calculator whose steady flow is written as one background frame over the csvs' paths
-  (background_<name>.csv, engine/background_frames.py) and named in each csv's log - for the browser viewer, which
-  draws arrows only from frames
+  frames: a calculator whose steady flow is the run's background: <name>.backgrounds.json (engine/backgrounds.py
+  steadyBackground - u and g on a polar grid round the bodies, and the seam of a flow with one), named in each csv's
+  log, for the browser viewer; background (name, description) names it in the viewer's Background menu
   """
   if frames is not None:
-    framesName = 'background_%s.csv' % name
-    staticFrame(os.path.join(folder, framesName), frames, boxAround([path for path, *_ in made]))
+    #the steady flow as a backgrounds file (engine/backgrounds.py), named in each csv's log
+    bg = Backgrounds()
+    steadyBackground(bg, frames, boxAround([path for path, *_ in made]), background[0] if background else 'the flow',
+                     background[1] if background else None)
+    bg.write(os.path.join(folder, name + '.backgrounds.json'))
     for path, *_ in made:
       with open(path[:-4] + '.log', 'a') as log:
-        log.write('%s %s\n' % (LOG_LINE, framesName))
+        log.write('%s %s.backgrounds.json\n' % (BACKGROUNDS_LINE, name))
   styles = styles or (lambda colour, style='solid': {'pos': [colour, style, colour]})
   results = [{'path': path, 'relative': os.path.basename(path), 'visible': True, 'straight': False, 'ends': False,
               'periapsis': False, 'apoapsis': False, 'styles': styles(colour, *style),

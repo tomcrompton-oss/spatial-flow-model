@@ -285,6 +285,119 @@ class EIHBinary(Binary):
     return Binary.describe(self).replace('binary:', 'binary moving by EIH:')
 
 
+def starFlow(binary):
+  """
+  the flow model's flow for the binary's two stars wherever they are at t: each star's inflow sqrt(2GM/d) from where
+  it is, combined by squares and pointing along g (engine/flow.py combine 'squares', direction 'g'). the flow of their
+  space as they stand at each moment - not carried along with them, and with no wave in it
+  """
+  from engine.flow import Body, SpecialFlowCalculator
+
+  class Star(Body):
+    def __init__(self, which, mass):
+      super().__init__(mass)
+      self.which = which
+    def at(self, t):
+      return binary.bodies(t)[self.which]
+    @property
+    def moving(self):
+      return True
+
+  return SpecialFlowCalculator([Star(0, binary.m1), Star(1, binary.m2)], 2, direction='g')
+
+
+class TurningStars:
+  """
+  the flow model's eikonal flow for the binary's two stars, turning with them (engine/turning.py, Calculator combine
+  'turning': each star carries its own flow, regions meeting at a seam that turns with them), for its background
+  frames. that flow is for a steady circular orbit, so it is worked out once, for the stars REF apart, and at each t
+  scaled to their separation a there and turned to their direction: the turning flow scales exactly - lengths with
+  a, speeds with a^(-1/2) - so this is the steady flow of the orbit the stars are on at that moment (it leaves out
+  their inspiral, slow beside the orbit). it is Newtonian, built in the frame turning with the stars, which moves at
+  c about 5 a out (for two 1.4 solar-mass stars): only within reach*a of their centre (where |w| < 0.8 c) is it used;
+  nan beyond, and where its paths leave the tables
+
+    stars = TurningStars(binary)
+    stars.flow(pos, None, t), stars.region(pos, t)   for engine/backgrounds.py's fields, and seamLines
+    stars.seam(t)                                    the seam's lines at t; stars.lines: in the reference orbit's frame
+  """
+  REF = 1e5
+
+  def __init__(self, binary, reach=4.0):
+    from engine.flow import Body, SpecialFlowCalculator
+    self.binary, self.reach = binary, reach
+    s = binary.state(binary.times[0])
+    sense = 1.0 if s[0]*s[3] - s[1]*s[2] >= 0 else -1.0      #which way the stars go round
+    omega = sense*math.sqrt(binary.GM/self.REF**3)
+    self.calc = SpecialFlowCalculator([Body(binary.m1, binary.m2/binary.M*self.REF, 0.0, circling=omega),
+                                       Body(binary.m2, -binary.m1/binary.M*self.REF, 0.0, circling=omega)],
+                                      2, combine='turning')
+    from engine.turning import TurningRayField, carriedJacobi
+    bodies = self.calc.bodies           #its paths' tables at the stars' own scale (the defaults are the solar system's)
+    self.field = TurningRayField(bodies, omega, carriedJacobi(bodies, omega), minR=1e-3*self.REF, maxR=20*self.REF)
+    self.lines = None
+
+  def placing(self, t):
+    """the stars' separation a and its direction at t"""
+    s = self.binary.state(t)
+    return math.hypot(s[0], s[1]), math.atan2(s[1], s[0])
+
+  def toRef(self, pos, t):
+    """pos (m) at t, in the reference orbit's frame (the stars REF apart on the x axis); and a and the angle at t"""
+    a, angle = self.placing(t)
+    c, sn = math.cos(angle), math.sin(angle)
+    x, y = pos[0]*self.REF/a, pos[1]*self.REF/a
+    return np.array([c*x + sn*y, -sn*x + c*y]), a, angle
+
+  def region(self, pos, t=0.0):
+    x, _, _ = self.toRef(pos, t)
+    if np.hypot(*x) > self.reach*self.REF:
+      return None
+    return self.field.region(x)
+
+  def flow(self, pos, region=None, t=0.0):
+    x, a, angle = self.toRef(pos, t)
+    none = np.array([np.nan, np.nan])
+    if np.hypot(*x) > self.reach*self.REF:
+      return none
+    w2 = self.field.speed2(x)
+    direction = self.field.direction(x)
+    if w2 <= 0 or direction is None:      #past its paths' tables
+      return none
+    om = self.calc.omega
+    u = (math.sqrt(w2)*np.asarray(direction) + om*np.array([-x[1], x[0]]))*math.sqrt(self.REF/a)
+    c, sn = math.cos(angle), math.sin(angle)
+    return np.array([c*u[0] - sn*u[1], sn*u[0] + c*u[1]])
+
+  def seam(self, t):
+    """the seam's lines at t (m): the reference orbit's, worked out once (seamLines), scaled and turned"""
+    from engine.background_frames import seamLines
+    if self.lines is None:
+      R = self.reach*self.REF
+      inside = lambda x: self.field.region(x) if np.hypot(*x) <= R else None
+      self.lines = seamLines(inside, (-R, R, -R, R), 120)
+    a, angle = self.placing(t)
+    c, sn = math.cos(angle), math.sin(angle)
+    k = a/self.REF
+    return [k*np.column_stack([c*l[:, 0] - sn*l[:, 1], sn*l[:, 0] + c*l[:, 1]]) for l in self.lines]
+
+
+def starsFrame(binary, times, scaled=True, ref=None):
+  """
+  a frame (engine/backgrounds.py Frame) turning with the binary's stars: at each of times its angle is the stars'
+  direction (body 1 from body 2, unwrapped); scaled, it also grows and shrinks with their separation a - lengths with
+  a, the flow with a^(-1/2), its acceleration with a^-2 - for the stars' own flow, its pattern that of the stars ref
+  apart (by default, as they are at the first time); unscaled, for their waves' strain (whose pattern turns with them
+  but keeps its size)
+  """
+  from engine.backgrounds import Frame
+  states = np.array([binary.state(t) for t in times])
+  a = np.hypot(states[:, 0], states[:, 1])
+  angle = np.unwrap(np.arctan2(states[:, 1], states[:, 0]))
+  k = a/(ref or a[0]) if scaled else np.ones_like(a)
+  return Frame(times, angle=angle, scale=k, u=k**-0.5, a=k**-2.0)
+
+
 def peters(a, e, m1, m2):
     """Peters (1964): (da/dt, de/dt), orbit-averaged, for the quadrupole radiation reaction"""
     M = m1 + m2

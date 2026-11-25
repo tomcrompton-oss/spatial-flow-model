@@ -19,7 +19,8 @@ each error is given as a fraction of the wave's effect (h X0, or h L/c)
 
 DYNAMIC_BACKGROUNDS (on; --static turns it off): each ring's flow - and the acceleration of space - on a grid at 32
 moments a period (background_<name>, engine/background_frames.py), named in its log, so the viewer's backgrounds (u
-and g arrows, lines of equal |u|) follow the wave during a replay; pick a ring's environment under Background
+and g arrows, lines of equal |u|) follow the wave during a replay - for the desktop viewer; the browser viewer's
+background is gravWave.backgrounds.json (engine/backgrounds.py), each ring's wave a flow straight in space about it
 
 writes logs/gravWave/gravWave_<datetime>/: per ring a csv of its particles' paths (ring_<name>: an empty row ending
 each, drawn dotted), a csv of its shape at 8 moments (shapes_<name>) through the last period (solid) and a log; gravWave.full.json to open them
@@ -40,6 +41,7 @@ from engine.flow import SpecialFlowCalculator, Particle
 from engine.waves import PlaneWave
 from engine.logger import Log, LOG_DIR
 from engine.background_frames import writeFrames, LOG_LINE
+from engine.backgrounds import Backgrounds, LOG_LINE as BACKGROUNDS_LINE
 from engine.constants import *
 from two_body_escapes import writeViewerFiles
 
@@ -72,10 +74,11 @@ def rateMatrix(wave, t):
   return np.array([[rp, rx], [rx, -rp]])
 
 
-def ring(folder, name, centre, settings):
+def ring(folder, name, centre, settings, background=None):
   """
   one ring: a csv of its particles' paths, a csv of its shape at SHAPES moments through the last period (each a closed
-  loop round the ring, an empty row ending it), and a log; returns the two csvs' paths
+  loop round the ring, an empty row ending it), and a log; returns the two csvs' paths. background: the browser
+  viewer's background (engine/backgrounds.py) the ring's wave is added to, as a flow straight in space about it
   """
   middle = np.array([centre*RADIUS, 0.0])
   calc = SpecialFlowCalculator([], 2, wave=PlaneWave(frequency=FREQUENCY, centre=middle, **settings))
@@ -121,6 +124,10 @@ def ring(folder, name, centre, settings):
     writeFrames(framesPath, calc, (middle[0] - span, middle[0] + span, middle[1] - span, middle[1] + span),
                 np.arange(PERIODS*FRAMES + 1)/FRAMES/FREQUENCY, FRAME_CELLS)
     log.print(LOG_LINE, os.path.basename(framesPath))
+  if background is not None:
+    times = np.arange(PERIODS*FRAMES + 1)/FRAMES/FREQUENCY
+    background.linear('%s: %s' % (name, calc.wave.describe()), calc, middle, 1.6*RADIUS, list(times))
+    log.print(BACKGROUNDS_LINE, 'gravWave.backgrounds.json')
   log.print('the ring stretched and squeezed by up to %.4g of its radius (h/2 = %g)' % (widest, SHOWN/2))
   log.print('its shape at %d moments in the last period: %s' % (SHAPES, os.path.basename(shapePath)))
   log.close()
@@ -223,9 +230,16 @@ def main():
   folder = os.path.join(LOG_DIR, 'gravWave', 'gravWave_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder)
   made = []
+  bg = Backgrounds()
+  waves = bg.add("the waves' flow",
+                 "Each ring sits in its own plane gravitational wave passing straight through the plane (along z). In"
+                 " the flow model the wave is a flow of space, a shear about the ring's centre,"
+                 " u = (1/2) (h+' X + hx' Y, hx' X - h+' Y); g is its acceleration. Drawn round each ring: plus, cross"
+                 " and circular polarization, left to right.")
   for name, centre, settings, colour in RINGS:
-    tracks, shapes = ring(folder, name, centre, settings)
+    tracks, shapes = ring(folder, name, centre, settings, waves)
     made += [(shapes, colour, 'solid'), (tracks, colour, 'dotted')]
+  bg.write(os.path.join(folder, 'gravWave.backgrounds.json'))
   writeViewerFiles(folder, 'gravWave', made, preferences={'showFlow': DYNAMIC_BACKGROUNDS})
   lines = ['gravitational wave checks: the flow model against GR, to first order in h', '']
   particles = particleChecks(lines)

@@ -1,2 +1,3 @@
 the waves of a binary: 1.4 + 1.4 solar masses, a = 150000 m, e = 0, with radiation reaction, on its axis 1.23428e+24 m away (retarded by 0 s), strain x 8.66864e+20, centred at (450000, 0) m
 16 free particles on a ring of 120000 m round (450000, 0) m; strain scaled to 0.3 at the end
+backgrounds: binaryWaves.backgrounds.json

@@ -21,8 +21,8 @@ const ARROW_SPACING = 40;   //pixels between background arrows
 const PLAYER = new URLSearchParams(location.search).has('player');   //the cut-down player, for embedding in pages
 const REPLAY_SECONDS = 20;  //a whole run at 1x
 const ALL = 'All environments', SELECTED = "Selected result's environment";
-const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showScalar: true, showBodies: true,
-               showSchwarzschild: true, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false};
+const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showScalar: true, showSeam: true,
+               showBodies: true, showSchwarzschild: true, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false};
 
 const state = {
   results: [],         //{name, file, data, paths, log, env, visible, color}
@@ -92,36 +92,41 @@ function parseLog(text) {
   const direction = (text.match(/^flow direction: (.+)$/m) || [])[1];
   const wave = (text.match(/^gravitational wave: (.+)$/m) || [])[1];
   const scalar = (text.match(/^background scalar: (.+)$/m) || [])[1];
-  return {bodies, frames: frames && frames.trim(), direction, wave, scalar: scalar && scalar.trim()};
+  const backgrounds = (text.match(/^backgrounds: (.+)$/m) || [])[1];
+  return {bodies, frames: frames ? files(frames) : null, direction, wave, scalar: scalar && scalar.trim(),
+          backgrounds: backgrounds && backgrounds.trim()};
 }
 
-/* background frames (docs/archive/formats.md): the flow and its acceleration on a grid at a run of times - or, with
-   the columns t, x, y, s, a scalar (a wave's strain, say), drawn as a colour map */
+/* a log's list of frames files, comma-separated (a colour map's, a flow's) */
+function files(text) {
+  return text.split(',').map(f => f.trim()).filter(Boolean);
+}
+
+/* background frames (docs/archive/formats.md): on a grid at a run of times, t, x, y and any of the flow (u_x, u_y),
+   its acceleration (a_x, a_y) and a scalar s (a wave's strain, say) drawn as a colour map. nan where a field has no
+   value (a flow worked out only near some points); a field a file doesn't carry has no reference, so isn't drawn */
 function parseFrames(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
-  const header = lines[0].split(',').map(c => c.trim());
-  const width = header.length, scalar = header[3] === 's';
-  const n = lines.length - 1, raw = new Float64Array(n * width);
+  const header = lines[0].split(',').map(c => c.trim()), col = name => header.indexOf(name);
+  const width = header.length, n = lines.length - 1, raw = new Float64Array(n * width);
   for (let i = 0; i < n; i++) {
     const cells = lines[i + 1].split(',');
     for (let j = 0; j < width; j++) raw[i * width + j] = +cells[j];
   }
   const unique = k => [...new Set(Array.from({length: n}, (_, i) => raw[i * width + k]))].sort((a, b) => a - b);
   const times = unique(0), xs = unique(1), ys = unique(2);
-  const u = new Float32Array(n * 2), a = new Float32Array(n * 2);
+  //each field two values a point, so frameSample reads them all alike (a scalar's second is 0)
+  const field = (cx, cy) => {
+    if (cx < 0) return null;
+    const out = new Float32Array(n * 2);
+    for (let i = 0; i < n; i++) { out[2 * i] = raw[i * width + cx]; out[2 * i + 1] = cy < 0 ? 0 : raw[i * width + cy]; }
+    return out;
+  };
+  const u = field(col('u_x'), col('u_y')), a = field(col('a_x'), col('a_y')), s = field(col('s'), -1);
   const frames = {times, xs, ys, u, a, size: xs.length * ys.length};
-  if (scalar) {
-    const values = new Float32Array(n * 2);                  //two per point, so frameSample reads it as it does u
-    for (let i = 0; i < n; i++) values[2 * i] = raw[i * width + 3];
-    frames.s = values;
-    frames.reference = {u: null, a: null, s: percentileOfSizes(values, 98)};
-    return frames;
-  }
-  for (let i = 0; i < n; i++) {
-    u[2 * i] = raw[i * width + 3]; u[2 * i + 1] = raw[i * width + 4];
-    a[2 * i] = raw[i * width + 5]; a[2 * i + 1] = raw[i * width + 6];
-  }
-  frames.reference = {u: percentileOfSizes(u, 90), a: percentileOfSizes(a, 90)};   //one scale for the whole run
+  if (s) frames.s = s;
+  frames.reference = {u: u && percentileOfSizes(u, 90), a: a && percentileOfSizes(a, 90),   //one scale for the run
+                      s: s && percentileOfSizes(s, 98)};
   return frames;
 }
 
@@ -134,6 +139,18 @@ function percentileOfSizes(field, p) {
   if (!sizes.length) return null;
   sizes.sort((x, y) => x - y);
   return sizes[Math.min(sizes.length - 1, Math.floor(p / 100 * sizes.length))];
+}
+
+/* an environment's frames from several files: each field (u, a, s) from the first file that has it */
+function combineFrames(layers) {
+  layers = layers.filter(Boolean);
+  if (!layers.length) return null;
+  const layer = {}, reference = {};
+  for (const key of ['u', 'a', 's']) {
+    layer[key] = layers.find(f => f.reference[key]) || null;
+    reference[key] = layer[key] ? layer[key].reference[key] : null;
+  }
+  return {layer, reference};
 }
 
 /* the field (u or a) at (x, y), time t: between the frames either side of t, bilinear within; null off the grid */
@@ -166,16 +183,17 @@ function locate(list, v) {
 /* a run: its full.json (if any), prefs, config, results, logs and frames */
 async function loadRun(source, fullName) {
   message('loading…');
-  state.results = []; state.environments = []; state.selected = null; stopReplay();
+  state.results = []; state.environments = []; state.selected = null; state.backgrounds = null; stopReplay();
   try {
     fullName = fullName || source.names().find(n => n.endsWith('.full.json'));
-    let entries;
+    let entries, chosen = null;
     if (fullName) {
       const full = JSON.parse(await source.read(fullName));
       if (full.preferences) Object.assign(state.prefs, pickPrefs(JSON.parse(await source.read(full.preferences)).preferences || {}));
       const config = full.config ? JSON.parse(await source.read(full.config)) : {results: []};
       entries = config.results || [];
       state.background = config.background === ALL ? ALL : SELECTED;
+      chosen = config.background;
     } else {
       entries = source.names().filter(n => n.endsWith('.csv') && !n.startsWith('background_')).sort().map(n => ({relative: n}));
     }
@@ -186,10 +204,20 @@ async function loadRun(source, fullName) {
     const texts = await Promise.all(files.map(file => Promise.all([
       read(file), read(file.replace(/\.csv$/, '.log')).catch(() => null)])));   //no log: no bodies
     const logs = texts.map(([, log]) => log === null ? {bodies: []} : parseLog(log));
-    const frameCache = new Map(await Promise.all([...new Set(logs.map(l => l.frames).filter(Boolean))].map(async name => {
+    const named = logs.flatMap(l => l.frames || []);
+    const frameCache = new Map(await Promise.all([...new Set(named)].map(async name => {
       try { return [name, parseFrames(await read(name))]; }
       catch (e) { message('no frames file ' + name); return [name, null]; }
     })));
+    //a backgrounds file (engine/backgrounds.py): its backgrounds make the Background menu, in place of environments'
+    const manifests = [...new Set(logs.map(l => l.backgrounds).filter(Boolean))];
+    for (const name of manifests) {
+      try { state.backgrounds = (state.backgrounds || []).concat(parseBackgrounds(await read(name))); }
+      catch (e) { message('could not read the backgrounds file ' + name + ': ' + e.message); }
+    }
+    if (state.backgrounds && state.backgrounds.length)
+      state.background = (state.backgrounds.find(b => b.name === chosen) || state.backgrounds[0]).name;
+    else state.backgrounds = null;
     entries.forEach((entry, i) => {
       const file = files[i], log = logs[i];
       const result = {name: studyName(file), file, data: parseCsv(texts[i][0]), log, visible: entry.visible !== false,
@@ -235,25 +263,30 @@ function buildPaths(result, entry) {
   });
 }
 
+/* a result's environment (its bodies and background frames), shared by results with the same */
 function environmentFor(log, frameCache) {
-  const key = JSON.stringify([log.bodies, log.frames || null, log.direction || null]);
+  const files = log.frames;
+  const key = JSON.stringify([log.bodies, files || null, log.direction || null]);
   let env = state.environments.find(e => e.key === key);
   if (env) return env;
-  const frames = log.frames ? frameCache.get(log.frames) || null : null;
-  env = {key, bodies: log.bodies, frames, scalar: log.scalar || 's', name: describe(log, frames)};
+  const frames = files ? combineFrames(files.map(f => frameCache.get(f))) : null;
+  env = {key, bodies: log.bodies, frames, scalar: log.scalar || 's', name: describe(log, frames, files)};
   state.environments.push(env);
   return env;
 }
 
-function describe(log, frames) {
+function describe(log, frames, files) {
   let name = log.bodies.length ? log.bodies.length + (log.bodies.length === 1 ? ' body: ' : ' bodies: ') + log.bodies.map(b =>
     (+(b.mass / MS).toPrecision(4)) + ' MS ' + (b.black ? 'black' : 'white') + ' at (' + fmt(b.x / AU) + ', ' + fmt(b.y / AU) + ') AU').join(', ')
     : 'No bodies';
   if (log.direction && log.direction.startsWith('down zero-energy paths'))
     name += log.direction.includes('exact two-body solution') ? ', eikonal flow (exact)' : ', eikonal flow';
-  if (log.frames) name += (frames && frames.s ? ', ' + (log.scalar || 'a field') + ' (' :
-                          frames && frames.times.length > 1 ? ', flow changing with time (' : ', flow frame (') +
-                          studyName(log.frames.replace(/\.csv$/, '')) + ')';
+  if (files && files.length) {
+    const flow = frames && (frames.layer.u || frames.layer.a);
+    name += (frames && frames.layer.s ? ', ' + (log.scalar || 'a field') : '') +
+            (!flow ? '' : flow.times.length > 1 ? ', flow changing with time' : ', flow frame') +
+            ' (' + files.map(f => studyName(f.replace(/\.csv$/, ''))).join(', ') + ')';
+  }
   return name;
 }
 
@@ -327,6 +360,7 @@ function draw() {
   }
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.fillStyle = css('--page'); ctx.fillRect(0, 0, w, h);
+  syncAvailable();
   $('empty').style.display = state.results.length ? 'none' : 'flex';
   if (!state.view) return;
   const {l, t, r, b} = plotRect();
@@ -335,7 +369,9 @@ function draw() {
   ctx.beginPath(); ctx.rect(l, t, r - l, b - t); ctx.clip();
   drawAxes(true);
   const keys = [];
-  for (const env of fieldEnvironments()) keys.push(...drawField(env));
+  const background = currentBackground();
+  if (background) keys.push(...drawBackground(background));
+  else for (const env of fieldEnvironments()) keys.push(...drawField(env));
   for (const result of state.results.filter(r => r.visible)) {
     const until = drawUntil(result);
     if (until !== false) for (const p of result.paths) drawPath(result, p, until);
@@ -458,6 +494,27 @@ function flushDots() {
   }
 }
 
+/* the background checkboxes a run can use: greyed out, with a tip saying why, when no environment being drawn has
+   the data (u, g or a colour map in its frames; bodies, and so horizons) */
+function syncAvailable() {
+  const envs = fieldEnvironments(), background = currentBackground();
+  const has = background ? key => backgroundHas(background, key) : key => envs.some(e => e.frames && e.frames.reference[key]);
+  const bodies = envs.some(e => e.bodies.length);
+  const which = background ? 'this background' : state.background === ALL ? 'this run' : "the selected result's background";
+  for (const [id, ok, missing] of [
+      ['showFlow', has('u'), 'no flow of space (u) saved for ' + which],
+      ['showGravity', has('a'), 'no acceleration of space (g) saved for ' + which],
+      ['showScalar', has('s'), 'no colour-map field saved for ' + which],
+      ['showSeam', has('seam'), 'no seam saved for ' + which + ' (only the eikonal flows have one)'],
+      ['showBodies', bodies, 'no bodies in ' + which],
+      ['showSchwarzschild', bodies, 'no bodies, so no horizons, in ' + which]]) {
+    const box = $(id);
+    if (box.disabled === !ok) continue;
+    box.disabled = !ok;
+    box.parentElement.title = ok ? '' : 'Not available: ' + missing;
+  }
+}
+
 function drawBodies(env) {
   if (!state.prefs.showBodies && !state.prefs.showSchwarzschild) return;
   const scale = (toScreen(1, 0)[0] - toScreen(0, 0)[0]);
@@ -488,33 +545,213 @@ function fieldEnvironments() {
 function drawField(env) {
   const keys = [], frames = env.frames;
   if (!frames) return keys;
-  const t = fieldTime() ?? frames.times[0];
+  const first = frames.layer.s || frames.layer.u || frames.layer.a;
+  const t = fieldTime() ?? first.times[0];
   const named = fieldEnvironments().length > 1 ? '  (' + env.name + ')' : '';
-  if (frames.s && state.prefs.showScalar && frames.reference.s) {
-    drawScalar(frames, t, frames.reference.s);
-    const moment = frames.times.length > 1 ? '  at t = ' + fmt(t) + ' s' : '';
+  const when = layer => layer.times.length > 1 ? '  at t = ' + fmt(t) + ' s' : '';
+  if (frames.layer.s && state.prefs.showScalar) {
+    drawScalar((x, y) => frameSample(frames.layer.s, 's', x, y, t), frames.reference.s);
+    const moment = when(frames.layer.s);
     keys.push([SCALAR_PLUS, env.scalar + ': red +' + fmt(frames.reference.s) + ', blue \u2212' + fmt(frames.reference.s) + moment + named]);
   }
   for (const [show, field, colour, label, offset] of [
       [state.prefs.showFlow, 'u', css('--muted'), 'u', 0],
       [state.prefs.showGravity, 'a', css('--g-arrow'), 'g, the acceleration of space', 0.5]]) {
-    if (!show || !frames.reference[field]) continue;
-    drawArrows(frames, field, t, colour, frames.reference[field], offset);
+    if (!show || !frames.layer[field]) continue;
+    drawArrows((x, y) => frameSample(frames.layer[field], field, x, y, t), colour, frames.reference[field], offset);
     const ref = frames.reference[field];
-    const moment = frames.times.length > 1 ? '  at t = ' + fmt(t) + ' s' : '';
+    const moment = when(frames.layer[field]);
     keys.push([colour, label + '  ' + (field === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment + named]);
   }
+  return keys;
+}
+
+//---------------------------------------------------------------- backgrounds files (engine/backgrounds.py)
+
+/* a backgrounds file's backgrounds, each field's values decoded once */
+function parseBackgrounds(text) {
+  const doc = JSON.parse(text), shared = (doc.shared || []).map(decodeLayer);   //layers several backgrounds use
+  return (doc.backgrounds || []).map(b => ({name: b.name, description: b.description || '', reference: b.reference || {},
+    layers: (b.layers || []).map(l => 'shared' in l ? shared[l.shared] : decodeLayer(l)), cache: new Map()}));
+}
+
+/* a field layer's stored values (sign, then 1 + 800 (log10 |v/scale| + 20); 0 is 0, -32768 none) as numbers, two
+   to a point per quantity (a colour map's second is 0) */
+function decodeLayer(layer) {
+  if (layer.type !== 'field') return layer;
+  const raw = atob(layer.data), ints = new Int16Array(raw.length / 2);
+  for (let i = 0; i < ints.length; i++) ints[i] = raw.charCodeAt(2 * i) | (raw.charCodeAt(2 * i + 1) << 8);
+  const comps = layer.components, nc = comps.length, n = ints.length / nc, values = {};
+  for (const c of comps) values[c[0]] = values[c[0]] || new Float32Array(n * 2);
+  for (let i = 0; i < n; i++)
+    for (let c = 0; c < nc; c++) {
+      const q = ints[i * nc + c], name = comps[c], scale = layer.scale[name[0]];
+      values[name[0]][2 * i + (name.endsWith('_y') ? 1 : 0)] =
+        q === -32768 ? NaN : q === 0 ? 0 : Math.sign(q) * Math.pow(10, (Math.abs(q) - 1) / 800 - 20) * scale;
+    }
+  const g = layer.grid, size = g.kind === 'polar' ? g.nr * g.nt : g.nx * g.ny;
+  return Object.assign({}, layer, {values, size, data: null});
+}
+
+function currentBackground() {
+  if (!state.backgrounds) return null;
+  return state.backgrounds.find(b => b.name === state.background) || state.backgrounds[0];
+}
+
+/* whether a background can draw u, a (g), s (a colour map) or lines (the seam) */
+function backgroundHas(background, key) {
+  return background.layers.some(l => l.type === 'field' ? !!l.values[key] : l.type === 'linear' ? key === 'u' || key === 'a'
+                                                         : l.type === 'lines' && key === 'seam');
+}
+
+/* where along a list of times t falls, as a fractional index, held at the ends */
+function timeIndex(times, t) {
+  const k = locate(times, t);
+  return k === null ? (t < times[0] ? 0 : times.length - 1) : k;
+}
+
+/* a frame's centre, angle, scale and quantity scales at t */
+function frameAt(frame, t) {
+  const k = timeIndex(frame.times, t), k0 = Math.floor(k), k1 = Math.min(k0 + 1, frame.times.length - 1), f = k - k0;
+  const out = {};
+  for (const key of ['x', 'y', 'angle', 'scale', 'u', 'a', 's']) out[key] = frame[key][k0] * (1 - f) + frame[key][k1] * f;
+  return out;
+}
+
+/* a layer's u, a or s at the world point (x, y), time t: [vx, vy] (a colour map's [s, 0]), or null where it has none */
+function sampleLayer(layer, key, x, y, t) {
+  if (layer.type === 'linear') {
+    if (key !== 'u' && key !== 'a') return null;
+    const dx = x - layer.centre[0], dy = y - layer.centre[1];
+    if (layer.radius !== null && Math.hypot(dx, dy) > layer.radius) return null;
+    const k = timeIndex(layer.times, t), k0 = Math.floor(k), k1 = Math.min(k0 + 1, layer.times.length - 1), f = k - k0;
+    const m = layer[key][k0].map((v, i) => v * (1 - f) + layer[key][k1][i] * f);
+    return [m[0] * dx + m[1] * dy, m[2] * dx + m[3] * dy];
+  }
+  if (layer.type !== 'field' || !layer.values[key]) return null;
+  const fr = layer.frame ? frameAt(layer.frame, t) : null;
+  let px = x, py = y;
+  if (fr) {
+    const dx = x - fr.x, dy = y - fr.y, c = Math.cos(fr.angle), s = Math.sin(fr.angle);
+    px = (c * dx + s * dy) / fr.scale; py = (-s * dx + c * dy) / fr.scale;
+  }
+  //the four grid points round it, and how far between
+  const g = layer.grid;
+  let i0, i1, j0, j1, fi, fj, across;
+  if (g.kind === 'polar') {
+    const r = Math.hypot(px, py);
+    if (!(r >= g.r0 && r <= g.r1)) return null;
+    const ring = Math.log(r / g.r0) / Math.log(g.r1 / g.r0) * (g.nr - 1);
+    let angle = Math.atan2(py, px); if (angle < 0) angle += 2 * Math.PI;
+    const a = angle / (2 * Math.PI) * g.nt;
+    j0 = Math.min(Math.floor(ring), g.nr - 2); j1 = j0 + 1; fj = ring - j0;
+    i0 = Math.floor(a) % g.nt; i1 = (i0 + 1) % g.nt; fi = a - Math.floor(a);
+    across = g.nt;
+  } else {
+    const fx = (px - g.x0) / (g.x1 - g.x0) * (g.nx - 1), fy = (py - g.y0) / (g.y1 - g.y0) * (g.ny - 1);
+    if (!(fx >= 0 && fx <= g.nx - 1 && fy >= 0 && fy <= g.ny - 1)) return null;
+    i0 = Math.min(Math.floor(fx), g.nx - 2); i1 = i0 + 1; fi = fx - i0;
+    j0 = Math.min(Math.floor(fy), g.ny - 2); j1 = j0 + 1; fj = fy - j0;
+    across = g.nx;
+  }
+  const k = timeIndex(layer.times, t), k0 = Math.floor(k), k1 = Math.min(k0 + 1, layer.times.length - 1), fk = k - k0;
+  const values = layer.values[key], out = [0, 0];
+  for (const [frame, wt] of [[k0, 1 - fk], [k1, fk]]) {
+    if (wt === 0) continue;
+    const base = frame * layer.size;
+    for (const [i, j, w] of [[i0, j0, (1 - fi) * (1 - fj)], [i1, j0, fi * (1 - fj)], [i0, j1, (1 - fi) * fj], [i1, j1, fi * fj]])
+      for (let c = 0; c < 2; c++) out[c] += wt * w * values[2 * (base + j * across + i) + c];
+  }
+  if (!isFinite(out[0]) || !isFinite(out[1])) return null;
+  if (!fr) return out;
+  if (key === 's') return [out[0] * fr.s, 0];
+  const c = Math.cos(fr.angle), s = Math.sin(fr.angle), m = fr[key];
+  return [(c * out[0] - s * out[1]) * m, (s * out[0] + c * out[1]) * m];
+}
+
+/* a background's u, a or s at (x, y), time t: from the first of its layers that has a value there */
+function sampleBackground(background, key, x, y, t) {
+  for (const layer of background.layers) {
+    const v = sampleLayer(layer, key, x, y, t);
+    if (v) return v;
+  }
+  return null;
+}
+
+/* the size a full arrow (u, a) or the strongest colour (s) stands for: from what is on screen now - at eleven times
+   through the replay, so it holds through it, and no one moment (a wave switching on) sets it - the 90th percentile
+   of the sizes (98th for a colour map); the file's own reference if nothing is on screen */
+function backgroundReference(background, key) {
+  const {l, t: top, r, b} = plotRect(), range = replayRange() || [0, 0];
+  const id = [key, state.view.join(), r - l, b - top, range.join()].join('|');
+  if (!background.cache.has(id)) {
+    const sizes = [], step = ARROW_SPACING / 2;
+    for (const t of Array.from({length: 11}, (_, i) => range[0] + (range[1] - range[0]) * i / 10))
+      for (let sy = top + step / 2; sy < b; sy += step)
+        for (let sx = l + step / 2; sx < r; sx += step) {
+          const [x, y] = toData(sx, sy), v = sampleBackground(background, key, x, y, t);
+          if (v) { const size = Math.hypot(v[0], v[1]); if (size > 0) sizes.push(size); }
+        }
+    sizes.sort((x, y) => x - y);
+    const p = key === 's' ? 0.98 : 0.9;
+    background.cache.set(id, sizes.length ? sizes[Math.min(sizes.length - 1, Math.floor(p * sizes.length))]
+                                          : background.reference[key] || null);
+  }
+  return background.cache.get(id);
+}
+
+/* a background's layers at the replay time (the start when stopped); returns key entries */
+function drawBackground(background) {
+  const keys = [], t = fieldTime() ?? 0;
+  const moving = background.layers.some(l => (l.times && l.times.length > 1) || (l.frame && l.frame.times.length > 1));
+  const moment = moving ? '  at t = ' + fmt(t) + ' s' : '';
+  if (state.prefs.showScalar && backgroundHas(background, 's')) {
+    const ref = backgroundReference(background, 's');
+    if (ref) {
+      drawScalar((x, y) => sampleBackground(background, 's', x, y, t), ref);
+      const label = background.layers.find(l => l.type === 'field' && l.values.s).label;
+      keys.push([SCALAR_PLUS, label + ': red +' + fmt(ref) + ', blue \u2212' + fmt(ref) + moment]);
+    }
+  }
+  for (const [show, key, colour, label, offset] of [
+      [state.prefs.showFlow, 'u', css('--muted'), 'u', 0],
+      [state.prefs.showGravity, 'a', css('--g-arrow'), 'g, the acceleration of space', 0.5]]) {
+    if (!show || !backgroundHas(background, key)) continue;
+    const ref = backgroundReference(background, key);
+    if (!ref) continue;
+    drawArrows((x, y) => sampleBackground(background, key, x, y, t), colour, ref, offset);
+    keys.push([colour, label + '  ' + (key === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment]);
+  }
+  if (state.prefs.showSeam)
+    for (const layer of background.layers.filter(l => l.type === 'lines')) {
+      const k = Math.floor(timeIndex(layer.times, t)), fr = layer.frame ? frameAt(layer.frame, t) : null;
+      const c = fr ? Math.cos(fr.angle) : 1, s = fr ? Math.sin(fr.angle) : 0;
+      ctx.strokeStyle = css('--ink'); ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+      for (const flat of layer.lines[k]) {
+        ctx.beginPath();
+        for (let i = 0; i < flat.length; i += 2) {
+          let x = flat[i], y = flat[i + 1];
+          if (fr) [x, y] = [fr.x + fr.scale * (c * x - s * y), fr.y + fr.scale * (s * x + c * y)];
+          const [sx, sy] = toScreen(x, y);
+          if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
+        }
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      keys.push([css('--ink'), layer.label + moment, [6, 4]]);
+    }
+  if (keys.length) keys.push(['transparent', 'background: ' + background.name]);
   return keys;
 }
 
 /* a scalar field as a colour map: cells of SCALAR_CELL pixels, red where it is positive, blue negative, their strength
    its size over the run's scale (capped); nothing off the grid or where it is not a number */
 const SCALAR_CELL = 5, SCALAR_PLUS = '#d6452a', SCALAR_MINUS = '#2a6fd6';
-function drawScalar(frames, t, reference) {
+function drawScalar(sample, reference) {
   const {l, t: top, r, b} = plotRect();
   for (let sy = top; sy < b; sy += SCALAR_CELL)
     for (let sx = l; sx < r; sx += SCALAR_CELL) {
-      const [x, y] = toData(sx + SCALAR_CELL / 2, sy + SCALAR_CELL / 2), v = frameSample(frames, 's', x, y, t);
+      const [x, y] = toData(sx + SCALAR_CELL / 2, sy + SCALAR_CELL / 2), v = sample(x, y);
       if (!v || !isFinite(v[0]) || v[0] === 0) continue;
       ctx.globalAlpha = Math.min(1, Math.abs(v[0]) / reference) * 0.85;
       ctx.fillStyle = v[0] > 0 ? SCALAR_PLUS : SCALAR_MINUS;
@@ -526,12 +763,12 @@ function drawScalar(frames, t, reference) {
 function speed(v) { return v >= 1e3 ? fmt(v / 1e3) + ' km/s' : fmt(v) + ' m/s'; }
 
 /* arrows on a screen grid, each from its grid point, its length in proportion to the field (capped at a full one) */
-function drawArrows(frames, field, t, colour, reference, offset) {
+function drawArrows(sample, colour, reference, offset) {
   const {l, t: top, r, b} = plotRect(), longest = ARROW_SPACING * 0.8, shift = ARROW_SPACING * (0.5 + offset);
   ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 1;
   for (let sy = top + shift; sy < b; sy += ARROW_SPACING)
     for (let sx = l + shift; sx < r; sx += ARROW_SPACING) {
-      const [x, y] = toData(sx, sy), v = frameSample(frames, field, x, y, t);
+      const [x, y] = toData(sx, sy), v = sample(x, y);
       if (!v) continue;
       const size = Math.hypot(v[0], v[1]);
       if (!(size > 0)) continue;
@@ -552,9 +789,15 @@ function arrow(x0, y0, x1, y1) {
 }
 
 function drawBox(lines, anchor) {
-  ctx.font = '12px -apple-system, Helvetica, Arial, sans-serif';
   const {l, t, r, b} = plotRect(), rowH = 18, swatch = 26;
-  const width = Math.max(...lines.map(([, text]) => ctx.measureText(text).width)) + swatch + 22;
+  //the text shrinks (to 9px) to keep the box inside the plot
+  let size = 12, widest;
+  for (; ; size--) {
+    ctx.font = size + 'px -apple-system, Helvetica, Arial, sans-serif';
+    widest = Math.max(...lines.map(([, text]) => ctx.measureText(text).width));
+    if (size <= 9 || widest + swatch + 22 <= r - l - 16) break;
+  }
+  const width = widest + swatch + 22;
   const height = rowH * lines.length + 8;
   const x = anchor === 'top-right' ? r - width - 8 : l + 8, y = anchor === 'top-right' ? t + 8 : b - height - 8;
   ctx.fillStyle = css('--surface'); ctx.strokeStyle = css('--grid');
@@ -851,7 +1094,7 @@ function hideTip() { tipFor = null; $('tip').style.display = 'none'; }
 function message(text) { $('message').textContent = text; }
 
 function syncControls() {
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'equalAspect', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showSeam', 'showBodies', 'showSchwarzschild', 'equalAspect', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
     $(id).checked = !!state.prefs[id];
   $('unit').value = state.prefs.unit;
   $('loop').checked = !!state.prefs.replayLoop;
@@ -859,9 +1102,11 @@ function syncControls() {
   $('pSpeed').value = $('speed').value;
   const background = $('background');
   background.innerHTML = '';
-  for (const name of [SELECTED, ALL, ...state.environments.filter(e => e.bodies.length || e.frames).map(e => e.name)])
-    background.add(new Option(name, name));
+  const names = state.backgrounds ? state.backgrounds.map(b => b.name)
+                                  : [SELECTED, ALL, ...state.environments.filter(e => e.bodies.length || e.frames).map(e => e.name)];
+  for (const name of names) background.add(new Option(name, name));
   background.value = state.background;
+  showDescription();
   const list = $('results');
   list.innerHTML = '';
   for (const r of state.results) {
@@ -881,16 +1126,23 @@ function syncControls() {
   showReplay();
 }
 
+/* the chosen background's description, under the Background menu */
+function showDescription() {
+  const background = currentBackground();
+  $('bgDescription').textContent = background ? background.description : '';
+  $('bgDescription').style.display = background && background.description ? '' : 'none';
+}
+
 function setup() {
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
   SPEEDS.forEach(s => { $('speed').add(new Option(speedName(s), s)); $('pSpeed').add(new Option(speedName(s), s)); });
   setupPlayer();
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showBodies', 'showSchwarzschild', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showSeam', 'showBodies', 'showSchwarzschild', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
     $(id).onchange = () => { state.prefs[id] = $(id).checked; draw(); };
   $('equalAspect').onchange = () => { state.prefs.equalAspect = $('equalAspect').checked; equalise(); draw(); };
   $('unit').onchange = () => { state.prefs.unit = +$('unit').value; draw(); };
   $('speed').onchange = () => { state.prefs.replaySpeed = $('speed').value; };
-  $('background').onchange = () => { state.background = $('background').value; draw(); };
+  $('background').onchange = () => { state.background = $('background').value; showDescription(); draw(); };
   $('fit').onclick = fit;
   $('play').onclick = () => play('together');
   $('playInTurn').onclick = () => play('sequence');

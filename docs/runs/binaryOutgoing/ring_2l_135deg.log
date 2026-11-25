@@ -1,5 +1,4 @@
 the outgoing wave of a binary: 1.4 + 1.4 solar masses, a = 100000 m, e = 0, with radiation reaction at (-2.18467e+06, 2.18467e+06) m, as a plane wave along (-0.707, 0.707), strain x 4912.25
 16 free particles on a ring of 2.317e+05 m round (-2.185e+06, 2.185e+06) m, 2 wavelengths out at 135 degrees; moved by the flow model with curved space
 stretched by up to 0.073 of its radius
-background frames: background_strain.csv
-background scalar: h+ (strain, scaled up 4.91e+03 times)
+backgrounds: binaryOutgoing.backgrounds.json

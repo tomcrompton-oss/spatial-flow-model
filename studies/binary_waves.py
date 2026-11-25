@@ -19,10 +19,14 @@ waves as GR does:
 
 viewer: the binary spiralling in from 150 km (the last 0.4 s kept), and beside it (though in truth far away along its
 axis) a ring of 16 free particles in its waves, scaled so the strain reaches 0.3 at the end: the ring's stretching
-grows and quickens - the chirp. (binaryWaves.full.json)
+grows and quickens - the chirp. three backgrounds to choose between, never added (binaryWaves.backgrounds.json,
+engine/backgrounds.py): the stars' own flow at its true scale (engine/radiation.py starFlow: each star's inflow from
+where it is), the wave's flow about the ring, scaled up as its strain is, and the stars' eikonal flow turning with
+them and the seam where their regions meet (engine/radiation.py TurningStars), within 4 a, where it holds.
+(binaryWaves.full.json)
 
 writes logs/binaryWaves/binaryWaves_<datetime>/: checks.log; csvs of the two bodies' paths and the ring's particles;
-the viewer files
+binaryWaves.backgrounds.json; the viewer files
 
 run: python3 studies/binary_waves.py [--checks | --viewer]      (both by default; a few minutes)
 """
@@ -35,11 +39,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 from engine.flow import SpecialFlowCalculator, Particle
-from engine.radiation import Binary, BinaryWave, peters
+from engine.radiation import Binary, BinaryWave, peters, starFlow, TurningStars, starsFrame
 from engine.constants import *
 from engine.logger import LOG_DIR
 from grav_wave import roundTrip, strainMatrix
 from two_body_escapes import writeViewerFiles
+from engine.backgrounds import Backgrounds, polar, LOG_LINE
 
 M1 = M2 = 1.4*MS
 MPC = 3.0857e22
@@ -249,6 +254,37 @@ def viewer(folder):
     f.write('%s\n%d free particles on a ring of %g m round (%g, %g) m; strain scaled to %g at the end\n'
             % (wave.describe(), particles, radius, *centre, shown))
   made.append((path, '#1baf7a', 'dotted'))
+  #the backgrounds (engine/backgrounds.py): three, never added together. the stars' flows are kept once, in the frame
+  #turning and shrinking with them (their pattern stays the same as they spiral in); the ring's wave is straight in
+  #space, two matrices a time
+  times = [r[0] for r in rows[0][::4]]
+  t0 = times[0]
+  bg = Backgrounds()
+  bg.add("the stars' flow, true scale",
+         "The stars' own flow of space at its true scale: each star's inflow, sqrt(2GM/d), from where the star is at"
+         " that moment (not where it was a light-travel time before), combined and pointing along g; g is the"
+         " acceleration of space. It turns and shrinks with the stars as they spiral in."
+         ).field("the stars' flow", starFlow(b), polar(0.02*a0, 1000*a0), [t0], starsFrame(b, times))
+  bg.add('the wave about the ring, \u00d7%.3g' % wave.scale,
+         "The flow of space the ring moves in: the binary's wave passing straight through the ring's plane - in truth"
+         " 40 Mpc away along the binary's axis, drawn here beside it - a shear about the ring's centre, scaled up"
+         " %.3g times as the strain is. Never added to the stars' flow, which is at its true scale." % wave.scale
+         ).linear('the wave', calc, centre, 1.7*radius, [r[0] for r in rows[0][::2]])
+  stars_ = TurningStars(b)
+  stars_.seam(t0)                                   #works out the seam's lines, in the reference orbit's frame
+  refFrame = starsFrame(b, times, ref=TurningStars.REF)
+  turning = bg.add("the stars' turning flow and its seam, within 4 a",
+                   "The stars' eikonal flow turning with them, at its true scale: each star carries its own flow, down"
+                   " zero-energy paths out of it, and their regions meet at the seam (dashed), which turns with them -"
+                   " the steady flow of the circular orbit they are on at each moment. It is a Newtonian flow, built in"
+                   " the frame turning with the stars, which moves at c about 5 orbit radii (a) out, so it is drawn"
+                   " only within 4 a.")
+  turning.field("the stars' turning flow", stars_, polar(0.02*TurningStars.REF, 4.2*TurningStars.REF), [t0], refFrame)
+  turning.lines("the seam, where the stars' regions of flow meet", lambda t: stars_.lines, [t0], refFrame)
+  bg.write(os.path.join(folder, 'binaryWaves.backgrounds.json'))
+  for path, *_ in made:
+    with open(path[:-4] + '.log', 'a') as f:
+      f.write('%s binaryWaves.backgrounds.json\n' % LOG_LINE)
   writeViewerFiles(folder, 'binaryWaves', made)
   print('viewer: %d steps for the ring, to t = %.4f s' % (step, tEnd), flush=True)
 
