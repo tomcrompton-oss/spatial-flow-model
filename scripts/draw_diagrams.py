@@ -1262,16 +1262,130 @@ def jupiterlight():
   return W, H, shapes
 
 
+def peeling():
+  """outgoing light near a black hole's horizon, in the flow's time (exact general relativity): space falls in (faint);
+  light sent out from just outside the horizon barely gains on the hole at first, its distance from the horizon
+  growing tenfold every 4.6 rs/c - peeling away exponentially; light sent out from inside is carried in"""
+  W, H = 760, 440
+  PX, PT, X0, Y0 = 330, 17, 60, 390          #pixels per rs, per rs/c; r = 0.8 rs at X0; t = 0 at Y0
+  P = lambda r, t: (X0 + (r - 0.8)*PX, Y0 - t*PT)
+  RMAX, TMAX = 2.1, 21
+  F = lambda r: (lambda s: s*s/2 + s + math.log(abs(s - 1)))(math.sqrt(r))
+  shapes = [arrow(P(0.8, 0), P(RMAX + 0.04, 0), 'ink', 1.0), arrow(P(0.8, 0), P(0.8, TMAX + 0.6), 'ink', 1.0),
+            text(*P(RMAX + 0.04, -2.6), 'r (rₛ)', 'ink', 0.9, anchor='end'), text(P(0.8, 0)[0] - 8, P(0, TMAX)[1], 't (rₛ/c)', 'ink', 0.9, anchor='end')]
+  for r in (1.0, 1.5, 2.0):
+    shapes += [line(P(r, 0), P(r, -0.35), 'ink', width=0.8), text(P(r, 0)[0], P(r, -1.4)[1], '%g' % r, 'ink', 0.8, anchor='middle')]
+  for t in (5, 10, 15, 20):
+    shapes += [line(P(0.8, t), (P(0.8, t)[0] - 6, P(0.8, t)[1]), 'ink', width=0.8), text(P(0.8, t)[0] - 10, P(0.8, t)[1] + 4, '%d' % t, 'ink', 0.8, anchor='end')]
+  #space falling in: r^1.5 = 1.5 (c0 - t)
+  for c0 in range(2, 40, 3):
+    pts = []
+    for k in range(200):
+      r = 0.8 + (RMAX - 0.8)*k/199
+      t = c0 - (2/3)*r**1.5
+      if 0 <= t <= TMAX:
+        pts.append(P(r, t))
+    if len(pts) > 1:
+      shapes += poly(pts, 'faint', 0.8)
+  shapes += [line(P(1, 0), P(1, TMAX), 'ink', dash=True, width=1.2), text(P(1, TMAX)[0] + 6, P(1, TMAX)[1] + 4, 'horizon', 'ink', 0.85)]
+  #outgoing light, exact: t = 2[F(r) - F(r0)]
+  for eps in (0.3, 0.1, 0.03, 0.01, 0.003, 0.001, 0.0003):
+    r0 = 1 + eps
+    pts = []
+    for k in range(400):
+      r = r0 + (RMAX - r0)*(k/399)**2
+      t = 2*(F(r) - F(r0))
+      if t <= TMAX:
+        pts.append(P(r, t))
+    shapes += poly(pts, 'v', 1.5)
+  for r0 in (0.97, 0.9):              #from inside: carried in
+    pts = []
+    for k in range(200):
+      r = r0 - (r0 - 0.8)*k/199
+      t = 2*(F(r) - F(r0))
+      if 0 <= t <= TMAX:
+        pts.append(P(r, t))
+    shapes += poly(pts, 'u', 1.5)
+  x0 = 545
+  shapes += [line((x0, 90), (x0 + 30, 90), 'v', width=1.5), text(x0 + 38, 86, 'light sent out from', 'ink', 0.85),
+             text(x0 + 38, 104, 'just outside', 'ink', 0.85),
+             line((x0, 140), (x0 + 30, 140), 'u', width=1.5), text(x0 + 38, 136, 'light sent out from', 'ink', 0.85),
+             text(x0 + 38, 154, 'inside: carried in', 'ink', 0.85),
+             line((x0, 190), (x0 + 30, 190), 'faint', width=0.8), text(x0 + 38, 195, 'space falling in', 'ink', 0.85),
+             text(x0, 250, 'Near the horizon, light\'s', 'ink', 0.85), text(x0, 268, 'distance from it grows', 'ink', 0.85),
+             text(x0, 286, 'by a factor of e every', 'ink', 0.85), text(x0, 304, '2 rₛ/c: the rate the', 'ink', 0.85),
+             text(x0, 322, 'inflow speeds up across', 'ink', 0.85), text(x0, 340, 'the horizon, c/2rₛ.', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def pairs():
+  """where the radiation's energy comes from: a pair from the vacuum's fluctuations at the horizon, one escaping with
+  positive energy, its partner carried in with negative energy (as measured far away), so the hole's mass falls"""
+  W, H = 760, 330
+  hx, y = 330, 150
+  shapes = [rect(40, 60, hx - 40, 180, fill='fill', colour='fill'), text(160, 200, 'inside the horizon', 'ink', 0.85, anchor='middle'),
+            line((hx, 50), (hx, 250), 'ink', dash=True, width=1.4), text(hx, 40, 'horizon', 'ink', 0.85, anchor='middle')]
+  for x in (90, 170, 250, 410, 500, 600, 690):
+    for yy in (80, 220):
+      L = 46*math.sqrt(140/max(abs(x - 40), 60))
+      shapes.append(arrow((x, yy), (x - L, yy), 'u', 1.2))
+  #the pair, just outside
+  px = hx + 22
+  shapes += [ellipse(px, y, 5, 5, 'ink'), text(px + 6, y + 30, 'a pair from the', 'ink', 0.8), text(px + 6, y + 46, 'vacuum\'s fluctuations', 'ink', 0.8)]
+  wig = lambda xa, xb: [(xa + (xb - xa)*k/60, y - 2 + 5*math.sin(k/60*(xb - xa)/9)) for k in range(61)]
+  shapes += poly(wig(px + 8, px + 230), 'v', 1.6) + [arrow((px + 222, y - 2), (px + 240, y - 2), 'v', 1.6)]
+  shapes += poly(wig(px - 8, px - 200), 'u', 1.6) + [arrow((px - 192, y - 2), (px - 210, y - 2), 'u', 1.6)]
+  shapes += [text(px + 120, y - 22, 'escapes: positive energy', 'v', 0.85, anchor='middle'),
+             text(px + 120, y - 6, '', 'v', 0.85, anchor='middle'),
+             text(px - 110, y - 22, 'carried in: negative energy', 'u', 0.85, anchor='middle'),
+             text(W/2, 290, 'Each pair adds up to nothing. What escapes is the radiation; what falls in lowers the hole\'s mass by the same.',
+                  'ink', 0.85, anchor='middle'),
+             arrow((60, 312), (94, 312), 'u', 1.2), text(104, 317, 'space flowing in (energies as measured far away)', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def dumbhole():
+  """Unruh's dumb hole: a fluid speeding up through a narrowing channel; where it outruns sound there is a sonic
+  horizon, beyond which sound sent upstream is swept downstream - the fluid's black hole"""
+  W, H = 760, 330
+  y0, top, bottom = 150, 60, 240
+  width = lambda x: 90 - 60/(1 + math.exp(-(x - 330)/50))       #the channel's half width, narrowing downstream
+  shapes = []
+  shapes += poly([(x, y0 - width(x)) for x in range(40, 721, 10)], 'ink', 1.6)
+  shapes += poly([(x, y0 + width(x)) for x in range(40, 721, 10)], 'ink', 1.6)
+  speed = lambda x: 90/width(x)                                   #the flow speeds up as the channel narrows
+  sonic = next(x for x in range(40, 721) if speed(x) >= 2.0)
+  for x in range(70, 711, 64):
+    L = 14*speed(x)
+    shapes.append(arrow((x - L/2, y0), (x + L/2, y0), 'u', 1.3))
+  shapes += [line((sonic, y0 - width(sonic) - 14), (sonic, y0 + width(sonic) + 14), 'v', dash=True, width=1.5),
+             text(sonic, y0 - width(sonic) - 22, 'sonic horizon', 'v', 0.85, anchor='middle')]
+  #sound sent upstream: makes it out on the slow side, swept back on the fast side
+  for x, ok in ((200, True), (560, False)):
+    yy = y0 + 32
+    if ok:
+      shapes += poly(circle_points(x, yy, 10, math.pi/2, 3*math.pi/2, 12), 'v', 1.2) + [arrow((x - 14, yy), (x - 44, yy), 'v', 1.2)]
+      shapes += [text(x - 30, yy + 24, 'sound gets upstream', 'ink', 0.8, anchor='middle')]
+    else:
+      shapes += poly(circle_points(x, yy, 10, math.pi/2, 3*math.pi/2, 12), 'v', 1.2) + [arrow((x + 4, yy + 10), (x + 34, yy + 10), 'v', 1.2)]
+      shapes += [text(x + 10, yy + 34, 'sound sent upstream', 'ink', 0.8, anchor='middle'), text(x + 10, yy + 50, 'is swept down', 'ink', 0.8, anchor='middle')]
+  shapes += [text(40, 30, 'flow speeding up as the channel narrows', 'ink', 0.85),
+             text(W/2, 305, 'A dumb hole (Unruh, 1981): sound plays the part of light, and the moving fluid the part of flowing space.',
+                  'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
 TESTS = os.path.join(ROOT, 'docs', 'part1', 'tests', 'images')
 PART1 = os.path.join(ROOT, 'docs', 'part1', 'images')
 PART2 = os.path.join(ROOT, 'docs', 'part2', 'images')
+PART6 = os.path.join(ROOT, 'docs', 'part6', 'images')
 DIAGRAMS = {'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
             'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro,
             'funnel': funnel, 'falling': falling, 'spacetime': spacetime,
-            'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
+            'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'peeling': peeling, 'pairs': pairs, 'dumbhole': dumbhole, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
 FOLDER = {'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
           'funnel': PART1, 'falling': PART1, 'spacetime': PART1,
-          'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
+          'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'peeling': PART6, 'pairs': PART6, 'dumbhole': PART6, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
 
 
 # --- drawing ----------------------------------------------------------------------------------------------------------
