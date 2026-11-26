@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+light sent straight out at t 3467.35 s from 1.5625 rs by the probe (held)
+  10  held     3000.0   3467.35   3467.35    1.56250    1.56250     4655.49     4655.49    500.00   1.69e-09

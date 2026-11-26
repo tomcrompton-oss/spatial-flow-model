@@ -27,6 +27,8 @@ destination. But space is empty. A river quickly speeds a floating object up to 
 and stops a moving one; space does not slow moving objects, so we would not expect steadily moving space to speed up
 a stationary one.
 
+The [Hypothesis](../hypothesis.md) says *that* space flows. The postulates below say *how* things move in it.
+
 **Postulates**
 
 1. A particle in moving space has a velocity, seen by a distant observer, made up of the velocity of the space it is
@@ -46,18 +48,21 @@ another adds nothing to that (postulate 3).
 Part 1 starts with the simplest case: a single non-rotating, spherically symmetric body, with test particles of
 negligible mass moving under no other force (though a particle may be held still, like an object on the surface of a
 planet). The mechanics are described first in [Newtonian](newtonian.md) terms, then with
-[special relativity](special-relativistic.md), and each is run as a simulation.
+[special relativity](special-relativistic.md), and each is run as a simulation. [The Four Clocks](four-clocks.md)
+then shows what the special relativistic version means for time.
 
 ## The velocity of space
 
-Take the simplest case: a non-rotating, spherically symmetric body. We assume that space follows the path of test
-particles falling from rest far away. Then the space at distance $r$ from the body has a velocity equal to the
+We assume that space round such a body follows the path of test particles falling from rest far away. Then the space at distance $r$ from the body has a velocity equal to the
 classical escape velocity, towards the body (along the unit vector $\hat n$ pointing at it). We call this the
 gravitational velocity:
 
 $$
 \mathbf u_g = v_e\,\hat n = \sqrt{\frac{2GM}{r}}\;\hat n
 $$
+
+The [Hypothesis](../hypothesis.md) wrote its size as $v_e$; from here on we write the velocity of space simply as
+$\mathbf u$, as in $\mathbf v = \mathbf u + \mathbf w$.
 
 - It is a true velocity (unlike the classical escape velocity, which is a speed).
 - It always points directly at the body: round a body that doesn't spin, space only ever flows towards it. Unlike

@@ -39,7 +39,7 @@ part. Because the error falls as the step squared, two runs give the answer for 
 
 <iframe src="../../../viewer/index.html?player&run=../runs/mercuryCentury/mercuryCentury.full.json" width="100%" height="480" loading="lazy" title="Mercury's perihelion over a century"></iframe>
 
-*Mercury's real orbit for a century, 417 orbits round the Sun alone, at a step of 1 × 10⁻⁴: its perihelion's advance orbit by orbit
+*Mercury's real orbit round the Sun alone for 417 orbits, a little over a century (a century is 415), at a step of 1 × 10⁻⁴: its perihelion's advance orbit by orbit
 (solid), 42.60″ by the end of the century, against exact general relativity's 43.01″ (dashed). The gap is the step's
 error, under 1% here, which the table above shows shrinking to nothing as the step does. The run took 43 minutes.* [Open full screen](../../../viewer/index.html?run=../runs/mercuryCentury/mercuryCentury.full.json){ target=_blank }
 

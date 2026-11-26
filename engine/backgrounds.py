@@ -17,6 +17,9 @@ kB, and covers the whole screen at any zoom
                                                    space, du/dt + (u . grad) u), sampled on grid at each of times
   b.scalar(label, field, grid, times=(0,), frame=None)
                                                    a colour map: field(X, Y, t) on arrays of points
+  b.twist(label, field, grid, times=(0,), frame=None)
+                                                   twist arcs: field(X, Y, t) a rate of turning (rad/s, positive
+                                                   anticlockwise), drawn as an arc at each point
   b.lines(label, lines, times=(0,), frame=None)     lines(t): a list of (n, 2) arrays (a seam)
   b.linear(label, calc, centre, radius, times)     a flow straight in space about centre, u = M(t) (x - centre) (a
                                                    plane wave through the plane): two matrices a time
@@ -34,8 +37,9 @@ in a turning frame (two stars on a circular orbit), and for an orbit that shrink
 
 the file (version 1):
   {"kind": "backgrounds", "version": 1, "shared": [layer, ...], "backgrounds": [{"name", "description",
-    "reference": {"u", "a", "s"}, "layers": [layer or {"shared": k}, ...]}, ...]}
-  field:  {"type": "field", "label", "grid", "components": ["u_x", "u_y", "a_x", "a_y"] or ["s"] (a colour map),
+    "reference": {"u", "a", "s", "t"}, "layers": [layer or {"shared": k}, ...]}, ...]}
+  field:  {"type": "field", "label", "grid", "components": ["u_x", "u_y", "a_x", "a_y"], ["s"] (a colour map) or ["t"]
+           (twist arcs),
            "scale": {"u": ...}, "times": [...], "frame": frame or null, "data": base64 of little-endian int16,
            sign(v) (1 + round(800 (log10 |v/scale| + 20))) per component per point per time (0 for 0), -32768
            where there is no value}
@@ -136,7 +140,7 @@ class Background:
   def __init__(self, name, description):
     self.name, self.description = name, description
     self.layers = []
-    self.sizes = {'u': [], 'a': [], 's': []}       #for the background's reference scales
+    self.sizes = {'u': [], 'a': [], 's': [], 't': []}       #for the background's reference scales
 
   def field(self, label, calc, grid, times=(0.0,), frame=None, steady=False):
     """u and g from calc on grid at each of times (see the module notes); steady: no du/dt (bodies at rest)"""
@@ -188,6 +192,25 @@ class Background:
     scale = percentile(np.abs(values).ravel(), 98) or 1.0
     self.sizes['s'].append(self.worldSizes(np.abs(values[..., 0]), frame, times, 's'))
     self.layers.append({'type': 'field', 'label': label, 'grid': grid, 'components': ['s'], 'scale': {'s': scale},
+                        'times': times, 'frame': frame.json() if frame else None,
+                        'data': encode(values/scale, 1.0)})
+    return self
+
+  def twist(self, label, field, grid, times=(0.0,), frame=None):
+    """
+    twist arcs: field(X, Y, t) a rate of turning about the axis out of the plane (rad/s, positive anticlockwise) at the
+    grid's points - a spinning hole's twist, say - drawn as an arc at each point turning that way, its sweep the rate
+    """
+    pts = points(grid)
+    times = [float(t) for t in times]
+    values = []
+    for t in times:
+      world = frame.toWorld(pts, t) if frame else pts
+      values.append(np.asarray(field(world[:, 0], world[:, 1], t), dtype=float))
+    values = np.array(values)[..., None]
+    scale = percentile(np.abs(values[np.isfinite(values)]).ravel(), 90) or 1.0
+    self.sizes['t'].append(np.abs(values[..., 0]).ravel())
+    self.layers.append({'type': 'field', 'label': label, 'grid': grid, 'components': ['t'], 'scale': {'t': scale},
                         'times': times, 'frame': frame.json() if frame else None,
                         'data': encode(values/scale, 1.0)})
     return self
@@ -244,7 +267,7 @@ class Background:
 
   def json(self):
     reference = {}
-    for q, p in (('u', 90), ('a', 90), ('s', 98)):
+    for q, p in (('u', 90), ('a', 90), ('s', 98), ('t', 90)):
       if self.sizes[q]:
         reference[q] = percentile(np.concatenate(self.sizes[q]), p)
     return {'name': self.name, 'description': self.description, 'reference': reference, 'layers': self.layers}

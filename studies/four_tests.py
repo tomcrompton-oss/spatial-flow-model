@@ -6,7 +6,9 @@ its own: python3 studies/four_tests.py bending precession orbit shapiro mercury
   bending     light past the Sun (b = 1 solar radius), and past a 1 solar-mass hole at impact parameters down by
               tens to 7 Schwarzschild radii, from 10 AU before to 10 AU after: the bend against GR's exact bending
               for the light's own impact parameter (cL/E: light started b off the axis where space flows along it
-              passes a little closer, by u/c), and Newtonian gravity at c for the half-size bend
+              passes a little closer, by u/c); for the Sun also Newtonian gravity at c, the Newtonian flow procedure
+              (plain addition) and special relativity with Newton's gravity on the light's energy, each the
+              half-size bend
   precession  Mercury's orbit scaled down 10^4, 10^5 and 3 x 10^5 times, at three step sizes: the precession
               against GR's exact precession for the orbit's own periapsis and apoapsis, the difference falling with
               the step
@@ -44,6 +46,7 @@ from engine.exact import (grDeflectionExact, grPrecessionExact, grRayExact, shap
 from studies.compare_step_size import orbit
 from studies.compare_second_order import precession, apsis, PERIHELION
 from two_body_escapes import writeViewerFiles
+from newtonian_flow import NewtonianFlow
 
 RS = schwarzschildRadius(MS)
 FRACTION = 3e-4            #the step: each moves at most this fraction of the distance to the Sun
@@ -62,9 +65,33 @@ def adaptive(dtMax, fraction=FRACTION):
 
 #---------------------------------------------------------------- bending
 
-def bend(start, b, fraction=FRACTION, newton=False):
-  """light from (-start, b) along +x to x = +start: its bend, GR's impact parameter as it starts, closest approach"""
-  calc = NewtonianCalculator([Body(MS)]) if newton else SpecialFlowCalculator([Body(MS)], order=2)
+class SpecialRelativistic(NewtonianCalculator):
+  """
+  special relativity with Newton's gravity as a force on the light's energy, F = (E/c^2) g: then
+  dv/dt = g - (g . v) v / c^2, and light keeps to c, its path turned by the part of g across it - half general
+  relativity's bend. second order (the midpoint's rates), |v| held at c
+  """
+  def move(self, p, dt):
+    acc = lambda x, v: (lambda g: g - (g @ v)*v/C**2)(self.gravity(x))
+    xm = p.pos + p.v*dt/2
+    vm = p.v + acc(p.pos, p.v)*dt/2
+    p.v = p.v + acc(xm, vm)*dt
+    p.v = p.v*C/np.linalg.norm(p.v)
+    p.pos = p.pos + vm*dt
+    p.pt += dt
+    p.t += dt
+
+
+def bend(start, b, fraction=FRACTION, newton=False, kind=None):
+  """
+  light from (-start, b) along +x to x = +start: its bend, GR's impact parameter as it starts, closest approach.
+  kind: None, the flow model; 'newton', Newtonian gravity at c; 'newtonflow', the Newtonian flow procedure (plain
+  addition, studies/newtonian_flow.py, second order); 'special', special relativity with Newton's gravity
+  """
+  kind = 'newton' if newton else kind
+  calc = {'newton': lambda: NewtonianCalculator([Body(MS)]), 'special': lambda: SpecialRelativistic([Body(MS)]),
+          'newtonflow': lambda: NewtonianFlow([Body(MS)], order=2)}.get(kind, lambda: SpecialFlowCalculator([Body(MS)], order=2))()
+  newton = kind in ('newton', 'special')
   p = Particle()
   p.pos = np.array([-start, b])
   if newton:
@@ -89,11 +116,16 @@ def bending(lines):
   lines.append('  the Sun, b = 1 solar radius:')
   sim, bGR, closest = bend(start, RSUN)
   newt, _, _ = bend(start, RSUN, newton=True)
+  nflow, _, _ = bend(start, RSUN, kind='newtonflow')
+  special, _, _ = bend(start, RSUN, kind='special')
   exact = grDeflectionExact(bGR)
   lines.append('    flow model %.7e rad (%.4f arcsec); GR exact at its impact parameter %.7e; ratio - 1 %.2e' %
                (sim, sim/ARCSEC, exact, sim/exact - 1))
   lines.append('    Newtonian gravity at c %.7e rad (%.4f arcsec), %.5f of GR; 4GM/c^2 b %.7e' %
                (newt, newt/ARCSEC, newt/exact, 4*G*MS/(C*C*RSUN)))
+  lines.append('    Newtonian flow %.7e rad (%.4f arcsec), %.5f of GR' % (nflow, nflow/ARCSEC, nflow/exact))
+  lines.append('    special relativity, Newton\'s gravity on the light\'s energy %.7e rad (%.4f arcsec), %.5f of GR' %
+               (special, special/ARCSEC, special/exact))
   lines.append('    (closest approach %.0f m; GR\'s impact parameter %.6f of b: u/c at the start)' % (closest, bGR/RSUN))
   lines.append('')
   lines.append('  a 1 solar-mass hole (r_s = %.1f m):' % RS)

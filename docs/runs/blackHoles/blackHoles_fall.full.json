@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "blackHoles_fall.prefs.json",
+  "config": "blackHoles_fall.config.json"
+}

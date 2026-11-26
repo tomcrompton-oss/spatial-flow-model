@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+light from 1.50 rs at t 2302.02 s, at 60 degrees
+backgrounds: blackHoles_flashes.backgrounds.json

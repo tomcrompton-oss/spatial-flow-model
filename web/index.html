@@ -22,6 +22,7 @@
   header h1 { font-size: 15px; margin: 0 8px 0 0; }
   #plotWrap { position: relative; min-height: 0; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  #spinLayer { position: absolute; inset: 0; pointer-events: none; }
   aside { border-left: 1px solid var(--grid); padding: 10px 12px; overflow: auto; }
   aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink2); margin: 14px 0 6px; }
   aside h2:first-child { margin-top: 0; }
@@ -105,6 +106,7 @@
   </header>
   <div id="plotWrap">
     <canvas id="plot"></canvas>
+    <canvas id="spinLayer"></canvas>
     <div id="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
     <div id="drop">Drop a run folder</div>
   </div>
@@ -117,9 +119,11 @@
     <label class="check"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
     <label class="check"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
     <label class="check"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
+    <label class="check"><input type="checkbox" id="showTwist"> twist arcs (how fast space turns things, round a spinning hole)</label>
     <label class="check"><input type="checkbox" id="showSeam"> lines (the seam, where the bodies' regions of flow meet)</label>
     <label class="check"><input type="checkbox" id="showBodies"> bodies</label>
     <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons</label>
+    <label class="check"><input type="checkbox" id="showSpin"> spinning bodies (turning the way they spin, not at their real speed)</label>
     <p class="note">Arrows, colour maps and seams come from a run's background frames; options greyed out have no data for the background shown.</p>
     <h2>View</h2>
     <select id="unit"></select>

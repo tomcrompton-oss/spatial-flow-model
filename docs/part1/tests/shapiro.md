@@ -4,7 +4,7 @@
 Irwin Shapiro proposed a further test that could be done within the solar system, sometimes called the fourth
 classical test: a delay in the round-trip time of radar signals bounced off other planets. The situation is like the
 bending of light, and the effect is usually put down to time dilation, like the redshift. In flowing space it also
-shows which clocks the flow's time is.
+shows whose clocks keep the flow's time.
 
 ![A radar pulse from the Earth to Venus, on the far side of the Sun, and its echo back, both passing close to the Sun through space flowing in towards it: the round trip takes about 200 µs longer than at c in flat space](images/shapiro.svg)
 

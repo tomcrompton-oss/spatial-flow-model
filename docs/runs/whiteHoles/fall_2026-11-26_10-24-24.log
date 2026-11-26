@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  white
+falling from rest at infinity into a white hole, from 20 rs (t = 0), against the outflow
+fall: from rest at infinity against the outflow, passing START = 20 rs at t = 0; at t 4000.0 s it is at 1.000002 rs, its clock at 2324.017 s (exact 2324.016 s; a black hole fall reaches the horizon at 2324.017 s), running at 7.69e-07 of the white hole's time

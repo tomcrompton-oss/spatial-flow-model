@@ -43,7 +43,7 @@ straight – but only by letting its local speed exceed $c$, which is why the re
 entering the first moving region slows its local velocity slightly, and as it crosses further regions this becomes a
 rotation: the photon's path curves.
 
-![Light crossing regions of space flowing downwards ever faster: its velocity in each region (red) turns, and the path seen from outside (blue) curves](images/regions.png)
+![Light crossing regions of space flowing downwards ever faster: its velocity through each region (green) turns while staying at c, and the path seen from outside (red) curves](images/regions.svg)
 
 This is an example of Thomas precession (Wigner rotation). It is **not** a direct effect of gravity on the particle —
 none of these regions is being accelerated by gravity — but an extra effect that applies only to particles moving

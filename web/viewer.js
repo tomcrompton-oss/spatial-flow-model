@@ -11,6 +11,7 @@ http://localhost:8000/web/index.html?run=../logs/<study>/<run>/<view>.full.json)
 'use strict';
 
 const G = 6.6743e-11, C = 299792458, AU = 1.495978707e11, MS = 1.989e30;
+const TIME_COLUMN = /^(t|time|pt|proper_t|tau)$/;   //columns of time: against them bodies and horizons are lines
 const UNITS = [['m', 1], ['km', 1e3], ['AU', AU], ['light-seconds', C]];
 const SPEEDS = ['0.1', '0.2', '0.5', '1', '2', '5', '10'];
 const speedName = s => '×' + s;   //×0.1 ... ×10
@@ -21,8 +22,8 @@ const ARROW_SPACING = 40;   //pixels between background arrows
 const PLAYER = new URLSearchParams(location.search).has('player');   //the cut-down player, for embedding in pages
 const REPLAY_SECONDS = 20;  //a whole run at 1x
 const ALL = 'All environments', SELECTED = "Selected result's environment";
-const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showScalar: true, showSeam: true,
-               showBodies: true, showSchwarzschild: true, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false};
+const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showScalar: true, showTwist: true, showSeam: true,
+               showBodies: true, showSchwarzschild: true, showSpin: false, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false};
 
 const state = {
   results: [],         //{name, file, data, paths, log, env, visible, color}
@@ -316,6 +317,25 @@ function fit() {
           x0 = Math.min(x0, p.x[i]); x1 = Math.max(x1, p.x[i]); y0 = Math.min(y0, p.y[i]); y1 = Math.max(y1, p.y[i]);
         }
   if (!isFinite(x0)) { state.view = [-1, 1, -1, 1]; draw(); return; }
+  //against time, the bodies' lines are in view too
+  const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
+  const timeX = path && TIME_COLUMN.test(path.xName || ''), timeY = path && TIME_COLUMN.test(path.yName || '');
+  if (state.prefs.showBodies && (timeX || timeY))
+    for (const env of fieldEnvironments())
+      for (const body of env.bodies) {
+        const at = bodyCoordinate(timeY ? path.xName : path.yName, body);
+        if (at === null) continue;
+        if (timeY) { x0 = Math.min(x0, at); x1 = Math.max(x1, at); } else { y0 = Math.min(y0, at); y1 = Math.max(y1, at); }
+      }
+  //in x / y, a body just off the paths (light near a hole) is brought into view; one far away is left out
+  else if (state.prefs.showBodies && /^(pos_)?x$/.test(path.xName || '') && /^(pos_)?y$/.test(path.yName || '')) {
+    const size = Math.max(x1 - x0, y1 - y0);
+    for (const env of fieldEnvironments())
+      for (const body of env.bodies)
+        if (Math.max(x0 - body.x, body.x - x1, y0 - body.y, body.y - y1) < size) {
+          x0 = Math.min(x0, body.x); x1 = Math.max(x1, body.x); y0 = Math.min(y0, body.y); y1 = Math.max(y1, body.y);
+        }
+  }
   const padX = (x1 - x0 || Math.abs(x0) || 1) * 0.08, padY = (y1 - y0 || Math.abs(y0) || 1) * 0.08;
   state.view = [x0 - padX, x1 + padX, y0 - padY, y1 + padY];
   equalise();
@@ -377,7 +397,9 @@ function draw() {
     if (until !== false) for (const p of result.paths) drawPath(result, p, until);
   }
   flushDots();
+  spinning.length = 0;
   for (const env of fieldEnvironments()) drawBodies(env);
+  drawSpinning();
   ctx.restore();
   ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1; ctx.strokeRect(l, t, r - l, b - t);
   drawAxes(false);
@@ -389,7 +411,7 @@ function draw() {
 function axes() {
   const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
   const one = name => {
-    if (/^(t|time|pt|proper_t|tau)$/.test(name || '')) return {label: name + ' (s)', scale: 1};
+    if (TIME_COLUMN.test(name || '')) return {label: name + ' (s)', scale: 1};
     if (/\(.+\)\s*$/.test(name || '')) return {label: name, scale: 1};     //a column that names its own unit
     const [unit, scale] = UNITS[state.prefs.unit];
     return {label: ({pos_x: 'x', pos_y: 'y'}[name] || name || 'x') + ' (' + unit + ')', scale};
@@ -505,9 +527,11 @@ function syncAvailable() {
       ['showFlow', has('u'), 'no flow of space (u) saved for ' + which],
       ['showGravity', has('a'), 'no acceleration of space (g) saved for ' + which],
       ['showScalar', has('s'), 'no colour-map field saved for ' + which],
+      ['showTwist', has('t'), 'no twist saved for ' + which + ' (only a spinning hole\'s river has one)'],
       ['showSeam', has('seam'), 'no seam saved for ' + which + ' (only the eikonal flows have one)'],
       ['showBodies', bodies, 'no bodies in ' + which],
-      ['showSchwarzschild', bodies, 'no bodies, so no horizons, in ' + which]]) {
+      ['showSchwarzschild', bodies, 'no bodies, so no horizons, in ' + which],
+      ['showSpin', envs.some(e => e.bodies.some(b => b.spin)), 'no spinning bodies in ' + which]]) {
     const box = $(id);
     if (box.disabled === !ok) continue;
     box.disabled = !ok;
@@ -515,20 +539,98 @@ function syncAvailable() {
   }
 }
 
+/* a body's place on the axis a column plots: its x or y for a position, the origin for a distance from it; null
+   for anything else */
+function bodyCoordinate(name, body) {
+  if (/^(pos_)?x$/.test(name || '')) return body.x;
+  if (/^(pos_)?y$/.test(name || '')) return body.y;
+  if (/^(r|d|dist|distance)$/.test(name || '')) return 0;
+  return null;
+}
+
 function drawBodies(env) {
   if (!state.prefs.showBodies && !state.prefs.showSchwarzschild) return;
+  const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
+  const timeX = path && TIME_COLUMN.test(path.xName || ''), timeY = path && TIME_COLUMN.test(path.yName || '');
+  if (timeX || timeY) {
+    //against time a body stays where it is: a line along the time axis, and its horizon a dotted line either side
+    const {l, t: top, r, b} = plotRect();
+    const across = (at, dash, colour, width) => {
+      const [sx, sy] = toScreen(timeY ? at : 0, timeY ? 0 : at);
+      ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.setLineDash(dash);
+      if (timeY) line(sx, top, sx, b); else line(l, sy, r, sy);
+      ctx.setLineDash([]); ctx.lineWidth = 1;
+    };
+    for (const body of env.bodies) {
+      const at = bodyCoordinate(timeY ? path.xName : path.yName, body);
+      if (at === null) continue;
+      if (state.prefs.showSchwarzschild) {
+        const rs = 2 * G * body.mass / C / C;
+        for (const side of [-1, 1]) across(at + side * rs, [2, 3], css('--ink2'), 1);
+      }
+      if (state.prefs.showBodies) across(at, [], body.black ? '#111' : css('--ink'), 2.5);
+    }
+    return;
+  }
   const scale = (toScreen(1, 0)[0] - toScreen(0, 0)[0]);
   for (const body of env.bodies) {
     const [sx, sy] = toScreen(body.x, body.y);
     if (state.prefs.showSchwarzschild) {
-      const rs = 2 * G * body.mass / C / C * scale;
-      if (rs > 2) { ctx.strokeStyle = css('--ink2'); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.arc(sx, sy, rs, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]); }
+      //the horizon; a spinning hole's (Kerr, r+ = M + sqrt(M^2 - a^2)) at the flat distance R = sqrt(r^2 + a^2),
+      //with its ergosphere, r = 2M in the equatorial plane, dashed outside it
+      const M = G * body.mass / C / C, a = (body.spin || 0) * M;
+      const ring = (R, dash) => {
+        if (R * scale <= 2) return;
+        ctx.strokeStyle = css('--ink2'); ctx.setLineDash(dash); ctx.beginPath(); ctx.arc(sx, sy, R * scale, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+      };
+      const rPlus = M + Math.sqrt(Math.max(M * M - a * a, 0));
+      ring(Math.hypot(rPlus, a), [2, 3]);
+      if (a) ring(Math.hypot(2 * M, a), [7, 5]);
     }
+    if (state.prefs.showBodies && state.prefs.showSpin && body.spin) { spinning.push({sx, sy, body}); continue; }
     if (state.prefs.showBodies) {
       ctx.fillStyle = body.black ? '#111' : '#fff'; ctx.strokeStyle = css('--ink'); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(sx, sy, 6, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
     }
   }
+}
+
+/* spinning bodies, on a canvas over the plot so that they turn without the plot being redrawn: each a disc with
+   three spokes turning the way the body spins (anticlockwise for positive spin) at SPIN_RATE times its spin (rad/s of
+   the page's clock: a picture, not the real rate), and an arrow round it */
+const SPIN_RATE = 2.5, spinning = [], spinCanvas = $('spinLayer'), spinCtx = spinCanvas.getContext('2d');
+let spinFrame = null;
+function drawSpinning() {
+  if (spinning.length) { if (spinFrame === null) spinFrame = requestAnimationFrame(turnSpinning); }
+  else turnSpinning();   //clears it
+}
+function turnSpinning(now = performance.now()) {
+  if (spinFrame !== null) cancelAnimationFrame(spinFrame);
+  spinFrame = null;
+  const ratio = window.devicePixelRatio || 1, w = spinCanvas.clientWidth, h = spinCanvas.clientHeight;
+  if (spinCanvas.width !== Math.round(w * ratio) || spinCanvas.height !== Math.round(h * ratio)) {
+    spinCanvas.width = Math.round(w * ratio); spinCanvas.height = Math.round(h * ratio);
+  }
+  const c = spinCtx;
+  c.setTransform(ratio, 0, 0, ratio, 0, 0);
+  c.clearRect(0, 0, w, h);
+  if (!spinning.length || !state.view) return;
+  const {l, t, r, b} = plotRect();
+  c.save(); c.beginPath(); c.rect(l, t, r - l, b - t); c.clip();
+  for (const {sx, sy, body} of spinning) {
+    const R = 10, turn = -Math.sign(body.spin) * SPIN_RATE * Math.min(1, Math.abs(body.spin)) * now / 1000;
+    c.fillStyle = body.black ? '#111' : '#fff'; c.strokeStyle = css('--ink'); c.lineWidth = 1;
+    c.beginPath(); c.arc(sx, sy, R, 0, 2 * Math.PI); c.fill(); c.stroke();
+    c.strokeStyle = body.black ? '#fff' : css('--ink'); c.lineWidth = 1.6;
+    for (let k = 0; k < 3; k++) {
+      const a = turn + k * 2 * Math.PI / 3;
+      c.beginPath(); c.moveTo(sx + 2.5 * Math.cos(a), sy + 2.5 * Math.sin(a)); c.lineTo(sx + (R - 2) * Math.cos(a), sy + (R - 2) * Math.sin(a)); c.stroke();
+    }
+    c.strokeStyle = css('--ink'); c.fillStyle = css('--ink'); c.lineWidth = 1.4;
+    twistArc(c, sx, sy, R + 5, 1.5 * Math.PI, body.spin > 0, 7);   //an arrow three quarters of the way round
+  }
+  c.restore();
+  spinFrame = requestAnimationFrame(turnSpinning);
 }
 
 /* the environments whose backgrounds are drawn: all shown results' (All environments), or the selected result's */
@@ -598,7 +700,7 @@ function currentBackground() {
   return state.backgrounds.find(b => b.name === state.background) || state.backgrounds[0];
 }
 
-/* whether a background can draw u, a (g), s (a colour map) or lines (the seam) */
+/* whether a background can draw u, a (g), s (a colour map), t (twist arcs) or lines (the seam) */
 function backgroundHas(background, key) {
   return background.layers.some(l => l.type === 'field' ? !!l.values[key] : l.type === 'linear' ? key === 'u' || key === 'a'
                                                          : l.type === 'lines' && key === 'seam');
@@ -665,6 +767,7 @@ function sampleLayer(layer, key, x, y, t) {
   if (!isFinite(out[0]) || !isFinite(out[1])) return null;
   if (!fr) return out;
   if (key === 's') return [out[0] * fr.s, 0];
+  if (key === 't') return [out[0], 0];
   const c = Math.cos(fr.angle), s = Math.sin(fr.angle), m = fr[key];
   return [(c * out[0] - s * out[1]) * m, (s * out[0] + c * out[1]) * m];
 }
@@ -722,6 +825,14 @@ function drawBackground(background) {
     drawArrows((x, y) => sampleBackground(background, key, x, y, t), colour, ref, offset);
     keys.push([colour, label + '  ' + (key === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment]);
   }
+  if (state.prefs.showTwist && backgroundHas(background, 't')) {
+    const ref = backgroundReference(background, 't');
+    if (ref) {
+      drawTwist((x, y) => sampleBackground(background, 't', x, y, t), ref);
+      const label = background.layers.find(l => l.type === 'field' && l.values.t).label;
+      keys.push([TWIST, label + ': a full arc ' + fmt(ref) + ' rad/s' + moment]);
+    }
+  }
   if (state.prefs.showSeam)
     for (const layer of background.layers.filter(l => l.type === 'lines')) {
       const k = Math.floor(timeIndex(layer.times, t)), fr = layer.frame ? frameAt(layer.frame, t) : null;
@@ -763,6 +874,34 @@ function drawScalar(sample, reference) {
 function speed(v) { return v >= 1e3 ? fmt(v / 1e3) + ' km/s' : fmt(v) + ' m/s'; }
 
 /* arrows on a screen grid, each from its grid point, its length in proportion to the field (capped at a full one) */
+/* twist arcs (a spinning hole's river): at each point of a grid a quarter of the way between the arrows', an arc turning the way space turns
+   there (anticlockwise for a positive rate), its sweep the rate over reference (300 degrees at most); tiny ones left out */
+const TWIST = '#0f766e';
+function drawTwist(sample, reference) {
+  const {l, t: top, r, b} = plotRect(), shift = ARROW_SPACING * 0.75, radius = ARROW_SPACING * 0.2;
+  ctx.strokeStyle = TWIST; ctx.fillStyle = TWIST; ctx.lineWidth = 1;
+  for (let sy = top + shift; sy < b; sy += ARROW_SPACING)
+    for (let sx = l + shift; sx < r; sx += ARROW_SPACING) {
+      const [x, y] = toData(sx, sy), v = sample(x, y);
+      if (!v || !isFinite(v[0]) || v[0] === 0) continue;
+      const sweep = 300 / 180 * Math.PI * Math.min(1, Math.abs(v[0]) / reference);
+      if (sweep < Math.PI / 12) continue;
+      twistArc(ctx, sx, sy, radius, sweep, v[0] > 0, 5);
+    }
+}
+
+/* an arc round screen (sx, sy) from the top, anticlockwise on screen if anticlockwise, with an arrowhead at its end */
+function twistArc(c, sx, sy, radius, sweep, anticlockwise, head) {
+  const start = -Math.PI / 2, end = start + (anticlockwise ? -sweep : sweep);
+  c.beginPath(); c.arc(sx, sy, radius, start, end, anticlockwise); c.stroke();
+  const ex = sx + radius * Math.cos(end), ey = sy + radius * Math.sin(end);
+  const dir = anticlockwise ? -1 : 1, tx = -Math.sin(end) * dir, ty = Math.cos(end) * dir;
+  c.beginPath(); c.moveTo(ex + tx * head * 0.6, ey + ty * head * 0.6);
+  c.lineTo(ex - tx * head * 0.6 + ty * head * 0.45, ey - ty * head * 0.6 - tx * head * 0.45);
+  c.lineTo(ex - tx * head * 0.6 - ty * head * 0.45, ey - ty * head * 0.6 + tx * head * 0.45);
+  c.closePath(); c.fill();
+}
+
 function drawArrows(sample, colour, reference, offset) {
   const {l, t: top, r, b} = plotRect(), longest = ARROW_SPACING * 0.8, shift = ARROW_SPACING * (0.5 + offset);
   ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 1;
@@ -1094,7 +1233,7 @@ function hideTip() { tipFor = null; $('tip').style.display = 'none'; }
 function message(text) { $('message').textContent = text; }
 
 function syncControls() {
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showSeam', 'showBodies', 'showSchwarzschild', 'equalAspect', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showTwist', 'showSeam', 'showBodies', 'showSchwarzschild', 'showSpin', 'equalAspect', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
     $(id).checked = !!state.prefs[id];
   $('unit').value = state.prefs.unit;
   $('loop').checked = !!state.prefs.replayLoop;
@@ -1137,7 +1276,7 @@ function setup() {
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
   SPEEDS.forEach(s => { $('speed').add(new Option(speedName(s), s)); $('pSpeed').add(new Option(speedName(s), s)); });
   setupPlayer();
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showSeam', 'showBodies', 'showSchwarzschild', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
+  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showTwist', 'showSeam', 'showBodies', 'showSchwarzschild', 'showSpin', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
     $(id).onchange = () => { state.prefs[id] = $(id).checked; draw(); };
   $('equalAspect').onchange = () => { state.prefs.equalAspect = $('equalAspect').checked; equalise(); draw(); };
   $('unit').onchange = () => { state.prefs.unit = +$('unit').value; draw(); };

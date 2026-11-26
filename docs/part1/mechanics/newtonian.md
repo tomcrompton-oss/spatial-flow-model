@@ -1,5 +1,10 @@
 # Newtonian
 
+!!! note "Reader's note"
+    This page works through the mechanics in some detail, with vector calculus in places. The maths can be skipped
+    without losing the thread: what matters is the procedure in the numbered steps, and the result that it gives
+    Newton's law of gravity exactly, shown in the two examples at the end.
+
 First we look at the mechanics of flowing space using Newtonian mechanics alone. If the approach is valid, the
 results should be indistinguishable from ordinary gravity in the Newtonian limit. The approach may seem overly
 complicated for the Newtonian case, but it is the basis for adding [special relativity](special-relativistic.md) later.

@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "blackHoles_flashes.prefs.json",
+  "config": "blackHoles_flashes.config.json"
+}

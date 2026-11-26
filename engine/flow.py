@@ -683,6 +683,8 @@ class SpecialFlowCalculator(Calculator):
            order 2's 5. see studies/momentum_step.py
   """
 
+  keepLight = True   #light's |w| is kept at c through each step (False for plain, Newtonian addition, where it isn't)
+
   def __init__(self, bodies=None, order=2, direction=None, wave=None, combine='squares', carried=False, step=None):
     super().__init__(bodies, direction, wave, combine, carried)
     if order not in (1, 2):
@@ -790,7 +792,7 @@ class SpecialFlowCalculator(Calculator):
       p.pt += dt*math.sqrt(s)
 
   def moveSecondOrder(self, p, dt):
-    light = abs(length(p.w) - C) < 1e-9*C
+    light = self.keepLight and abs(length(p.w) - C) < 1e-9*C
 
     #half a step the first-order way, to the middle of the step - all from the side of any seam the step starts on
     side = self.sideOf(p)

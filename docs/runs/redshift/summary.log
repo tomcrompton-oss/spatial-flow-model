@@ -1,0 +1,11 @@
+neutron star: 2.785e+30 kg, rs 4135.78 m; emitter at 12000 m (2.902 rs), clock 0.809538079; receiver at 240000 m, clock 0.991346355
+  pulses every 0.0001 s of the emitter's clock = 0.000123527234 s of the flow's time; they arrive every 0.000123527234 s of the flow's time (spread 5.6e-18 s), = 0.000122458273 s of the receiver's clock
+  each takes 0.000985557415 s to climb (exact 0.000985557404 s); received / emitted frequency 0.816604686605, exact 0.816604686605, ratio - 1 6.9e-15; redshift z = 2.245827e-01
+
+white dwarf: 1.989e+30 kg, rs 2954.13 m; emitter at 6e+06 m (2031 rs), clock 0.999753792; receiver at 1.49598e+11 m, clock 0.999999990
+  pulses every 1 s of the emitter's clock = 1.00024627 s of the flow's time; they arrive every 1.00024627 s of the flow's time (spread 1.1e-13 s), = 1.00024626 s of the receiver's clock
+  each takes 499.124324 s to climb (exact 499.124324 s); received / emitted frequency 0.999753802349, exact 0.999753802349, ratio - 1 -2.4e-14; redshift z = 2.462583e-04
+
+the Sun: 1.989e+30 kg, rs 2954.13 m; emitter at 7e+08 m (2.37e+05 rs), clock 0.999997890; receiver at 1.49598e+11 m, clock 0.999999990
+  pulses every 1 s of the emitter's clock = 1.00000211 s of the flow's time; they arrive every 1.00000211 s of the flow's time (spread 3.4e-13 s), = 1.0000021 s of the receiver's clock
+  each takes 496.800637 s to climb (exact 496.800637 s); received / emitted frequency 0.999997899781, exact 0.999997899781, ratio - 1 -6.3e-15; redshift z = 2.100224e-06

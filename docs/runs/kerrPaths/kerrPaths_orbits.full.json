@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "kerrPaths_orbits.prefs.json",
+  "config": "kerrPaths_orbits.config.json"
+}

@@ -7,10 +7,12 @@ starts past a non-rotating one, for a 4e6 MS hole (sizes in M = GM/c^2)
   light from 200 M to 200 M past the hole at 12 M and 30 M: below the hole it goes round with the spin, above it
     against; and the same rays past the hole with no spin
 
-writes logs/kerrPaths/kerrPaths_<datetime>/ - a csv and log for each path, and kerrPaths.full.json (with its
-.prefs.json and .config.json) to open them all in the viewer set up to look at: colours, apsides, the horizon
+writes logs/kerrPaths/kerrPaths_<datetime>/ - a csv and log for each path; two views for the viewer,
+kerrPaths_orbits.full.json and kerrPaths_light.full.json (each with its .prefs.json and .config.json), set up to look
+at: colours, apsides, the horizon, the hole turning, twist arcs; and kerrPaths.backgrounds.json, the spinning hole's
+river (u and g), its twist as a colour map and the twist's turning rate as twist arcs, named in each csv's log
 
-run: python3 studies/kerr_paths.py      (then: python3 viewer/csv_viewer.py logs/kerrPaths/kerrPaths_<datetime>/kerrPaths.full.json)
+run: python3 studies/kerr_paths.py      (then: python3 viewer/csv_viewer.py logs/kerrPaths/kerrPaths_<datetime>/kerrPaths_orbits.full.json)
 """
 import json
 import math
@@ -24,11 +26,21 @@ from engine.kerr import KerrFlowCalculator
 from engine.logger import Log, LOG_DIR
 from engine.constants import *
 from engine.exact import kerrHorizon
+from engine.backgrounds import Backgrounds, steadyBackground, polar, LOG_LINE as BACKGROUNDS_LINE
 
 MASS = 4e6*MS
 SPIN = 0.9
 FRACTION = 3e-4
 LIGHT_START = 200    #light starts and ends this far out (M)
+DESCRIPTION = ('The river of space round a black hole of 4 million solar masses spinning at 0.9 of the most it can,'
+               ' in its equatorial plane (Hamilton and Lisle\'s river model, in Doran\'s coordinates). The river (grey'
+               ' arrows) flows straight in, with no swirl, at c sqrt(2GM/c^2 r), where r = sqrt(R^2 - a^2) and R is the'
+               ' distance from the hole; g (dark arrows) is its acceleration. The colour map is the river\'s twist: how'
+               ' far it turns anything carried in it about the spin axis, in radians, largest close in. The twist arcs are'
+               ' how fast the twist changes along the way in: the rate, in radians a second, at which it turns'
+               ' something moving straight in through the river at c; each arc'
+               ' turns the way that thing is turned. The paths'
+               ' round a hole with no spin are drawn against the same background.')
 
 
 def steps():
@@ -79,18 +91,32 @@ def main():
       made.append((path, colour, None, style, False))
       print('%-20s %s' % (name, reason))
 
-  #a full config for the viewer: these files, their colours and markers, and the horizon shown
-  results = [{'path': path, 'relative': os.path.basename(path), 'visible': True, 'straight': False, 'ends': False,
-              'periapsis': orbit, 'apoapsis': orbit, 'styles': {'pos': [colour, style, colour2 or colour]},
-              'selection': [['pos_x', 'pos_y']], 'group': None, 'hiddenOrbits': []} for path, colour, colour2, style, orbit in made]
-  config = {'kind': 'config', 'version': 1, 'results': results, 'selected': made[0][0], 'background': None, 'timeInterval': ''}
-  prefs = {'kind': 'preferences', 'version': 1, 'preferences': {'mode': 'xy', 'equalAspect': True, 'showSchwarzschild': True,
-           'showFlow': False, 'showTimeMarks': False, 'showMarkers': True, 'showPathLegend': True, 'showFieldKey': True}}
-  full = {'kind': 'full', 'version': 1, 'preferences': 'kerrPaths.prefs.json', 'config': 'kerrPaths.config.json'}
-  for fname, doc in (('kerrPaths.config.json', config), ('kerrPaths.prefs.json', prefs), ('kerrPaths.full.json', full)):
-    with open(os.path.join(folder, fname), 'w') as f:
-      json.dump(doc, f, indent=2)
-  print('open with: python3 viewer/csv_viewer.py', os.path.relpath(os.path.join(folder, 'kerrPaths.full.json'), os.path.dirname(LOG_DIR)))
+  #two players, the orbits and the light, each with the spinning hole's river as its background
+  bg = Backgrounds()
+  calc = KerrFlowCalculator([Body(MASS, spin=SPIN)], order=2)
+  b = steadyBackground(bg, calc, (-60*M, 60*M, -60*M, 60*M), 'the river of a spinning hole', DESCRIPTION)
+  b.scalar('the twist', lambda X, Y, t: np.array([calc.twistAt(np.array([x, y])) for x, y in zip(X, Y)]),
+           polar(0.95*a, 6e4*M, 160, 96))
+  b.twist('the twist\'s turning rate', lambda X, Y, t: np.array([C*calc.twistGradient(np.array([x, y])) for x, y in zip(X, Y)]),
+         polar(0.95*a, 6e4*M, 160, 96))
+  bg.write(os.path.join(folder, 'kerrPaths.backgrounds.json'))
+  for path, *_ in made:
+    with open(path[:-4] + '.log', 'a') as f:
+      f.write('%s kerrPaths.backgrounds.json\n' % BACKGROUNDS_LINE)
+  for view, which in (('kerrPaths_orbits', lambda orbit: orbit), ('kerrPaths_light', lambda orbit: not orbit)):
+    chosen = [m for m in made if which(m[4])]
+    results = [{'path': path, 'relative': os.path.basename(path), 'visible': True, 'straight': False, 'ends': False,
+                'periapsis': orbit, 'apoapsis': orbit, 'styles': {'pos': [colour, style, colour2 or colour]},
+                'selection': [['pos_x', 'pos_y']], 'group': None, 'hiddenOrbits': []} for path, colour, colour2, style, orbit in chosen]
+    config = {'kind': 'config', 'version': 1, 'results': results, 'selected': chosen[0][0], 'background': None, 'timeInterval': ''}
+    prefs = {'kind': 'preferences', 'version': 1, 'preferences': {'mode': 'xy', 'equalAspect': True, 'showSchwarzschild': True,
+             'showBodies': True, 'showSpin': True, 'showFlow': True, 'showTwist': True, 'showScalar': False, 'showTimeMarks': False, 'showMarkers': True,
+             'showPathLegend': True, 'showFieldKey': True}}
+    full = {'kind': 'full', 'version': 1, 'preferences': view + '.prefs.json', 'config': view + '.config.json'}
+    for ext, doc in (('.config.json', config), ('.prefs.json', prefs), ('.full.json', full)):
+      with open(os.path.join(folder, view + ext), 'w') as f:
+        json.dump(doc, f, indent=2)
+    print('open with: python3 viewer/csv_viewer.py', os.path.relpath(os.path.join(folder, view + '.full.json'), os.path.dirname(LOG_DIR)))
   return folder
 
 

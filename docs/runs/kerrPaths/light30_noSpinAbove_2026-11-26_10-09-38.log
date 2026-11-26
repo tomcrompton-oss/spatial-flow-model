@@ -1,0 +1,24 @@
+light30_noSpinAbove
+calc:  <flow.KerrFlowCalculator object, order 2, spin 0>
+dt:  1000000000.0
+step fraction: 0.0003  (adaptive steps, at most dt)
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+
+stopped: elapsed time reached after 19850 steps
+
+Simulation complete:  1.0040292739868164 seconds ( 0.0002788970205518934  hours)
+sim time: 7883.1244115031195
+closest distance: 155108164950.8601   1.0368338389165899 AU
+conserved quantities (per unit mass, the calculator's own forms; E less the rest energy):
+  b: start -1.613769671441e+11  end -1.613772469030e+11  change -2.798e+05 (-1.734e-06 of start)  largest -2.798e+05 (-1.734e-06)
+
+No orbits completed
+Angle: 0.15236472205012822
+[ 2.65011072e+08 -4.77039032e+07]
+265011072.2134577
+269270367.42955625
+Calc angle: 0.17809991999616653
+Calc angle: 0.16327503093938864
+
+backgrounds: kerrPaths.backgrounds.json

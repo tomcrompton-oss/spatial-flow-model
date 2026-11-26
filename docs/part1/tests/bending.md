@@ -13,8 +13,8 @@ The simulation can use different calculators:
 - **Newtonian** — Newton's law of gravitation. The particle's mass doesn't enter, so light is bent, but $c$ is no
   limit: photons speed up and slow down.
 - **Newtonian flow** — the mechanics of flowing space from [Newtonian](../mechanics/newtonian.md). Should match Newtonian.
-- **Special relativistic** — standard special relativity: light is bent and keeps to $c$. We expect half the
-  deflection.
+- **Special relativistic** — special relativity with Newton's gravity acting on the light's energy: light is bent
+  and keeps to $c$. We expect half the deflection.
 - **Special flow** — the mechanics of flowing space with special relativity, from [Special Relativistic](../mechanics/special-relativistic.md).
 
 The simulation sends light from 10 AU on the far side of the Sun to 10 AU on the near side, on a path passing the
@@ -25,15 +25,12 @@ relativity approximation is $\delta\phi \approx 4GM/c^2b$; exact general relativ
 | Calculator | Simulated deflection (rad) | Deflection (arcsec) | Exact GR (rad) |
 | --- | --- | --- | --- |
 | Newtonian | 4.2202 × 10⁻⁶ | 0.87 | 8.4408 × 10⁻⁶ |
-| Newtonian flow | 4.2201 × 10⁻⁶ | 0.87 | 8.4408 × 10⁻⁶ |
-| Special relativistic | 4.2201 × 10⁻⁶ | 0.87 | 8.4408 × 10⁻⁶ |
+| Newtonian flow | 4.2200 × 10⁻⁶ | 0.87 | 8.4408 × 10⁻⁶ |
+| Special relativistic | 4.2202 × 10⁻⁶ | 0.87 | 8.4408 × 10⁻⁶ |
 | Special flow | 8.4408 × 10⁻⁶ | 1.74 | 8.4408 × 10⁻⁶ |
 
-*(The Newtonian flow and special relativistic rows are from the earlier runs, whose calculators the current
-simulation no longer has; they gave the Newtonian value.)*
-
 The first three give half the observed deflection, as anything short of general relativity does: Newtonian gravity
-gives 0.49997 of general relativity's. Special flow gives the full deflection, 99% of the observed 1.75″, and agrees
+gives 0.49997 of general relativity's, Newtonian flow 0.49995 and special relativity 0.49998. Special flow gives the full deflection, 99% of the observed 1.75″, and agrees
 with exact general relativity to **1.5 parts in 10⁸**. One subtlety: light started off the axis where space is flowing
 in at $u$ has general relativity's impact parameter $b/(1 + u/c)$, not $b$, so it passes a little closer than $b$ (by
 4.4 parts in 10⁵, starting at 10 AU) and bends that much more than $4GM/c^2b$. The comparison is with exact general
@@ -64,4 +61,5 @@ and under Newtonian gravity starting at $c$ (dashed); the arrows are the flow of
 model bends light several times as much — 57° against 14° at 4 Schwarzschild radii — and further out the ratio falls
 towards the factor of two in the table (2.8 at 30 Schwarzschild radii, from 150 out on either side).* [Open full screen](../../../viewer/index.html?run=../runs/part1/part1_bending.full.json){ target=_blank }
 
-*The code: studies/four_tests.py (bending), against exact general relativity in engine/exact.py.*
+*The code: studies/four_tests.py (bending: all four calculators for the Sun, the flow model for the hole), against
+exact general relativity in engine/exact.py.*

@@ -1,0 +1,5 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+the probe: down from 20 rs to 1.5625 rs, held there, and back out
+probe: fell from 20 rs to 1.5625 rs (exact 1.5625) in 2298.971 s (exact 2298.971 s) by its clock and the flow's; held at 1.5625 rs for 2298.971 s of its clock (3831.619 s of the flow's: its clock at 0.6000); launched at w = 0.97561c outward (v = 0.17561c)
+  climbed back to 20.0031 rs: 2299.523 s by its clock (exact 2299.524 s; the fall took 2298.971 s), 2944.941 s of the flow's time (exact 2944.942 s); back at t 9075.531 s, its clock 6897.465 s

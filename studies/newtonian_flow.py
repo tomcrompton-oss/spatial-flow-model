@@ -37,6 +37,8 @@ class NewtonianFlow(SpecialFlowCalculator):
   """the page's procedure, with the change in the flow added to w as a plain vector: order 1 is the page's steps as
   they stand; order 2 takes the same steps half way, then the whole step at the middle's rates"""
 
+  keepLight = False   #with plain addition light's speed through space isn't c, and isn't held there
+
   def __init__(self, bodies, order=1):
     super().__init__(bodies, order=order, step='velocity')
 

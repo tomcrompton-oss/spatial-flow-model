@@ -9,7 +9,7 @@ can be chosen for the whole site:
 the site uses formal (CHOSEN); the other two are kept so a page can be tried in them
 
 run: python3 scripts/draw_diagrams.py [--all]     (writes docs/part1/mechanics/images/<diagram>.svg, and the tests'
-                                                    diagrams to docs/part1/tests/images/)
+                                                    diagrams to docs/part1/tests/images/, the black holes page's to docs/part1/images/)
 """
 import math
 import os
@@ -73,8 +73,8 @@ def near(points, gap):
   """a test for inflow's skip: is (x, y) within gap of any of the points?"""
   return lambda x, y: any(abs(x - px) < gap and abs(y - py) < gap and math.hypot(x - px, y - py) < gap for px, py in points)
 
-def inflow(cx, cy, body, boxes, skip=lambda x, y: False, step=64, length=30):
-  """faint arrows of space flowing in towards a body at (cx, cy), shorter further out (as 1/sqrt r)"""
+def inflow(cx, cy, body, boxes, skip=lambda x, y: False, step=64, length=30, colour='faint'):
+  """arrows (faint by default) of space flowing in towards a body at (cx, cy), shorter further out (as 1/sqrt r)"""
   out = []
   (x0, y0, x1, y1) = boxes
   for x in range(x0, x1 + 1, step):
@@ -84,7 +84,7 @@ def inflow(cx, cy, body, boxes, skip=lambda x, y: False, step=64, length=30):
       if r < body + 40 or skip(x, y):
         continue
       n = min(length*math.sqrt(160/r), 34)
-      out.append(arrow((x, y), (x + dx/r*n, y + dy/r*n), 'faint', 1.0))
+      out.append(arrow((x, y), (x + dx/r*n, y + dy/r*n), colour, 1.0))
   return out
 
 def ant(x, y, heading=0.0, colour='ink', scale=1.7):
@@ -300,6 +300,119 @@ def parallel():
   return W, H, shapes
 
 
+def regions():
+  """light crossing regions of space flowing downwards ever faster (0 to 0.8c): at each crossing the change in the
+  flow is added to its velocity through space relativistically, so its w (green) turns upward while staying at c, and
+  the path seen from outside (red, v = u + w) curves down"""
+  W, H = 760, 440
+  n, top, width, gap, shift = 6, 50, 92, 14, 12
+  def add(a, b):
+    """a seen from space moving at -b: a boosted by b (as engine/flow.py's add), in units of c"""
+    bb = b[0]**2 + b[1]**2
+    ab = a[0]*b[0] + a[1]*b[1]
+    par = (b[0]*ab/bb, b[1]*ab/bb)
+    per = (a[0] - par[0], a[1] - par[1])
+    k = math.sqrt(1 - bb)
+    return tuple((par[i] + b[i] + k*per[i])/(1 + ab) for i in range(2))
+  shapes = []
+  us = [-0.8*k/(n - 1) for k in range(n)]            #each region's flow, downwards (y up)
+  w = (1.0, 0.0)
+  x, y = 70.0, 170.0
+  pts, marks = [(x, y)], []
+  for k in range(n):
+    x0 = 40 + k*(width + gap)
+    shapes.append(rect(x0, top + k*shift, width, 220, dash=True, colour='faint'))
+    if k:
+      shapes.append(arrow((x0 + width/2, top + k*shift + 226), (x0 + width/2, top + k*shift + 232 + 60*abs(us[k])), 'u', 1.6))
+    if k:
+      w = add(w, (0.0, us[k - 1] - us[k]))           #crossing in: the change in the flow, added relativistically
+    v = (w[0], w[1] + us[k])
+    marks.append(((x, y), w, v))
+    t = (x0 + width + gap/2 - x)/v[0] if k < n - 1 else (x0 + width - 20 - x)/v[0]
+    x, y = x + v[0]*t, y - v[1]*t
+    pts.append((x, y))
+  shapes += poly(pts, 'v', 1.4, dash=True)
+  L = 62
+  for (px, py), w_, v_ in marks:
+    shapes += [arrow((px, py), (px + L*w_[0], py - L*w_[1]), 'w', 1.6), ellipse(px, py, 4, 4, 'ink')]
+  (px, py), w_, v_ = marks[-1]
+  size = math.hypot(*v_)
+  shapes.append(arrow((px, py), (px + L*v_[0]/size*1.1, py - L*v_[1]/size*1.1), 'v', 1.8))
+  shapes += [text(40, 30, 'space flowing down, faster in each region:', 'ink', 0.85),
+             text(40 + width/2, top + 220 + 24, 'still', 'faint', 0.8, anchor='middle'),
+             text(40 + 5*(width + gap) + width/2 + 12, top + 5*shift + 232 + 60*0.8 - 4, '0.8c', 'u', 0.85),
+             arrow((40, 415), (74, 415), 'u', 1.6), text(84, 420, 'u, the flow', 'ink', 0.85),
+             arrow((200, 415), (234, 415), 'w', 1.6), text(244, 420, 'w, through its region: always c', 'ink', 0.85),
+             line((460, 415), (494, 415), 'v', dash=True, width=1.4), text(504, 420, 'the path', 'ink', 0.85),
+             arrow((590, 415), (624, 415), 'v', 1.8), text(634, 420, 'v, seen from outside', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def spacefall():
+  """the hypothesis: space falling into a body at the escape speed, faster closer in - the speed a particle falling
+  from rest far away would have there"""
+  W, H = 760, 400
+  cx, cy, R = 220, 195, 60
+  shapes = [ellipse(cx, cy, R, R, 'sun', 0, 'sun'), text(cx, cy + 5, 'body', 'ink', 0.9, anchor='middle')]
+  for r, a0, n in ((1.45, 0.0, 12), (2.05, 0.26, 16), (2.75, 0.0, 20)):
+    for k in range(n):
+      a = a0 + 2*math.pi*k/n
+      L = 40/math.sqrt(r)
+      x, y = cx + R*r*math.cos(a), cy + R*r*math.sin(a)
+      if a0 == 0.0 and r == 1.45 and k == 0:
+        continue
+      shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'u', 1.4))
+  #a particle falling from far away, beside the space at the same place: the same velocity
+  px, py = cx + R*1.45 + 6, cy
+  shapes += [ellipse(px + 10, py - 14, 6, 6, 'v'), arrow((px + 2, py - 14), (px + 2 - 40/math.sqrt(1.45), py - 14), 'v', 1.8)]
+  x0 = 470
+  shapes += [arrow((x0, 110), (x0 + 34, 110), 'u', 1.4), text(x0 + 44, 115, 'space falling in at the escape speed,', 'ink', 0.85),
+             text(x0 + 44, 133, 'u = √(2GM/r): faster closer in', 'ink', 0.85, math_=False),
+             ellipse(x0 + 17, 176, 6, 6, 'v'), text(x0 + 44, 181, 'a particle that has fallen from rest', 'ink', 0.85),
+             text(x0 + 44, 199, 'far away: it moves just as the', 'ink', 0.85),
+             text(x0 + 44, 217, 'space around it does', 'ink', 0.85),
+             text(W/2, 372, 'Space flows straight in from every direction, with no swirl.', 'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def fourclocks():
+  """the four clocks round a body with space falling in: 1 far away at rest (the base time), 2 falling from rest far
+  away with the space (at rest in its space: no dilation), 3 held still on the surface (moving up through its space
+  at u: dilated, as general relativity has it), 4 thrown up from the surface at the escape speed (moving through its
+  space faster still: more dilated)"""
+  W, H = 760, 470
+  cx, cy, R = 140, 180, 62
+  shapes = inflow(cx, cy, R, (30, 40, 430, 320), skip=near([(cx + R + 16, cy), (cx + 70, cy - 92), (cx + 96, cy + 70)], 44), step=58,
+                  colour='u')
+  shapes += [ellipse(cx, cy, R, R, 'sun', 0, 'sun'), text(cx, cy + 5, 'body', 'ink', 0.85, anchor='middle')]
+  c3 = (cx + R + 15, cy)                                  #3 held still on the surface: moving up through space at u
+  shapes += clock(*c3) + [arrow((c3[0] + 16, cy), (c3[0] + 66, cy), 'w', 2.2),
+                          text(c3[0] + 42, cy - 10, 'w = u', 'w', 1.0, anchor='middle', math_=True),
+                          text(c3[0], cy + 34, '3', 'ink', 1.15, anchor='middle', bold=True)]
+  c2 = (cx + 70, cy - 92)                                 #2 falling with the space
+  shapes += clock(*c2) + [arrow((c2[0] - 12, c2[1] + 11), (c2[0] - 40, c2[1] + 38), 'u', 2.2),
+                          text(c2[0] + 20, c2[1] + 30, 'w = 0', 'u', 1.0, math_=True),
+                          text(c2[0], c2[1] - 22, '2', 'ink', 1.15, anchor='middle', bold=True)]
+  a = math.atan2(70, 96)
+  c4 = (cx + 96, cy + 70)                                 #4 thrown up from the surface at the escape speed
+  shapes += clock(*c4) + [arrow((c4[0] + 12*math.cos(a), c4[1] + 12*math.sin(a)), (c4[0] + 66*math.cos(a), c4[1] + 66*math.sin(a)), 'v', 2.2),
+                          text(c4[0] + 66, c4[1] + 26, 'w ≈ 2u', 'v', 1.0, math_=True),
+                          text(c4[0] - 22, c4[1] + 24, '4', 'ink', 1.15, anchor='middle', bold=True)]
+  c1 = (620, 170)
+  shapes += clock(*c1) + [text(c1[0], c1[1] + 34, '1', 'ink', 1.15, anchor='middle', bold=True),
+                          text(c1[0] + 24, c1[1] + 5, 'at rest, far away', 'ink', 0.85)]
+  shapes += [line((470, 40), (470, 320), 'faint', dash=True, width=0.8), text(500, 300, 'far away: space at rest', 'faint', 0.85)]
+  rows = (('1', 'far away, at rest in still space', 'the base time'),
+          ('2', 'falling in from rest far away, with the space: at rest in its space', 'keeps clock 1\'s time'),
+          ('3', 'held still on the surface, where space falls past at u: moving up through it at u', 'runs slow'),
+          ('4', 'thrown up from the surface at the escape speed: moving up through space faster than 3', 'runs slower still'))
+  for k, (who, what, rate) in enumerate(rows):
+    y = 360 + 24*k
+    shapes += [text(40, y, who, 'ink', 0.95, bold=True), text(64, y, what, 'ink', 0.85),
+               text(720, y, rate, 'ink', 0.85, anchor='end')]
+  return W, H, shapes
+
+
 def redshift():
   """light climbing out of a gravitational well: emitted by a clock deep in the well, which ticks slower, and received
   far out at a lower frequency - the same crests, spread out over a longer time"""
@@ -438,10 +551,327 @@ def shapiro():
   return W, H, shapes
 
 
+def funnel():
+  """general relativity's usual picture of a black hole: the curved space around it drawn as a funnel (Flamm's
+  paraboloid, z = 2 sqrt(rs (r - rs))), a slice at one moment of Schwarzschild's time, bent into a direction that
+  doesn't exist"""
+  W, H = 760, 380
+  cx, top, s, tilt, drop = 250, 70, 38, 0.3, 0.95
+  RMAX = 5.6
+  z = lambda r: 2*math.sqrt(max(r - 1, 0))
+  P = lambda r, a: (cx + s*r*math.cos(a), top + s*tilt*RMAX + s*tilt*r*math.sin(a) + s*drop*(z(RMAX) - z(r)))
+  shapes = []
+  for r in (1.0, 1.08, 1.25, 1.55, 2.0, 2.7, 3.6, 4.6, 5.6):
+    shapes += poly([P(r, 2*math.pi*k/120) for k in range(121)], 'ink' if r == 1.0 else 'faint', 1.6 if r == 1.0 else 1.0)
+  for k in range(16):
+    a = 2*math.pi*k/16
+    shapes += poly([P(1 + (RMAX - 1)*(j/60)**2, a) for j in range(61)], 'faint', 1.0)
+  m = P(2.7, 0.35)
+  shapes += [ellipse(m[0], m[1] - 7, 7, 7, 'v'), arrow((m[0] - 12, m[1] + 2), (m[0] - 40, m[1] + 20), 'v', 1.6)]
+  t = P(1.0, math.pi/2)
+  shapes += [line((t[0], t[1] + 6), (t[0], t[1] + 34), 'ink', width=0.8),
+             text(t[0], t[1] + 52, 'the horizon, rₛ', 'ink', 0.9, anchor='middle')]
+  x = 530
+  shapes += [text(x, 92, 'The usual picture: space around', 'ink', 0.95), text(x, 112, 'the hole as a curved sheet', 'ink', 0.95),
+             text(x, 156, 'The dip is drawn into a direction', 'ink', 0.85), text(x, 174, 'that doesn\'t exist.', 'ink', 0.85),
+             text(x, 210, 'A marble rolls in only because', 'ink', 0.85), text(x, 228, 'something already pulls it down.', 'ink', 0.85),
+             text(x, 264, 'The sheet is one moment of', 'ink', 0.85), text(x, 282, 'Schwarzschild\'s time, and it stops', 'ink', 0.85),
+             text(x, 300, 'at the horizon.', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def falling():
+  """the flow's picture of a black hole: space falling in everywhere, faster closer in, at c at the horizon and faster
+  inside it; on the right, light sent outward against the flow at four distances"""
+  W, H = 760, 460
+  cx, cy, s, C = 210, 210, 54, 34          #s pixels to rs; an arrow of C pixels on the left is the speed of light
+  shapes = [ellipse(cx, cy, s, s, 'fill', 0, 'fill')]
+  shapes += poly(circle_points(cx, cy, s, 0, 2*math.pi, 90), 'ink', 1.2, dash=True)
+  for r, a0 in ((1.4, 0), (1.95, 0.26), (2.6, 0), (3.3, 0.2)):
+    n = 12 if r < 2 else 16 if r < 3 else 20
+    for k in range(n):
+      a = a0 + 2*math.pi*k/n
+      L = C/math.sqrt(r)
+      x, y = cx + s*r*math.cos(a), cy + s*r*math.sin(a)
+      shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'u', 1.4))
+  shapes += [ellipse(cx, cy, 4, 4, 'ink'), text(cx, cy - 20, 'horizon:', 'ink', 0.75, anchor='middle'),
+             text(cx, cy - 6, 'space at c', 'ink', 0.75, anchor='middle'),
+             text(cx, cy + 24, 'faster inside', 'ink', 0.75, anchor='middle')]
+  x0, xs, xl, L = 450, 600, 640, 56          #the right column: labels, space's arrow, light's arrow; L pixels is c
+  shapes += [text(x0, 50, 'Light sent outward', 'ink', 0.95), text(xs, 76, 'space', 'u', 0.85, anchor='end'),
+             text(xl, 76, 'light', 'v', 0.85)]
+  for k, (r, words) in enumerate(((4, 'gains ground at 0.5c'), (2, 'gains slowly, at 0.29c'),
+                                  (1, 'holds still'), (0.6, 'is carried in at 0.29c'))):
+    y = 120 + 64*k
+    u = 1/math.sqrt(r)
+    shapes += [text(x0, y + 5, 'at %g rₛ' % r, 'ink', 0.9), text(x0, y + 25, words, 'ink', 0.8),
+               arrow((xs, y), (xs - L*u, y), 'u', 1.6)]
+    net = L*(1 - u)
+    if abs(net) < 1:
+      shapes.append(ellipse(xl + 4, y, 3.5, 3.5, 'v'))
+    else:
+      shapes.append(arrow((xl + max(0, -net), y), (xl + max(0, net), y), 'v', 1.6))
+  shapes += [text(x0, 384, 'light as seen from outside:', 'faint', 0.8), text(x0, 400, 'c through space, less the flow', 'faint', 0.8),
+             text(W/2, 432, 'Space falls in at u = c √(rₛ/r): half of c at 4 rₛ, c at the horizon, faster inside.',
+                  'ink', 0.85, anchor='middle'),
+             ]
+  return W, H, shapes
+
+
+def spacetime():
+  """lines of space falling into a black hole, with light cones, drawn against Schwarzschild's time (left) and the
+  flow's (Gullstrand-Painleve, right): r across in Schwarzschild radii, t up in rs/c, light at 45 degrees far out"""
+  W, H = 760, 450
+  PX, TOP, SIDE, RMAX, TMAX = 58, 52, 315, 5.4, 5.2
+  f = lambda r: 2*math.sqrt(r) + math.log((math.sqrt(r) - 1)/(math.sqrt(r) + 1))   #GP less Schwarzschild time
+  shapes = []
+  for left, gp, title in ((48, False, 'against Schwarzschild\'s time'), (418, True, 'against the flow\'s time')):
+    P = lambda r, t: (left + r*PX, TOP + SIDE - t*PX)
+    inside = lambda r, t: 0 <= r <= RMAX and 0 <= t <= TMAX
+    shapes += [arrow(P(0, 0), P(RMAX + 0.25, 0), 'ink', 1.0), arrow(P(0, 0), P(0, TMAX + 0.3), 'ink', 1.0),
+               text(*P(RMAX + 0.1, -0.4), 'r', 'ink', 1.1, math_=True), text(*P(-0.35, TMAX + 0.1), 't', 'ink', 1.1, math_=True),
+               text(*P(RMAX/2, TMAX + 0.55), title, 'ink', 0.95, anchor='middle')]
+    for k in range(1, 6):
+      shapes += [line(P(k, 0), P(k, -0.1), 'ink', width=0.8), text(P(k, 0)[0], P(k, -0.42)[1], '%d' % k, 'ink', 0.8, anchor='middle')]
+    shapes += [line(P(1, 0), P(1, TMAX), 'ink', dash=True, width=0.9)]
+    if gp:
+      shapes += [text(P(1, 0)[0] + 5, P(0, TMAX - 0.15)[1], 'horizon', 'ink', 0.8)]
+    #lines of falling space: r^1.5 = 1.5 (c0 - t) in the flow's time; Schwarzschild's time is less by f(r)
+    for c0 in (1.0, 2.6, 4.0, 5.6, 7.2, 8.8, 10.4):
+      pts = []
+      for k in range(400):
+        r = 0.02 + (RMAX - 0.02)*k/399
+        t = c0 - (2/3)*r**1.5
+        if not gp:
+          if r <= 1.004:
+            continue
+          t = t - f(r) + f(3.3)        #the two panels agree where the observer (c0 = 4) starts, at t = 0
+        if inside(r, t):
+          pts.append(P(r, t))
+      if len(pts) > 1:
+        shapes += poly(pts, 'u' if c0 == 4.0 else 'faint', 2.0 if c0 == 4.0 else 1.0)
+    #light cones: the future edges, dr/dt = -sqrt(rs/r) +- c in the flow's time, +-(1 - rs/r) in Schwarzschild's
+    for r, t in (((0.5, 1.4), (1.0, 2.6), (1.7, 1.4), (2.7, 2.6), (4.2, 1.4)) if gp else
+                 ((1.12, 2.6), (1.7, 1.4), (2.7, 2.6), (4.2, 1.4))):
+      x, y = P(r, t)
+      for s in ((-1/math.sqrt(r) + 1, -1/math.sqrt(r) - 1) if gp else ((1 - 1/r), -(1 - 1/r))):
+        n = math.hypot(s, 1)
+        shapes.append(line((x, y), (x + 30*s/n, y - 30/n), 'v', width=1.5))
+      shapes.append(ellipse(x, y, 2.6, 2.6, 'v'))
+  shapes += [text(W/2, 412, 'r in Schwarzschild radii, t in rₛ/c; light far out at 45°', 'faint', 0.85, anchor='middle'),
+             line((60, 438), (94, 438), 'faint', width=1.0), text(104, 443, 'space falling in', 'ink', 0.85),
+             line((250, 438), (284, 438), 'u', width=2.0), text(294, 443, 'an observer falling with it', 'ink', 0.85),
+             line((500, 438), (534, 438), 'v', width=1.5), text(544, 443, 'light sent out and in', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def twister():
+  """a spinning hole from above, in the river model: the river flowing straight in (no swirl), its twist turning
+  whatever it carries round with the spin (stronger close in), the horizon, and the ergosphere outside it"""
+  W, H = 760, 440
+  cx, cy, M = 230, 205, 34                  #M pixels to GM/c^2; spin 0.9
+  a = 0.9
+  rH = math.hypot(1 + math.sqrt(1 - a*a), a)*M          #flat distances R = sqrt(r^2 + a^2)
+  rE = math.hypot(2, a)*M
+  shapes = [ellipse(cx, cy, rH, rH, 'fill', 0, 'fill')]
+  shapes += poly(circle_points(cx, cy, rH, 0, 2*math.pi, 90), 'ink', 1.2, dash=True)
+  shapes += poly(circle_points(cx, cy, rE, 0, 2*math.pi, 120), 'faint', 1.4, dash=True)
+  for r, a0, n in ((2.9, 0.0, 12), (3.9, 0.26, 16), (5.0, 0.0, 20)):
+    for k in range(n):
+      th = a0 + 2*math.pi*k/n
+      x, y = cx + M*r*math.cos(th), cy + M*r*math.sin(th)
+      L = 34/math.sqrt(r/2)
+      shapes.append(arrow((x, y), (x - L*math.cos(th), y - L*math.sin(th)), 'u', 1.3))
+  #twist arcs, anticlockwise (with the spin), sweeping further close in
+  for r, a0, n in ((2.45, 0.13, 8), (3.4, 0.4, 10), (4.4, 0.15, 12)):
+    sweep = 4.6*(2.45/r)**1.6
+    for k in range(n):
+      th = a0 + 2*math.pi*k/n
+      x, y = cx + M*r*math.cos(th), cy + M*r*math.sin(th)
+      pts = circle_points(x, y, 8, -math.pi/2, -math.pi/2 - sweep, 20)
+      shapes += poly(pts, 'w', 1.2) + [arrow(pts[-3], pts[-1], 'w', 1.0)]
+  shapes += [ellipse(cx, cy, 7, 7, 'ink')]
+  spin = circle_points(cx, cy, 15, -math.pi/2, -math.pi/2 - 1.5*math.pi, 30)
+  shapes += poly(spin, 'ink', 1.2) + [arrow(spin[-3], spin[-1], 'ink', 1.2)]
+  x0 = 500
+  shapes += [arrow((x0, 120), (x0 + 34, 120), 'u', 1.4), text(x0 + 44, 125, 'the river: straight in,', 'ink', 0.85),
+             text(x0 + 44, 143, 'with no swirl', 'ink', 0.85)]
+  arc = circle_points(x0 + 17, 190, 9, -math.pi/2, -math.pi/2 - 4.0, 20)
+  shapes += poly(arc, 'w', 1.2) + [arrow(arc[-3], arc[-1], 'w', 1.0),
+             text(x0 + 44, 186, 'its twist: turning what it', 'ink', 0.85), text(x0 + 44, 204, 'carries, with the spin', 'ink', 0.85)]
+  shapes += [line((x0, 250), (x0 + 34, 250), 'ink', dash=True, width=1.2), text(x0 + 44, 255, 'the horizon', 'ink', 0.85),
+             line((x0, 286), (x0 + 34, 286), 'faint', dash=True, width=1.4), text(x0 + 44, 291, 'the ergosphere', 'ink', 0.85),
+             text(W/2, 425, 'A hole spinning anticlockwise at 0.9 of the most it can, seen from above its equator (not to scale)', 'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def bounce():
+  """a ball bouncing, filmed and then run backwards: the same arcs, the same pull down, only the direction along them
+  reversed"""
+  W, H = 760, 330
+  shapes = []
+  for left, title, sense in ((40, 'forwards', 1), (410, 'run backwards', -1)):
+    floor, x0, x1 = 250, left + 20, left + 300
+    shapes += [line((left, floor), (left + 320, floor), 'ink', width=1.0), text(left + 160, 40, title, 'ink', 1.0, anchor='middle')]
+    for k in range(8):
+      shapes.append(line((left + 8 + 40*k, floor), (left + 40*k, floor + 8), 'faint', width=0.8))
+    arcs = ((x0, x0 + 110, 120), (x0 + 110, x0 + 200, 80), (x0 + 200, x0 + 270, 52))
+    pts = []
+    for a, b, h in arcs:
+      pts += [(a + (b - a)*j/30, floor - 9 - h*4*(j/30)*(1 - j/30)) for j in range(31)]
+    if sense < 0:
+      pts = [(2*left + 320 - x, y) for x, y in pts]
+    shapes += poly(pts, 'u', 1.4)
+    for j in (15, 45, 72):
+      a, b = pts[j], pts[j + 2]
+      shapes.append(arrow(a, (a[0] + (b[0] - a[0])*3, a[1] + (b[1] - a[1])*3), 'u', 1.6))
+    bx, by = pts[-1]
+    shapes.append(ellipse(bx, by, 8, 8, 'v'))
+    for gx in (left + 140, left + 290):
+      shapes += [arrow((gx, 62), (gx, 92), 'w', 1.6), text(gx + 8, 84, 'g', 'w', 1.0, math_=True)]
+  shapes += [text(W/2, 304, 'The same arcs, either way: gravity pulls down in both, and the film run backwards is a motion that could happen.',
+                  'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def reverse():
+  """a black hole, and the same film run backwards: space and everything in it flowing out of the horizon - not
+  something a black hole can do, but a different object, a white hole"""
+  W, H = 760, 400
+  shapes = []
+  for cx, title, out in ((200, 'a black hole', False), (560, 'the film run backwards', True)):
+    cy, s = 190, 50
+    shapes += [ellipse(cx, cy, s, s, 'fill', 0, 'fill')] + poly(circle_points(cx, cy, s, 0, 2*math.pi, 90), 'ink', 1.2, dash=True)
+    shapes += [ellipse(cx, cy, 4, 4, 'ink'), text(cx, 40, title, 'ink', 1.0, anchor='middle')]
+    for k in range(12):
+      a = 2*math.pi*k/12 + 0.26
+      for r in (1.6, 2.5):
+        x, y = cx + s*r*math.cos(a), cy + s*r*math.sin(a)
+        L = 30/math.sqrt(r)
+        d = 1 if out else -1
+        if k in (0, 1) and r == 1.6:
+          continue
+        shapes.append(arrow((x, y), (x + d*L*math.cos(a), y + d*L*math.sin(a)), 'u', 1.2))
+    #a traveller crossing the horizon: in, or (run backwards) out
+    a = 0.13
+    p0, p1 = (cx + s*2.3*math.cos(a), cy + s*2.3*math.sin(a)), (cx + s*0.45*math.cos(a), cy + s*0.45*math.sin(a))
+    if out:
+      p0, p1 = p1, p0
+    shapes += [arrow(p0, p1, 'v', 2.2), ellipse(p0[0], p0[1], 5, 5, 'v')]
+  shapes += [text(200, 352, 'space flows in; things cross the horizon inwards', 'ink', 0.85, anchor='middle'),
+             text(200, 370, 'and never come out', 'ink', 0.85, anchor='middle'),
+             text(560, 352, 'space flows out; things cross the horizon outwards,', 'ink', 0.85, anchor='middle'),
+             text(560, 370, 'which a black hole forbids: this is a white hole', 'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def outflow():
+  """the flow's picture of a white hole: space flowing out, slowing as it goes, so its acceleration g points in; on the
+  right, something falling in from far away at four distances - its speed through space, its speed as seen from
+  outside and its clock"""
+  W, H = 760, 460
+  cx, cy, s, C = 210, 210, 54, 34
+  shapes = [ellipse(cx, cy, s, s, 'fill', 0, 'fill')]
+  shapes += poly(circle_points(cx, cy, s, 0, 2*math.pi, 90), 'ink', 1.2, dash=True)
+  for r, a0 in ((1.4, 0), (1.95, 0.26), (2.6, 0), (3.3, 0.2)):
+    n = 12 if r < 2 else 16 if r < 3 else 20
+    for k in range(n):
+      a = a0 + 2*math.pi*k/n
+      L = C/math.sqrt(r)
+      x, y = cx + s*r*math.cos(a) - L/2*math.cos(a), cy + s*r*math.sin(a) - L/2*math.sin(a)
+      shapes.append(arrow((x, y), (x + L*math.cos(a), y + L*math.sin(a)), 'u', 1.4))
+  for k in range(6):
+    a = 2*math.pi*k/6 + 0.52
+    r = 2.3
+    x, y = cx + s*r*math.cos(a), cy + s*r*math.sin(a)
+    shapes.append(arrow((x, y), (x - 16*math.cos(a), y - 16*math.sin(a)), 'w', 2.0))
+  shapes += [ellipse(cx, cy, 4, 4, 'ink'), text(cx, cy - 20, 'horizon:', 'ink', 0.75, anchor='middle'),
+             text(cx, cy - 6, 'space at c', 'ink', 0.75, anchor='middle'),
+             text(cx, cy + 24, 'faster inside', 'ink', 0.75, anchor='middle')]
+  x0, xs, xw, L = 440, 610, 650, 56
+  shapes += [text(x0, 50, 'Falling in from far away', 'ink', 0.95), text(xs, 76, 'space', 'u', 0.85, anchor='end'),
+             text(xw, 76, 'faller', 'v', 0.85)]
+  for k, r in enumerate((4, 2, 1.1, 1)):
+    y = 120 + 64*k
+    u = 1/math.sqrt(r)
+    w = 2*u/(1 + u*u)
+    v = w - u
+    clock = (1 - u*u)/(1 + u*u)
+    shapes += [text(x0, y + 5, 'at %g rₛ' % r, 'ink', 0.9),
+               text(x0, y + 25, 'through space %.3gc, clock %s' % (w, '%.2f' % clock if clock > 0 else 'stopped'), 'ink', 0.8),
+               arrow((xs - L*u, y), (xs, y), 'u', 1.6)]
+    if v*L > 1:
+      shapes.append(arrow((xw + v*L, y), (xw, y), 'v', 1.6))
+    else:
+      shapes.append(ellipse(xw + 4, y, 3.5, 3.5, 'v'))
+  shapes += [text(x0, 384, 'faller as seen from outside:', 'faint', 0.8), text(x0, 400, 'its speed through space, less the flow', 'faint', 0.8),
+             text(W/2, 432, 'Space flows out at u = c √(rₛ/r), slowing as it goes, so g (green) points in. Light moves at c through the space it is in.',
+                  'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def whitetime():
+  """the fall from far away, passing 1.8 rs at t = 0.8 rs/c, against each hole's own time: into a black hole (the flow's time, space falling in) it
+  crosses the horizon; into a white hole (space flowing out) it only creeps towards it, as space carries it back out
+  ever faster - the same path through spacetime, the same clock"""
+  W, H = 760, 450
+  PX, TOP, SIDE, RMAX, TMAX = 58, 52, 315, 5.4, 5.2
+  f = lambda r: 2*math.sqrt(r) + math.log((math.sqrt(r) - 1)/(math.sqrt(r) + 1))
+  shapes = []
+  for left, white, title in ((48, False, 'a black hole, in its own time'), (418, True, 'a white hole, in its own time')):
+    P = lambda r, t: (left + r*PX, TOP + SIDE - t*PX)
+    inside = lambda r, t: 0 <= r <= RMAX and 0 <= t <= TMAX
+    shapes += [arrow(P(0, 0), P(RMAX + 0.25, 0), 'ink', 1.0), arrow(P(0, 0), P(0, TMAX + 0.3), 'ink', 1.0),
+               text(*P(RMAX + 0.1, -0.4), 'r', 'ink', 1.1, math_=True), text(*P(-0.35, TMAX + 0.1), 't', 'ink', 1.1, math_=True),
+               text(*P(RMAX/2, TMAX + 0.55), title, 'ink', 0.95, anchor='middle')]
+    for k in range(1, 6):
+      shapes += [line(P(k, 0), P(k, -0.1), 'ink', width=0.8), text(P(k, 0)[0], P(k, -0.42)[1], '%d' % k, 'ink', 0.8, anchor='middle')]
+    shapes += [line(P(1, 0), P(1, TMAX), 'ink', dash=True, width=0.9), text(P(1, 0)[0] + 5, P(0, TMAX - 0.15)[1], 'horizon', 'ink', 0.8)]
+    #lines of space: in, r^1.5 = 1.5 (c0 - t), or out, r^1.5 = 1.5 (t - c0)
+    for c0 in ((1.0, 2.6, 4.0, 5.6, 7.2, 8.8, 10.4) if not white else (-6.4, -4.8, -3.2, -1.6, 0.0, 1.6, 3.2, 4.8)):
+      pts = []
+      for k in range(400):
+        r = 0.02 + (RMAX - 0.02)*k/399
+        t = c0 + (2/3)*r**1.5 if white else c0 - (2/3)*r**1.5
+        if inside(r, t):
+          pts.append(P(r, t))
+      if len(pts) > 1:
+        shapes += poly(pts, 'faint', 1.0)
+    #the fall, at 1.8 rs at t = 0.8 (and further out before): the black hole's time is its clock; the white hole's runs
+    #ahead by 2 (f(1.8) - f(r))
+    pts = []
+    for k in range(3000):
+      r = RMAX - (RMAX - (0.02 if not white else 1.0005))*k/2999
+      tau = (2/3)*(1.8**1.5 - r**1.5)
+      t = 0.8 + (tau - 2*(f(r) - f(1.8)) if white else tau)
+      if inside(r, t):
+        pts.append(P(r, t))
+    shapes += poly(pts, 'v', 2.0)
+    #light cones: future edges, dr/dt = -+sqrt(1/r) +- 1
+    for r, t in (((0.5, 3.4), (1.0, 2.6), (2.0, 3.4), (2.7, 1.4), (4.2, 3.0)) if not white else
+                 ((0.5, 1.4), (1.0, 0.7), (2.0, 4.2), (2.7, 1.4), (4.2, 3.0))):
+      x, y = P(r, t)
+      d = 1/math.sqrt(r)*(1 if white else -1)
+      for sl in (d + 1, d - 1):
+        n = math.hypot(sl, 1)
+        shapes.append(line((x, y), (x + 30*sl/n, y - 30/n), 'u', width=1.5))
+      shapes.append(ellipse(x, y, 2.6, 2.6, 'u'))
+  shapes += [text(W/2, 412, 'r in Schwarzschild radii, t in rₛ/c; light far out at 45°', 'faint', 0.85, anchor='middle'),
+             line((60, 438), (94, 438), 'faint', width=1.0), text(104, 443, 'lines of flowing space', 'ink', 0.85),
+             line((270, 438), (304, 438), 'v', width=2.0), text(314, 443, 'falling in from far away', 'ink', 0.85),
+             line((500, 438), (534, 438), 'u', width=1.5), text(544, 443, 'light sent out and in', 'ink', 0.85)]
+  return W, H, shapes
+
+
 TESTS = os.path.join(ROOT, 'docs', 'part1', 'tests', 'images')
-DIAGRAMS = {'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel,
-            'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro}
-FOLDER = {'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS}     #the rest go in OUT
+PART1 = os.path.join(ROOT, 'docs', 'part1', 'images')
+DIAGRAMS = {'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
+            'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro,
+            'funnel': funnel, 'falling': falling, 'spacetime': spacetime,
+            'spacefall': spacefall, 'twister': twister, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
+FOLDER = {'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
+          'funnel': PART1, 'falling': PART1, 'spacetime': PART1,
+          'spacefall': PART1, 'twister': PART1, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
 
 
 # --- drawing ----------------------------------------------------------------------------------------------------------

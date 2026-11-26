@@ -30,6 +30,7 @@ nav:
           - part1/mechanics/index.md
           - Newtonian: part1/mechanics/newtonian.md
           - Special Relativistic: part1/mechanics/special-relativistic.md
+          - The Four Clocks: part1/mechanics/four-clocks.md
       - The Four Tests:
           - part1/tests/index.md
           - The Gravitational Redshift of Light: part1/tests/redshift.md

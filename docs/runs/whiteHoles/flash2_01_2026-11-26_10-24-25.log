@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  white
+light from 1.10 rs at t 3118.45 s, at 30 degrees
+backgrounds: whiteHoles_flashes.backgrounds.json

@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+falling from rest at infinity, from 20 rs (t = 0) into the hole, moving with the flow (w = 0)
+fall: from rest at infinity, passing START = 20 rs at t = 0; the horizon at proper time 2324.02 s (exact), 26.28 s more to the centre; reached 0.050 rs at t 2350.000 s, proper time 2350.000 s (exact to there 2350.000 s)

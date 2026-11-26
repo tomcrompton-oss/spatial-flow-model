@@ -1,0 +1,18 @@
+{
+  "kind": "preferences",
+  "version": 1,
+  "preferences": {
+    "mode": "xy",
+    "equalAspect": true,
+    "showSchwarzschild": true,
+    "showBodies": true,
+    "showSpin": true,
+    "showFlow": true,
+    "showTwist": true,
+    "showScalar": false,
+    "showTimeMarks": false,
+    "showMarkers": true,
+    "showPathLegend": true,
+    "showFieldKey": true
+  }
+}

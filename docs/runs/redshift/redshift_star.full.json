@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "redshift_star.prefs.json",
+  "config": "redshift_star.config.json"
+}

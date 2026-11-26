@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+light sent straight out at t 240 s from 18.6142 rs by the falling observer
+  1      240.000   18.61418   18.61418      310.721      310.721                 -3.22e-09

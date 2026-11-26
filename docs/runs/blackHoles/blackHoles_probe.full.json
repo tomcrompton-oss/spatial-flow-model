@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "blackHoles_probe.prefs.json",
+  "config": "blackHoles_probe.config.json"
+}

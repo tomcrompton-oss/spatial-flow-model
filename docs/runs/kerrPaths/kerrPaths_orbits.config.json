@@ -1,0 +1,78 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "orbit_withSpin_2026-11-26_10-08-56.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": true,
+      "apoapsis": true,
+      "styles": {
+        "pos": [
+          "#2a78d6",
+          "solid",
+          "#1baf7a"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "orbit_againstSpin_2026-11-26_10-09-07.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": true,
+      "apoapsis": true,
+      "styles": {
+        "pos": [
+          "#e34948",
+          "solid",
+          "#eda100"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "orbit_noSpin_2026-11-26_10-09-18.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": true,
+      "apoapsis": true,
+      "styles": {
+        "pos": [
+          "#52514e",
+          "solid",
+          "#c3c2b7"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}
