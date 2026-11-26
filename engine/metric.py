@@ -101,9 +101,12 @@ class Spacetime:
     extra = 0.0 if k is None else p @ k @ p
     return flat + extra, extra
 
-  def reduced(self, x, p, t, light, region):
-    """H less its part that doesn't change with x (c sqrt(c^2 + p . p), or c |p| for light), worked from small parts"""
+  def reduced(self, x, p, t, light, region, less=None):
+    """H less its part that doesn't change with x (c sqrt(c^2 + p . p), or c |p| for light), worked from small parts;
+    and less . p, if less is given (force's: the flow at the difference's centre)"""
     a, u, k = self.parts(x, t, region)
+    if less is not None:
+      u = u - less
     pp, extra = self.norm2(p, k)
     flat = p @ p
     if light:
@@ -119,19 +122,43 @@ class Spacetime:
     kp = p if k is None else p + k @ p
     return (1 + a)*C*kp/(math.sqrt(pp) if light else math.sqrt(C*C + pp)) + u
 
-  def force(self, x, p, t, light, region, nearest):
+  def force(self, x, p, t, light, region, nearest, wide=False):
     """
-    dp/dt = -dH/dx, by fourth-order centred differences 10^-3 of the distance to the nearest body across: H holds the
+    dp/dt = -dH/dx, by fourth-order centred differences ~10^-3 of the distance to the nearest body across: H holds the
     potential energy (9 x 10^8 J/kg from the Sun at 1 AU) to a part in 10^16, so a narrower difference loses the
     relativistic part to rounding, and a second-order one this wide its error (10^-6 of g)
     """
-    h = 1e-3*nearest
+    if wide:
+      return self.wideForce(x, p, t, light, region, nearest)
+    h = 2.0**round(math.log2(1e-3*nearest))   #a power of two: x +- h, +- 2h are then exact (a multiple of x's last
+                                              #place), so no point of the difference is rounded - which, where H's
+                                              #slope is large, is noise in the force (H' x 3e-5 m/h at 1.5e11 m)
     out = np.zeros(2)
-    H = lambda y: self.reduced(y, p, t, light, region)
+    #less the centre's u . p (a constant across the difference): u . p is ~10^9 J/kg where a body's river carries
+    #its velocity (30 km/s) past a particle moving with it, and rounding it at each point is noise in the force
+    #(1e-12 m/s^2 at the Moon in engine/carried.py's FreeFallTurning); (u - u_centre) . p rounds 10^5 times finer
+    centre = self.parts(x, t, region)[1]
+    H = lambda y: self.reduced(y, p, t, light, region, centre)
     for i in range(2):
       e = np.zeros(2)
       e[i] = h
       out[i] = -(8*(H(x + e) - H(x - e)) - (H(x + 2*e) - H(x - 2*e)))/(12*h)
+    return out
+
+  def wideForce(self, x, p, t, light, region, nearest):
+    """force by eighth-order centred differences ~10^-2 of the distance to the nearest body across (truncation ~1e-16
+    of the force): where the flow is fast its rounding (~1e-16 of 10^5 m/s) is noise in H, ~3e-7 J/kg against the
+    Moon's 30 km/s momentum, and the force's noise is that over the width - a width 8x the fourth-order one's leaves
+    1/7 of the noise (MetricCalculator order=4)"""
+    h = 2.0**round(math.log2(1e-2*nearest))
+    out = np.zeros(2)
+    centre = self.parts(x, t, region)[1]
+    H = lambda y: self.reduced(y, p, t, light, region, centre)
+    weights = (4/5, -1/5, 4/105, -1/280)
+    for i in range(2):
+      e = np.zeros(2)
+      e[i] = h
+      out[i] = -sum(w*(H(x + (k + 1)*e) - H(x - (k + 1)*e)) for k, w in enumerate(weights))/h
     return out
 
   def energy(self, x, p, t, light, region):
@@ -480,17 +507,33 @@ class SlicedPN(Spacetime):
     return self.pieces(x, t)[1]
 
 
+def kahan(total, add, carry):
+  """total + add, with the rounding left over from earlier sums (carry) put back, and this sum's own carried on"""
+  y = add - (0.0 if carry is None else carry)
+  t = total + y
+  return t, (t - total) - y
+
+
 class MetricCalculator(Calculator):
   """
-  particles on a Spacetime's paths (see the module notes): the midpoint rule on Hamilton's equations, from the side of
+  particles on a Spacetime's paths (see the module notes): the midpoint rule (or order=4, Runge-Kutta's) on Hamilton's equations, from the side of
   any seam the step starts on; across a seam the momentum along it is kept and the energy H (as engine/flow.py's
   crossSeam). p.q is the momentum, p.v the velocity, p.u the flow there and p.w = v - u, for the step sizes and logs
   """
   runspeed = 8000
 
-  def __init__(self, spacetime):
+  def __init__(self, spacetime, order=2):
+    """order: 2, the midpoint rule; 4, the classical Runge-Kutta rule (four forces a step, not two, each by
+    Spacetime.wideForce, an eighth-order difference 10x wider: its rounding noise is 1/7 the usual). use 4 where the
+    momentum's force is much larger than the particle's acceleration - a flow carrying a body's river past a particle
+    that moves with the body (the Moon in engine/carried.py's FreeFallTurning: 0.145 m/s^2 against 0.003, from p's
+    30 km/s across the Earth's river), where the midpoint rule's step error is 100x GR's and its higher-order part
+    leaks into a differenced run (studies/lapse_moon.py)"""
     super().__init__(spacetime.bodies or [], direction='g' if len(spacetime.bodies) > 1 else None)
     self.spacetime = spacetime
+    if order not in (2, 4):
+      raise ValueError('order is 2 or 4')
+    self.order = order
 
   def __repr__(self):
     return '<metric.MetricCalculator object: %s>' % self.spacetime.describe()
@@ -541,6 +584,8 @@ class MetricCalculator(Calculator):
     self.seamStep(p, dt, self.step)
 
   def step(self, p, dt):
+    if self.order == 4:
+      return self.step4(p, dt)
     S, side, light = self.spacetime, self.sideOf(p), p.light
     x, q, t = p.pos, p.q, p.t
     middle = t + dt/2
@@ -552,6 +597,29 @@ class MetricCalculator(Calculator):
       p.pt += dt*S.rate(xm, qm, middle, side)
     p.pos = x + vm*dt
     p.d += length(vm*dt)
+    p.t = t + dt
+    self.keep(p)
+
+  def step4(self, p, dt):
+    """the classical Runge-Kutta step on Hamilton's equations, dx/dt = dH/dp, dp/dt = -dH/dx (and the proper time by
+    Simpson's rule on its rate)"""
+    S, side, light = self.spacetime, self.sideOf(p), p.light
+    x, q, t = p.pos, p.q, p.t
+    rates = lambda y, k, s: (S.velocity(y, k, s, light, side), S.force(y, k, s, light, side, self.nearestScale(y, s),
+                                                                      wide=True))
+    v1, f1 = rates(x, q, t)
+    v2, f2 = rates(x + v1*dt/2, q + f1*dt/2, t + dt/2)
+    v3, f3 = rates(x + v2*dt/2, q + f2*dt/2, t + dt/2)
+    v4, f4 = rates(x + v3*dt, q + f3*dt, t + dt)
+    if not light:
+      p.pt += dt/6*(S.rate(x, q, t, side) + 2*S.rate(x + v1*dt/2, q + f1*dt/2, t + dt/2, side)
+                    + 2*S.rate(x + v2*dt/2, q + f2*dt/2, t + dt/2, side) + S.rate(x + v3*dt, q + f3*dt, t + dt, side))
+    step = (v1 + 2*v2 + 2*v3 + v4)*dt/6
+    #compensated (Kahan) sums: the Moon's place, ~1.5e11 m from the Sun, holds a step's change only to 3e-5 m, and
+    #over 10^5 steps the rounding adds up to millimetres; carried in p.posCarry and p.qCarry, it doesn't
+    p.pos, p.posCarry = kahan(x, step, getattr(p, 'posCarry', None))
+    p.q, p.qCarry = kahan(q, (f1 + 2*f2 + 2*f3 + f4)*dt/6, getattr(p, 'qCarry', None))
+    p.d += length(step)
     p.t = t + dt
     self.keep(p)
 

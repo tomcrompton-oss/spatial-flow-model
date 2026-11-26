@@ -1,0 +1,101 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "equal masses, circular.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "ring distance (log10 r/a) / averaged flow less body velocity (log10 of its speed)": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "ring distance (log10 r/a)",
+          "averaged flow less body velocity (log10 of its speed)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "equal masses, e 0.6, at periastron.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "ring distance (log10 r/a) / averaged flow less body velocity (log10 of its speed)": [
+          "#1baf7a",
+          "solid",
+          "#1baf7a"
+        ]
+      },
+      "selection": [
+        [
+          "ring distance (log10 r/a)",
+          "averaged flow less body velocity (log10 of its speed)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "mass ratio 0.1, e 0.6, the heavier.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "ring distance (log10 r/a) / averaged flow less body velocity (log10 of its speed)": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "ring distance (log10 r/a)",
+          "averaged flow less body velocity (log10 of its speed)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "mass ratio 0.1, e 0.6, the lighter.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "ring distance (log10 r/a) / averaged flow less body velocity (log10 of its speed)": [
+          "#d6a21e",
+          "dashed",
+          "#d6a21e"
+        ]
+      },
+      "selection": [
+        [
+          "ring distance (log10 r/a)",
+          "averaged flow less body velocity (log10 of its speed)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

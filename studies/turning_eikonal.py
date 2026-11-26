@@ -52,6 +52,24 @@ def turningCalc(cls=Calculator):
   return cls(bodies(), combine='turning') if cls is Calculator else cls(bodies(), 2, combine='turning')
 
 
+class TurningFrame:
+  """the turning flow seen in the frame turning with the bodies, where it is steady: u - Omega x x, at t = 0 (the
+  frame the paths are drawn in); nan where the flow has no value (the Sun's paths turn back before 2/3 AU)"""
+
+  def __init__(self, calc):
+    self.calc, self.bodies = calc, calc.bodies
+    self.warn = lambda message: None
+
+  def flow(self, pos, region=None, t=0.0):
+    pos = np.asarray(pos, dtype=float)
+    try:
+      u = self.calc.flow(pos, None, 0.0)
+    except Exception:
+      return np.array([np.nan, np.nan])
+    return u - OMEGA*np.array([-pos[1], pos[0]])
+
+
+
 def paths(folder):
   """space paths out of each body, run back in time in the turning frame (as the tables are)"""
   calc = turningCalc()
@@ -89,7 +107,13 @@ def paths(folder):
       made.append((write(folder, 'path_%s_%02d' % (('sun', 'earth')[index], k), calc, rows, ['t', 'pos_x', 'pos_y'],
                          ['a space path out of %s, run back in time in the turning frame (J = %.9e)'
                           % (('the Sun', 'the Earth')[index], field.J)]), COLOURS[index]))
-  writeViewerFiles(folder, 'turning_paths', made)
+  writeViewerFiles(folder, 'turning_paths', made, preferences={'showPathLegend': False, 'showFlow': True},
+                   frames=TurningFrame(calc),
+                   background=('The turning flow, in the frame turning with the bodies',
+                               'The flow of space relative to the frame that turns with the Sun and the Earth once a '
+                               'year, where it is steady: the turning flow less the frame\'s own motion. Each body\'s '
+                               'paths follow it. Beyond about two thirds of the way to the Earth the Sun\'s paths turn '
+                               'back, and the Sun\'s flow has no value there.'))
   sun = max(k for k in range(field.rows) if field.covered[0][k].any())
   cross = field.crossings[1][0] if field.crossings[1] else field.rows - 1
   lines.append('  the tables: the Sun\'s paths fill %.3f AU round it (then turn back); the Earth\'s are clean to'

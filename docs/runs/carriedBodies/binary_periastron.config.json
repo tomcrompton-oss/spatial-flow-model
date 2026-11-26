@@ -1,0 +1,55 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "each body in the others' flow.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "orbit (n) / periastron turned (arcsec)": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "orbit (n)",
+          "periastron turned (arcsec)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "general relativity.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "orbit (n) / periastron turned (arcsec)": [
+          "#7a7a74",
+          "dashed",
+          "#7a7a74"
+        ]
+      },
+      "selection": [
+        [
+          "orbit (n)",
+          "periastron turned (arcsec)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

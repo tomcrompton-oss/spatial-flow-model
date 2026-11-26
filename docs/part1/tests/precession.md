@@ -31,7 +31,7 @@ distance to it. Mercury's real orbit, round the Sun alone, ten orbits at each st
 | 1 × 10⁻⁵ | 5.0203 × 10⁻⁷ | 5.0208 × 10⁻⁷ | −0.010% | 43.01 | 12 min |
 
 Exact general relativity is the full precession integral for the orbit's own perihelion and aphelion (see
-[References](../../appendix-c.md)), 43.01″ a century. Each step tenfold finer takes about a hundredth off the
+[References](../../appendix-c/references.md)), 43.01″ a century. Each step tenfold finer takes about a hundredth off the
 difference, as a second-order step should: the difference is the step's error, not the physics. It is about the same
 angle an orbit at every scale (4 × 10⁻⁸ radians at the coarsest step), which for Mercury's tiny precession is a large
 part. Because the error falls as the step squared, two runs give the answer for no step at all: from the

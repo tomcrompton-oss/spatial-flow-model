@@ -2,7 +2,7 @@ alone: the Earth by itself, moving at 29780 m/s (along +y)
   g round it: a particle let go at rest beside it, its acceleration over 0.01 s against Newton's; angle from the side facing -x (90 deg is ahead)
     flow                      0 deg     45 deg     90 deg    135 deg    180 deg    225 deg    270 deg    315 deg   (|a - g_Newton|, m/s^2)
     taken along                52.3       41.3       26.1       41.3       52.3       41.3       26.1       41.3
-    carried                   2e-08   1.39e-08   2.16e-08   1.39e-08      2e-08   1.61e-08   1.84e-08    1.5e-08
+    carried                1.24e-08   1.55e-08   1.25e-08   1.55e-08   1.24e-08   1.53e-08   1.18e-08   1.52e-08
   clocks at rest on it: a pulse a second from the clock ahead to the one at its side, the count ratio less 1 (GR: 0, as at rest)
     taken along    +3.7064e-09   (the pulses arrived 1.000000000 s apart)
     carried        -1.8874e-15   (the pulses arrived 1.000000000 s apart)
@@ -12,8 +12,8 @@ system: the Sun, and the Earth 1 AU away moving at 29780 m/s at right angles to 
   g round the Earth, against Newton's (the Sun's tide at the surface is 5.05e-07 m/s^2)
     flow                      0 deg     45 deg     90 deg    135 deg    180 deg    225 deg    270 deg    315 deg   (|a - g_Newton|, m/s^2)
     taken along                  64       89.6       78.5       47.2         64       89.6       78.5       47.2
-    carried, by g^1            0.12      0.171      0.148     0.0899      0.119      0.162      0.147     0.0919
-    carried, by g^2         0.00681    0.00985    0.00629    0.00473    0.00524    0.00462    0.00625    0.00977
+    carried, by g^1          0.0798     0.0652     0.0706     0.0861     0.0789     0.0566      0.068     0.0862
+    carried, by g^2         0.00681    0.00973    0.00618    0.00473    0.00524    0.00463    0.00615    0.00975
     carried, by g^4         0.00672     0.0097    0.00614    0.00462    0.00514    0.00462    0.00614     0.0097
     carried, by g^8         0.00672     0.0097    0.00614    0.00462    0.00514    0.00462    0.00614     0.0097
   (the Earth's share of g at its surface is 1 - 6.0e-04; by g^n, 1 - that to the nth. what is left as the share sharpens is the vectors' own cross term, u_E . (u_S(x) - u_S(Earth)), about u_E u_S/AU = 3.2e-03 m/s^2)
@@ -21,19 +21,35 @@ system: the Sun, and the Earth 1 AU away moving at 29780 m/s at right angles to 
     taken along    6.394e-09
     carried        1.675e-13
 
-drops, taken along: from 0 deg (90 = ahead), after 150 s: 120.6 km down, 574.8 km sideways
-drops, taken along: from 45 deg (90 = ahead), after 86 s: 101.9 km down, 131.7 km sideways
-drops, taken along: from 90 deg (90 = ahead), after 76 s: 100.3 km down, 0.0 km sideways
-drops, taken along: from 135 deg (90 = ahead), after 86 s: 101.9 km down, 131.7 km sideways
-drops, taken along: from 180 deg (90 = ahead), after 150 s: 120.6 km down, 574.8 km sideways
-drops, taken along: from 225 deg (90 = ahead), after 150 s: -89.4 km down, 409.8 km sideways
-drops, taken along: from 270 deg (90 = ahead), after 150 s: -179.2 km down, 0.0 km sideways
-drops, taken along: from 315 deg (90 = ahead), after 150 s: -89.4 km down, 409.8 km sideways
-drops, carried: from 0 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
-drops, carried: from 45 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
-drops, carried: from 90 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
-drops, carried: from 135 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
-drops, carried: from 180 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
-drops, carried: from 225 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
-drops, carried: from 270 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
-drops, carried: from 315 deg (90 = ahead), after 145 s: 100.6 km down, 0.0 km sideways
+drops, taken along: from 0 deg (90 = ahead), 100 km up, after 150 s: 120.6 km down, 574.8 km sideways
+drops, taken along: from 0 deg, 6371 km up, after 3000 s: 28264 km down, 32437 km sideways, still falling
+drops, taken along: from 45 deg (90 = ahead), 100 km up, after 86 s: 101.9 km down, 131.7 km sideways
+drops, taken along: from 45 deg, 6371 km up, after 1650 s: 14430 km down, 6143 km sideways, landed
+drops, taken along: from 90 deg (90 = ahead), 100 km up, after 76 s: 100.3 km down, 0.0 km sideways
+drops, taken along: from 90 deg, 6371 km up, after 967 s: 6377 km down, 0 km sideways, landed
+drops, taken along: from 135 deg (90 = ahead), 100 km up, after 86 s: 101.9 km down, 131.7 km sideways
+drops, taken along: from 135 deg, 6371 km up, after 1650 s: 14430 km down, 6143 km sideways, landed
+drops, taken along: from 180 deg (90 = ahead), 100 km up, after 150 s: 120.6 km down, 574.8 km sideways
+drops, taken along: from 180 deg, 6371 km up, after 3000 s: 28264 km down, 32437 km sideways, still falling
+drops, taken along: from 225 deg (90 = ahead), 100 km up, after 150 s: -89.4 km down, 409.8 km sideways
+drops, taken along: from 225 deg, 6371 km up, after 2710 s: 7497 km down, 37871 km sideways, still falling
+drops, taken along: from 270 deg (90 = ahead), 100 km up, after 150 s: -179.2 km down, 0.0 km sideways
+drops, taken along: from 270 deg, 6371 km up, after 3000 s: -22634 km down, 0 km sideways, still falling
+drops, taken along: from 315 deg (90 = ahead), 100 km up, after 150 s: -89.4 km down, 409.8 km sideways
+drops, taken along: from 315 deg, 6371 km up, after 2710 s: 7497 km down, 37871 km sideways, still falling
+drops, carried: from 0 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 0 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed
+drops, carried: from 45 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 45 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed
+drops, carried: from 90 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 90 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed
+drops, carried: from 135 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 135 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed
+drops, carried: from 180 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 180 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed
+drops, carried: from 225 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 225 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed
+drops, carried: from 270 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 270 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed
+drops, carried: from 315 deg (90 = ahead), 100 km up, after 145 s: 100.6 km down, 0.0 km sideways
+drops, carried: from 315 deg, 6371 km up, after 2071 s: 6373 km down, 0 km sideways, landed

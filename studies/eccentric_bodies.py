@@ -19,7 +19,8 @@ shrinks, as the tide's terms average out on a circle; it is also given as a frac
 cases: mass ratios 0.1 and 1, e = 0 (the check) and 0.6, at periastron and apastron
 
 run: python3 studies/eccentric_bodies.py     (under a minute; prints, and writes
-     logs/modelChecks/eccentricBodies_<datetime>/summary.log)
+     logs/modelChecks/eccentricBodies_<datetime>/summary.log, and a viewer file, ownSpace.full.json, of four of the
+     cases)
 """
 import math
 import os
@@ -58,6 +59,37 @@ def rings(orbit, k, ts):
   return out
 
 
+PLOTTED = {(1.0, 0.0, 'periastron', 'heavier'): ('equal masses, circular', '#2a78d6', 'solid'),
+           (1.0, 0.6, 'periastron', 'heavier'): ('equal masses, e 0.6, at periastron', '#1baf7a', 'solid'),
+           (0.1, 0.6, 'periastron', 'heavier'): ('mass ratio 0.1, e 0.6, the heavier', '#eb6834', 'solid'),
+           (0.1, 0.6, 'periastron', 'lighter'): ('mass ratio 0.1, e 0.6, the lighter', '#d6a21e', 'dashed')}
+
+
+def writePlot(folder, plotted):
+  """for the viewer: for a few of the cases, how far each body's averaged space is from moving with it (the mean less
+  the body's velocity, / the body's speed) against the ring's mean distance, both as log10"""
+  sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+  from two_body_escapes import writeViewerFiles
+  made = []
+  x, y = 'ring distance (log10 r/a)', 'averaged flow less body velocity (log10 of its speed)'
+  for key, (title, colour, style) in PLOTTED.items():
+    if key not in plotted:
+      continue
+    path = os.path.join(folder, title + '.csv')
+    with open(path, 'w') as f:
+      f.write('%s,%s\n' % (x, y))
+      for r, _, b in plotted[key]:
+        f.write('%.6g,%.6g\n' % (math.log10(r), math.log10(b)))
+    with open(path[:-4] + '.log', 'w') as f:
+      f.write('the one-potential flow round a body of an eccentric binary (%s): its average round rings at mean distance'
+              ' r (the separation a = 1), less the body\'s velocity, as a share of the body\'s speed; both log10\n' % title)
+    made.append((path, colour, style))
+  writeViewerFiles(folder, 'ownSpace', made, selection=((x, y),),
+                   styles=lambda colour, style='solid': {'%s / %s' % (x, y): [colour, style, colour]},
+                   preferences={'equalAspect': False, 'showBodies': False, 'showSchwarzschild': False,
+                                'showGrid': True, 'showPathLegend': True})
+
+
 def main():
   folder = os.path.join(LOG_DIR, 'modelChecks', 'eccentricBodies_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder, exist_ok=True)
@@ -67,6 +99,7 @@ def main():
     print(s, flush=True)
   say('the flow round each body, averaged over the direction, less the body\'s velocity, / the flow\'s speed there;')
   say('rings at mean distance r (a = 1), from the nearest out')
+  plotted = {}
   for q in (0.1, 1.0):
     for e in (0.0, 0.6):
       orbit = ef.Orbit(q, e)
@@ -77,6 +110,9 @@ def main():
           say('q %.1f e %.1f %-10s %-7s  r: %s' % (q, e, label, name, ' '.join('%.4f' % r for r, _, _ in rs)))
           say('%33s mean / flow speed: %s   (goes as r^%.1f)' % ('', ' '.join('%.1e' % f for _, f, _ in rs), power))
           say('%33s mean / body speed: %s' % ('', ' '.join('%.1e' % b for _, _, b in rs)))
+          if (q, e, label, name) in PLOTTED:
+            plotted[(q, e, label, name)] = rs
+  writePlot(folder, plotted)
   with open(os.path.join(folder, 'summary.log'), 'w') as f:
     f.write('\n'.join(lines) + '\n')
   print('written to', folder)

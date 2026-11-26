@@ -1,0 +1,5 @@
+the Moon over 89 days, from logs/modelChecks/lapseMoon_90d_differenced_2026-11-26_18-56-47/tracks.npz: GR's Moon with its own de Sitter turn (k = 0) fitted to each model's, its start and the stretch free; how far apart they are
+  the turning flow                 rms 0.7911 m, largest 1.8538 m
+  the turning flow, space curved   rms 0.7920 m, largest 1.8596 m
+  one potential                    rms 0.0533 m, largest 0.1048 m
+  general relativity (the check)   rms 0.0486 m, largest 0.0797 m

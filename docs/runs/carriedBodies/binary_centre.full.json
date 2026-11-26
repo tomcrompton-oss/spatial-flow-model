@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "binary_centre.prefs.json",
+  "config": "binary_centre.config.json"
+}

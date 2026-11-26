@@ -4,11 +4,11 @@
   "preferences": {
     "mode": "xy",
     "equalAspect": true,
-    "showFlow": false,
+    "showFlow": true,
     "showTimeMarks": false,
     "showMarkers": false,
     "showBodies": true,
-    "showPathLegend": true,
+    "showPathLegend": false,
     "showFieldKey": true
   }
 }

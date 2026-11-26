@@ -10,7 +10,7 @@ track turned by -k times GR's de Sitter rate (1.5 V g/c^2, 19.2 mas a year):
 
 and the rms left by the fit is what of the Moon's orbit no start and k can take up (the test's floor is the GR row's).
 also fitted with GM_Earth free (lunar laser ranging fits it). the model's track is run at 60 and 30 s steps and taken
-to zero step (Richardson: the step is second order)
+to zero step (Richardson: the step error goes as dt^2, or dt^4 with order=4)
 
 the models (MODELS):
   GR                               GR's first post-Newtonian metric of the same bodies (engine/metric.py
@@ -44,6 +44,12 @@ run: python3 studies/lapse_moon.py [days]     (default 90; prints, and writes
      python3 studies/lapse_moon.py [days] differenced     (the relativistic part alone: each model at c less at
                                                           c x 1000, added to Newton's - its Newtonian errors out)
      python3 studies/lapse_moon.py refit <folder>/tracks.npz     (the fits again, from a run's tracks)
+     python3 studies/lapse_moon.py residuals <folder>/tracks.npz     (GR's Moon with its de Sitter turn fitted to each
+                                                                     model's, and what is left by day: for the viewer)
+     python3 studies/lapse_moon.py 90 [differenced] 'models=GR|turning, flat'     (a chosen set of models)
+     python3 studies/lapse_moon.py 90 [differenced] 'steps=30|15'     (other steps than 60 and 30 s)
+     python3 studies/lapse_moon.py 90 [differenced] order=4     (Runge-Kutta's rule, not the midpoint rule: needed
+                                                                for the J = 0 flows, whose step error is 100x GR's)
 """
 import math
 import os
@@ -63,6 +69,9 @@ from multi_body_pn import NODES, WEIGHTS
 MODELS = ['GR', 'turning, flat', 'turning, N = 1, space from u from its body', 'carried, flat',
           'carried, N = 1, space from u from its body']
 DTS = (60.0, 30.0)
+#the integrator's order (engine/metric.py MetricCalculator): 2, the midpoint rule, or 4, Runge-Kutta's. from the
+#environment, so that the pool's workers (spawned, not forked: they don't see main's globals) have it too
+ORDER = int(os.environ.get('LAPSE_MOON_ORDER', '2'))
 SAMPLE = 6*3600.0
 GRDT = 120.0
 DMOON = 3.844e8
@@ -81,7 +90,6 @@ def spacetime(model):
   if model.startswith('GR in the turning time'):
     from engine.carried import FreeFallTurning
     from engine.turning import carriedJacobi
-    from engine.flow import SpecialFlowCalculator
     J = 0.0
     if 'carried J' in model:
       J = carriedJacobi(bodies(), SpecialFlowCalculator(bodies(), 2, combine='turning').omega)
@@ -130,7 +138,7 @@ def run(job):
   the flow's integral from the Earth to it)"""
   model, dt, days, scale = job
   setC(scale)
-  calc = MetricCalculator(spacetime(model))
+  calc = MetricCalculator(spacetime(model), order=ORDER)
   B = calc.spacetime.bodies
   p = Particle()
   p.pos = B[1].at(0.0) + START[0]
@@ -346,6 +354,72 @@ def refit(path):
       print('  %-44s k %+.4f   stretch along %+.2f, across %+.2f V^2/2c^2   rms %.4f m' % (m, k, a/EPS, b/EPS, rms), flush=True)
 
 
+def fitFixedK(pool, ts, target, D):
+  """GR's Moon, with GR's own de Sitter turn (k held at 0), fitted to the target track - its start and the stretch
+  free: the fitted track"""
+  free = [0, 1, 2, 3, 5, 6]
+  steps = np.array([1.0, 1.0, 1e-6, 1e-6, 0.01, 1e-9, 1e-9])
+  p = np.concatenate([START[0], START[1], np.zeros(3)])
+  setC(1.0)
+  base = lambda p: grTrack(p, ts, D)
+  r = (base(p) - target).ravel()
+  for _ in range(8):
+    cols = pool.map(column, [(p, k, steps[k], ts, D, False) for k in free])
+    J = np.array([((c - target).ravel() - r)/steps[k] for k, c in zip(free, cols)]).T
+    before = math.sqrt(np.mean(r*r))
+    p[free] = p[free] - np.linalg.lstsq(J, r, rcond=None)[0]
+    r = (base(p) - target).ravel()
+    if abs(before - math.sqrt(np.mean(r*r))) < 1e-4*before:
+      break
+  return base(p)
+
+
+RESIDUAL_MODELS = (('turning, flat', 'the turning flow', '#eb6834', 'solid'),
+                   ('turning, N = 1, space from u from its body', 'the turning flow, space curved', '#d6a21e', 'dashed'),
+                   ('GR in the turning time, chi, no lapse', 'one potential', '#2a78d6', 'solid'),
+                   ('GR', 'general relativity (the check)', '#7a7a74', 'dotted'))
+
+
+def residuals(path):
+    """from a differenced run's tracks.npz: for each model, GR's Moon with GR's de Sitter turn fitted to the model's
+    (start and stretch free, k held at 0), and how far apart they are at each sample - the part of the model's Moon
+    no start can take up. a csv per model (day against metres), a viewer file and summary.log, in a new folder
+    logs/modelChecks/lapseMoonResiduals_<datetime>/"""
+    import json
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from two_body_escapes import writeViewerFiles
+    data = np.load(path)
+    ts = data['ts']
+    folder = os.path.join(LOG_DIR, 'modelChecks', 'lapseMoonResiduals_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+    os.makedirs(folder, exist_ok=True)
+    made, lines = [], ['the Moon over %g days, from %s: GR\'s Moon with its own de Sitter turn (k = 0) fitted to each'
+                       ' model\'s, its start and the stretch free; how far apart they are' % (ts[-1]/86400, path)]
+    with Pool(8) as pool:
+      for model, title, colour, style in RESIDUAL_MODELS:
+        if model not in data.files:
+          continue
+        fitted = fitFixedK(pool, ts, data[model], radius(model))
+        gap = np.linalg.norm(fitted - data[model], axis=1)
+        name = os.path.join(folder, title)
+        with open(name + '.csv', 'w') as f:
+          f.write('time (days),gap (m)\n')
+          for t, g in zip(ts, gap):
+            f.write('%.6g,%.6g\n' % (t/86400, g))
+        with open(name + '.log', 'w') as f:
+          f.write('the Moon in %s (%s), against GR\'s Moon with its de Sitter turn fitted to it: how far apart, by day\n'
+                  % (title, model))
+        made.append((name + '.csv', colour, style))
+        lines.append('  %-32s rms %.4f m, largest %.4f m' % (title, math.sqrt(np.mean(gap*gap)), gap.max()))
+        print(lines[-1], flush=True)
+    writeViewerFiles(folder, 'lapseMoon_residuals', made, selection=(('time (days)', 'gap (m)'),),
+                     styles=lambda colour, style='solid': {'time (days) / gap (m)': [colour, style, colour]},
+                     preferences={'equalAspect': False, 'showBodies': False, 'showSchwarzschild': False,
+                                  'showPathLegend': True, 'showGrid': True, 'replaySpeed': '1'})
+    with open(os.path.join(folder, 'summary.log'), 'w') as f:
+      f.write('\n'.join(lines) + '\n')
+    print('written to', folder)
+
+
 def zeroStep(model, ts, runs, days, scale, mapped):
   """the model's Moon from the Earth taken to zero step, in GR's coordinates (mapped) and at GR's sample times; and
   the 60 s step's"""
@@ -356,7 +430,8 @@ def zeroStep(model, ts, runs, days, scale, mapped):
       times, tracks[dt] = harmonic(model, ts, rows)
     else:
       times, tracks[dt] = ts, np.array([x - earth for x, sun, earth, I in rows])
-  zero = (4*tracks[DTS[1]] - tracks[DTS[0]])/3
+  k = 2**ORDER                                  #Richardson: the step error goes as dt^ORDER
+  zero = (k*tracks[DTS[1]] - tracks[DTS[0]])/(k - 1)
   #GR's times at the Moon differ from T by under a millisecond: the track is moved to them along its velocity
   vel = np.gradient(zero, ts, axis=0)
   shift = vel*(ts - times)[:, None]
@@ -366,8 +441,22 @@ def zeroStep(model, ts, runs, days, scale, mapped):
 def main():
   if len(sys.argv) > 2 and sys.argv[1] == 'refit':
     return refit(sys.argv[2])
+  if len(sys.argv) > 2 and sys.argv[1] == 'residuals':
+    return residuals(sys.argv[2])
   days = float(sys.argv[1]) if len(sys.argv) > 1 else 90.0
   differenced = 'differenced' in sys.argv[2:]
+  global MODELS
+  for a in sys.argv[2:]:
+    if a.startswith('models='):
+      MODELS = [m.strip() for m in a[len('models='):].split('|')]   #a chosen set of models, | between them
+  global DTS, ORDER
+  for a in sys.argv[2:]:
+    if a.startswith('order='):
+      ORDER = int(a[len('order='):])
+      os.environ['LAPSE_MOON_ORDER'] = str(ORDER)   #for the pool's workers
+  for a in sys.argv[2:]:
+    if a.startswith('steps='):
+      DTS = tuple(float(x) for x in a[len('steps='):].split('|'))     #the two steps (s), the second half the first
   folder = os.path.join(LOG_DIR, 'modelChecks', 'lapseMoon_%gd%s_%s' % (days, '_differenced' if differenced else '',
                                                                        datetime.now().strftime('%Y-%m-%d_%H-%M-%S')))
   os.makedirs(folder, exist_ok=True)
@@ -387,7 +476,9 @@ def main():
                                                                      clock(time.time() - started)))
     lines = ['moon: the Moon round the Earth for %g days, the Sun and the Earth going round each other; GR (EIH) fitted to'
              ' the model\'s track in harmonic coordinates, its start and k free, turned by -k de Sitter (19.2 mas a year):'
-             ' k = 0 the model has GR\'s de Sitter precession, k = 1 none; the rms left' % days]
+             ' k = 0 the model has GR\'s de Sitter precession, k = 1 none; the rms left' % days,
+             '  steps %g and %g s, %s' % (DTS[0], DTS[1], 'Runge-Kutta (order 4), its force an eighth-order difference'
+                                          if ORDER == 4 else 'the midpoint rule (order 2)')]
     if differenced:
       lines.append('  differenced: the model\'s track is its track at c less its track at c x 1000, added to Newton\'s (EIH at'
                    ' c x 1000): its relativistic part alone, its Newtonian errors taken out')

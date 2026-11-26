@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "ownSpace.prefs.json",
+  "config": "ownSpace.config.json"
+}

@@ -655,9 +655,11 @@ class FreeFallTurning(FreeFallPN):
   def baseFlow(self, x, t, region):
     from engine.flow import turn
     if self.local is not None and region == self.local.k:
-      y = turn(x, -self.omega*t)
-      if self.local.covers(y):
-        return turn(self.local.w(y) + self.omega*np.array([-y[1], y[0]]), self.omega*t)
+      #the point from the body in the lab, then turned (LocalTurningFlow.wRel: turning the point first rounds it)
+      d = turn(x - self.bodies[self.local.k].at(t), -self.omega*t)
+      if self.local.coversRel(d):
+        y = self.local.z + d
+        return turn(self.local.wRel(d) + self.omega*np.array([-y[1], y[0]]), self.omega*t)
     return self.calc.turningFlow(x, region, t)
 
   def region(self, x, t):

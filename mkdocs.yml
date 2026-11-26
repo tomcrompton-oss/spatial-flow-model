@@ -49,14 +49,35 @@ nav:
       - Deriving Curved Space: part2/deriving-curved-space.md
       - Multiple Bodies: part2/multiple-bodies.md
       - Conclusion: part2/conclusion.md
-  - Part 3 – Dynamic Bodies (Fixed Paths): part3.md
-  - Part 4 – Dynamic Bodies: part4.md
+  - Part 3 – Dynamic Bodies (Fixed Paths):
+      - Dynamic Models: part3/dynamic-models.md
+      - Carrying the Flow: part3/carrying-the-flow.md
+      - Curving the Turning Flow: part3/curving-the-turning-flow.md
+      - One Potential: part3/one-potential.md
+      - Conclusion: part3/conclusion.md
+  - Part 4 – Dynamic Bodies:
+      - Bodies Moved by the Flow: part4/bodies-moved-by-the-flow.md
+      - Each Body in the Others' Flow: part4/each-body-in-the-others-flow.md
+      - Moving With Its Own Space: part4/moving-with-its-own-space.md
+      - Conclusion: part4/conclusion.md
   - Part 5 – Gravitational Waves: part5.md
   - Part 6 – Hawking and Unruh Radiation: part6/index.md
-  - Conclusion: conclusion.md
-  - Appendix A – Simulations: appendix-a.md
+  - Conclusion:
+      - conclusion/index.md
+      - The Model, Step by Step: conclusion/step-by-step.md
+      - What Comes From Outside: conclusion/from-outside.md
+  - Appendix A – Simulations:
+      - appendix-a/index.md
+      - The Simulator: appendix-a/simulator.md
+      - Models: appendix-a/models.md
+      - Viewers: appendix-a/viewers.md
+      - Results: appendix-a/results.md
+      - File Formats: appendix-a/formats.md
   - Appendix B – Rabbit Holes: appendix-b.md
-  - Appendix C – References: appendix-c.md
+  - Appendix C – References:
+      - appendix-c/index.md
+      - References: appendix-c/references.md
+      - Prior Work: appendix-c/prior-work.md
   - Archive:
       - Overview: archive/index.md
       - Preface: archive/preface.md
