@@ -863,15 +863,413 @@ def whitetime():
   return W, H, shapes
 
 
+def twobodies():
+  """two equal bodies at rest: equipotentials of -GM/r1 - GM/r2 (separate rings round each body when deep, a figure
+  eight through the centre, one ring round both further out), and space falling at the speed the potential sets,
+  sqrt(2GM/r1 + 2GM/r2), along g - which at the centre has no direction"""
+  W, H = 760, 440
+  cx, cy, S = 320, 210, 112                 #the centre between the bodies, and pixels per unit (bodies at x = -1, +1)
+  bodies = ((-1.0, 0.0), (1.0, 0.0))
+  k = lambda x, y: sum(1/max(math.hypot(x - bx, y - by), 1e-9) for bx, by in bodies)     #-potential, GM = 1
+  P = lambda x, y: (cx + S*x, cy - S*y)
+  def crossing(ox, oy, a, level, last):
+    """along the ray from (ox, oy) at angle a, the first (or last) r where k falls to level"""
+    dx, dy = math.cos(a), math.sin(a)
+    rs = [0.02*i for i in range(1, 260)]
+    inside = [k(ox + r*dx, oy + r*dy) >= level for r in rs]
+    idx = [i for i in range(1, len(rs)) if inside[i - 1] and not inside[i]]
+    if not idx:
+      return None
+    i = idx[-1] if last else idx[0]
+    lo, hi = rs[i - 1], rs[i]
+    for _ in range(40):
+      mid = (lo + hi)/2
+      lo, hi = (mid, hi) if k(ox + mid*dx, oy + mid*dy) >= level else (lo, mid)
+    return lo
+  shapes = []
+  #rings round each body (deep levels, and the figure eight's two halves), one ring round both further out
+  for level in (3.2, 2.45, 2.0):
+    for bx, by in bodies:
+      pts = []
+      for j in range(241):
+        a = 2*math.pi*j/240
+        r = crossing(bx, by, a, level, False)
+        if r is not None:
+          pts.append(P(bx + r*math.cos(a), by + r*math.sin(a)))
+      shapes += poly(pts, 'faint', 1.2 if level == 2.0 else 1.0)
+  for level in (1.55, 1.2):
+    pts = []
+    for j in range(241):
+      a = 2*math.pi*j/240
+      r = crossing(0.0, 0.0, a, level, True)
+      pts.append(P(r*math.cos(a), r*math.sin(a)))
+    shapes += poly(pts, 'faint', 1.0)
+  #space falling at the speed the potential sets, along g
+  step = 0.36
+  for i in range(-7, 7):
+    for j in range(-4, 5):
+      x, y = i*step + step/2, j*step
+      near = min(math.hypot(x - bx, y - by) for bx, by in bodies)
+      if near < 0.36 or math.hypot(x, y) < 0.2:
+        continue
+      gx = sum((bx - x)/math.hypot(x - bx, y - by)**3 for bx, by in bodies)
+      gy = sum((by - y)/math.hypot(x - bx, y - by)**3 for bx, by in bodies)
+      g = math.hypot(gx, gy)
+      if g == 0:
+        continue
+      u = math.sqrt(2*k(x, y))
+      L = min(12*u, 30)
+      a0 = P(x, y)
+      shapes.append(arrow(a0, (a0[0] + L*gx/g, a0[1] - L*gy/g), 'u', 1.3))
+  for bx, by in bodies:
+    shapes += [ellipse(*P(bx, by), 22, 22, 'sun', 0, 'sun')]
+  shapes += [text(*P(-1, -0.04), 'M', 'ink', 1.0, anchor='middle', math_=True), text(*P(1, -0.04), 'M', 'ink', 1.0, anchor='middle', math_=True),
+             ellipse(cx, cy, 13, 13, 'v'), ellipse(cx, cy, 11, 11, 'bg', 0, 'bg'), text(cx, cy + 6, '?', 'v', 1.1, anchor='middle', bold=True)]
+  x0 = 580
+  shapes += [arrow((x0, 110), (x0 + 34, 110), 'u', 1.3), text(x0 + 44, 105, 'space falling at', 'ink', 0.85),
+             text(x0 + 44, 123, 'the speed the', 'ink', 0.85), text(x0 + 44, 141, 'potential sets,', 'ink', 0.85),
+             text(x0 + 44, 159, 'along g', 'ink', 0.85),
+             line((x0, 200), (x0 + 34, 200), 'faint', width=1.0), text(x0 + 44, 205, 'equal potential', 'ink', 0.85),
+             ellipse(x0 + 17, 250, 11, 11, 'v'), ellipse(x0 + 17, 250, 9, 9, 'bg', 0, 'bg'), text(x0 + 17, 255, '?', 'v', 0.9, anchor='middle', bold=True),
+             text(x0 + 44, 246, 'the centre: no', 'ink', 0.85), text(x0 + 44, 264, 'pull, so no', 'ink', 0.85),
+             text(x0 + 44, 282, 'direction', 'ink', 0.85),
+             text(W/2, 420, 'Two equal bodies at rest. The figure eight is the potential through the centre.', 'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def hollowsphere():
+  """a hollow sphere: space falls in outside it as round a single body; inside, there is no pull, the potential is
+  the surface's everywhere, and the escape speed is the surface's - a speed for the flow, but no direction. right:
+  the potential along a line through the centre, flat inside"""
+  W, H = 760, 400
+  cx, cy, R = 200, 190, 80
+  shapes = []
+  for k in range(20):
+    a = 2*math.pi*k/20 + 0.16
+    for r in (1.55, 2.15):
+      x, y = cx + R*r*math.cos(a), cy + R*r*math.sin(a)
+      L = 34/math.sqrt(r)
+      shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'u', 1.3))
+  shapes += [ellipse(cx, cy, R + 7, R + 7, 'sun', 0, 'sun'), ellipse(cx, cy, R - 7, R - 7, 'bg', 0, 'bg')]
+  shapes += [text(cx, cy - 24, 'no pull: g = 0', 'ink', 0.85, anchor='middle'),
+             text(cx, cy - 4, 'escape speed:', 'ink', 0.85, anchor='middle'),
+             text(cx, cy + 14, 'the surface\'s', 'ink', 0.85, anchor='middle'),
+             ellipse(cx, cy + 42, 12, 12, 'v'), ellipse(cx, cy + 42, 10, 10, 'bg', 0, 'bg'),
+             text(cx, cy + 47, '?', 'v', 1.0, anchor='middle', bold=True),
+             text(30, 30, 'a hollow shell: mass M, radius R', 'ink', 0.85)]
+  #the potential along the line through the centre
+  x0, x1, top, base = 430, 730, 70, 300
+  mid = (x0 + x1)/2
+  sx = 38                                   #pixels per R
+  phi = lambda x: -1/max(abs(x), 1.0)       #in GM/R
+  pts = [(mid + sx*x, top + (base - top)*(-phi(x))) for x in [i/50 for i in range(-190, 191)]]
+  shapes += [line((x0, top), (x1, top), 'ink', width=0.8), text(x1, top - 8, '0', 'ink', 0.8, anchor='end'),
+             line((mid, top - 10), (mid, base + 30), 'faint', width=0.8)]
+  shapes += poly(pts, 'v', 1.8)
+  for sgn in (-1, 1):
+    shapes.append(line((mid + sgn*sx, top), (mid + sgn*sx, base + 14), 'sun', width=3.0))
+  shapes += [text(mid, top - 22, 'the potential along a line through the centre', 'ink', 0.85, anchor='middle'),
+             text(mid, base + 20, '−GM/R, the same everywhere inside', 'ink', 0.8, anchor='middle'),
+             text(x1 - 4, top + 52, '−GM/r outside', 'ink', 0.8, anchor='end'),
+             text(mid - sx, base + 46, '−R', 'ink', 0.8, anchor='middle'), text(mid + sx, base + 46, 'R', 'ink', 0.8, anchor='middle'),
+             text(W/2, 380, 'Outside, the shell is like a single body of the same mass. Inside, nothing pulls, but the potential is the surface\'s.',
+                  'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def shelloptions():
+  """four ways space could flow through a hollow sphere along the line an object falls through it, each at the
+  surface's escape speed inside: the same way as it came in, the way it flows on the far side, towards the centre,
+  and out from the centre - and where each meets the flow outside head on, or splits from it"""
+  W, H = 760, 590
+  left, right, mid = 60, 700, 380
+  sx = 56                                   #pixels per R
+  shapes = []
+  rows = (('the faller', None), ('A  inside, as it came in', [1, 1]), ('B  inside, as on the far side', [-1, -1]),
+          ('C  towards the centre', [1, -1]), ('D  out from the centre', [-1, 1]))
+  for n, (label, inside) in enumerate(rows):
+    y = 60 + 105*n
+    shapes += [text(left, y - 22, label, 'ink', 0.9, bold=(n == 0)), line((left, y), (right, y), 'faint', width=0.8)]
+    for sgn in (-1, 1):
+      shapes.append(line((mid + sgn*sx, y - 16), (mid + sgn*sx, y + 16), 'sun', width=3.0))
+    if inside is None:
+      #the faller: from rest far to the left, through the sphere at the surface's speed, to rest far to the right
+      for x in (-5.2, -4.0, -2.8, -1.7, -0.6, 0.5, 1.6, 2.7, 3.9, 5.1):
+        speed = 1/math.sqrt(max(abs(x), 1.0))
+        L = 34*speed
+        px = mid + sx*x
+        shapes.append(arrow((px - L/2, y), (px + L/2, y), 'v', 1.6))
+      shapes.append(ellipse(mid + sx*(-5.6), y, 5, 5, 'v'))
+      continue
+    for x in (-5.2, -4.0, -2.8, -1.7, 1.7, 2.8, 4.0, 5.2):          #outside: in towards the sphere
+      L = 34/math.sqrt(abs(x))
+      d = 1 if x < 0 else -1
+      px = mid + sx*x
+      shapes.append(arrow((px - d*L/2, y), (px + d*L/2, y), 'u', 1.4))
+    for x, d in ((-0.55, inside[0]), (0.55, inside[1])):           #inside: the surface's speed, each half its way
+      px = mid + sx*x
+      shapes.append(arrow((px - d*17, y), (px + d*17, y), 'u', 1.4))
+    #where flows meet head on (or split apart): at each surface, and at the centre
+    meets = []
+    if inside[0] != 1:
+      meets.append(-1)
+    if inside[1] != -1:
+      meets.append(1)
+    if inside[0] != inside[1]:
+      meets.append(0)
+    for m in meets:
+      shapes += [ellipse(mid + sx*m, y + 30, 4, 4, 'v')]
+  shapes += [ellipse(left + 6, H - 26, 4, 4, 'v'), text(left + 18, H - 21, 'where the flow meets itself head on, or splits apart', 'ink', 0.85),
+             arrow((470, H - 26), (504, H - 26), 'u', 1.4), text(514, H - 21, 'space', 'ink', 0.85),
+             arrow((590, H - 26), (624, H - 26), 'v', 1.6), text(634, H - 21, 'the faller', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def potentialflow():
+  """the potential flow round two bodies at rest (the engine's exact two-body eikonal flow): the paths of things falling
+  from rest far away, which space flows down, each body's region filled by those that fall into it, and the seam where
+  the regions meet; between the bodies the flow leaves the seam on both sides - left, two equal bodies; right, one
+  four times the other"""
+  sys.path.insert(0, ROOT)
+  import numpy as np
+  from engine.flow import Body, SpecialFlowCalculator
+  from engine.constants import MS, AU
+  from engine.backgrounds import seamAround
+  W, H = 760, 420
+  shapes = []
+  for left, masses, title in ((20, (1.0, 1.0), 'two equal bodies'), (400, (1.0, 0.25), 'one four times the other')):
+    calc = SpecialFlowCalculator([Body(masses[0]*MS, x=-0.5*AU), Body(masses[1]*MS, x=0.5*AU)], 2, 'eikonal-exact')
+    calc.warn = lambda m: None
+    S, cx, cy = 118, left + 170, 200          #pixels per AU, the centre
+    P = lambda x, y: (cx + S*x, cy - S*y)
+    inside = lambda x, y: abs(x) < 1.42 and abs(y) < 1.45
+    #paths in from far away, followed down the flow (its direction) until they reach a body
+    starts = [(3.0*math.cos(a), 3.0*math.sin(a)) for a in [2*math.pi*(k + 0.5)/28 for k in range(28)]]
+    #and paths that leave the seam, either side of it, all along it: between the bodies, space comes from the seam
+    for y0 in [-1.3 + 2.6*k/10 for k in range(11)]:
+      xs = [i/400 for i in range(-400, 401)]
+      reg = [calc.region(np.array([x*AU, y0*AU])) for x in xs]
+      cross = next(xs[i] for i in range(1, len(xs)) if reg[i] != reg[i - 1])
+      for dx in (-0.004, 0.004):
+        starts.append((cross + dx, y0))
+    for sx, sy in starts:
+      x, y = sx, sy
+      pts = []
+      for _ in range(4000):
+        u = calc.flow(np.array([x*AU, y*AU]), calc.region(np.array([x*AU, y*AU])), 0.0)
+        n = math.hypot(*u)
+        if not n or min(math.hypot(x + 0.5, y), math.hypot(x - 0.5, y)) < 0.05:
+          break
+        x, y = x + 0.012*u[0]/n, y + 0.012*u[1]/n
+        if inside(x, y):
+          pts.append(P(x, y))
+      if len(pts) > 6:
+        shapes += poly(pts, 'u', 1.0)
+        k = len(pts)//3
+        shapes.append(arrow(pts[k - 2], pts[k], 'u', 1.2))
+    for line_ in seamAround(lambda q: calc.region(q), np.zeros(2), 0.005*AU, 3*AU, cells=(120, 96)):
+      pts = [P(q[0]/AU, q[1]/AU) for q in line_ if inside(q[0]/AU, q[1]/AU)]
+      if len(pts) > 1:
+        shapes += poly(pts, 'v', 1.8, dash=True)
+    for (bx, m) in ((-0.5, masses[0]), (0.5, masses[1])):
+      r = 16*math.sqrt(m)
+      shapes.append(ellipse(*P(bx, 0), r, r, 'sun', 0, 'sun'))
+    shapes += [text(cx, 24, title, 'ink', 0.95, anchor='middle')]
+  shapes += [line((150, 400), (184, 400), 'u', width=1.0), text(194, 405, 'the flow: in from far away, or out of the seam', 'ink', 0.85),
+             line((500, 400), (534, 400), 'v', dash=True, width=1.8), text(544, 405, 'the seam', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def watershed():
+  """the seam and the hollow sphere's boundaries, along a line: inside the hollow sphere (option D) space splits at the
+  centre; between two bodies, the potential flow splits at the seam, flowing away towards each body - and something
+  crossing either changes reference frame, keeping its velocity relative to the boundary"""
+  W, H = 760, 300
+  left, right, mid = 60, 700, 380
+  sx = 56
+  shapes = []
+  #the hollow sphere, option D
+  y = 70
+  shapes += [text(left, y - 26, 'the hollow sphere, option D: space splits at the centre', 'ink', 0.9),
+             line((left, y), (right, y), 'faint', width=0.8)]
+  for sgn in (-1, 1):
+    shapes.append(line((mid + sgn*sx*2, y - 16), (mid + sgn*sx*2, y + 16), 'sun', width=3.0))
+  for x in (-5.2, -4.0, -2.9, 2.9, 4.0, 5.2):
+    L = 34/math.sqrt(abs(x)/2)
+    d = 1 if x < 0 else -1
+    px = mid + sx*x
+    shapes.append(arrow((px - d*L/2, y), (px + d*L/2, y), 'u', 1.4))
+  for x, d in ((-1.0, -1), (1.0, 1)):
+    shapes.append(arrow((mid + sx*x - d*17, y), (mid + sx*x + d*17, y), 'u', 1.4))
+  shapes += [line((mid, y - 20), (mid, y + 20), 'v', dash=True, width=1.6)]
+  #two bodies, the potential flow along the line through them
+  y = 190
+  shapes += [text(left, y - 26, 'two bodies, the potential flow: space splits at the seam', 'ink', 0.9),
+             line((left, y), (right, y), 'faint', width=0.8)]
+  for sgn in (-1, 1):
+    shapes.append(ellipse(mid + sgn*sx*2.5, y, 12, 12, 'sun', 0, 'sun'))
+  speed = lambda x: math.sqrt(1/abs(x + 2.5) + 1/abs(x - 2.5))
+  for x in (-5.4, -4.3, -3.4, -1.6, -0.6, 0.6, 1.6, 3.4, 4.3, 5.4):
+    towards = -2.5 if x < 0 else 2.5
+    d = 1 if towards > x else -1
+    L = min(16*speed(x), 40)
+    px = mid + sx*x
+    shapes.append(arrow((px - d*L/2, y), (px + d*L/2, y), 'u', 1.4))
+  shapes += [line((mid, y - 20), (mid, y + 20), 'v', dash=True, width=1.6), text(mid, y + 36, 'seam: g = 0', 'v', 0.85, anchor='middle')]
+  shapes += [line((70, 270), (104, 270), 'v', dash=True, width=1.6),
+             text(114, 275, 'where space splits: crossing it, something changes reference frame, keeping its velocity relative to it', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def stretched():
+  """curved space round two bodies at rest: each small circle of space stretched across the potential flow, by u^2/c^2
+  (much exaggerated: by u^2 here over the largest u^2 drawn), along the flow unchanged; the flow behind, faint"""
+  sys.path.insert(0, ROOT)
+  import numpy as np
+  from engine.flow import Body, SpecialFlowCalculator
+  from engine.constants import MS, AU
+  W, H = 760, 430
+  calc = SpecialFlowCalculator([Body(MS, x=-0.5*AU), Body(MS, x=0.5*AU)], 2, 'eikonal-exact')
+  calc.warn = lambda m: None
+  S, cx, cy = 140, 275, 210
+  P = lambda x, y: (cx + S*x, cy - S*y)
+  shapes = []
+  #the flow, faint
+  for k in range(24):
+    a = 2*math.pi*(k + 0.5)/24
+    x, y = 3.0*math.cos(a), 3.0*math.sin(a)
+    pts = []
+    for _ in range(3000):
+      u = calc.flow(np.array([x*AU, y*AU]), calc.region(np.array([x*AU, y*AU])), 0.0)
+      n = math.hypot(*u)
+      if not n or min(math.hypot(x + 0.5, y), math.hypot(x - 0.5, y)) < 0.06:
+        break
+      x, y = x + 0.012*u[0]/n, y + 0.012*u[1]/n
+      if abs(x) < 1.75 and abs(y) < 1.18:
+        pts.append(P(x, y))
+    if len(pts) > 4:
+      shapes += poly(pts, 'faint', 0.8)
+  #small circles of space, stretched across the flow
+  grid = [(i*0.25, j*0.25) for i in range(-6, 7) for j in range(-4, 5)]
+  u2 = {}
+  for x, y in grid:
+    if min(math.hypot(x + 0.5, y), math.hypot(x - 0.5, y)) < 0.2 or abs(x) < 1e-9 and abs(y) < 1e-9:
+      continue
+    q = np.array([x*AU, y*AU])
+    u = calc.flow(q, calc.region(q), 0.0)
+    u2[(x, y)] = u
+  top = max(float(u @ u) for u in u2.values())
+  for (x, y), u in u2.items():
+    a = math.atan2(-u[1], u[0])                           #the flow's direction on screen
+    r0 = 8
+    across = r0*(1 + 1.1*float(u @ u)/top)
+    px, py = P(x, y)
+    pts = [(px + r0*math.cos(t)*math.cos(a) - across*math.sin(t)*math.sin(a),
+            py + r0*math.cos(t)*math.sin(a) + across*math.sin(t)*math.cos(a)) for t in [2*math.pi*k/40 for k in range(41)]]
+    shapes += poly(pts, 'u', 1.1)
+  for bx in (-0.5, 0.5):
+    shapes.append(ellipse(*P(bx, 0), 13, 13, 'sun', 0, 'sun'))
+  #the key: one small circle of space, enlarged - flat (dashed), and stretched across the flow
+  kx, ky, r = 650, 150, 34
+  shapes += poly(circle_points(kx, ky, r, 0, 2*math.pi, 60), 'faint', 1.0, dash=True)
+  shapes += poly([(kx + r*math.cos(t), ky + 1.55*r*math.sin(t)) for t in [2*math.pi*k/60 for k in range(61)]], 'u', 1.6)
+  shapes += [arrow((kx - 78, ky), (kx - 44, ky), 'ink', 1.6), text(kx - 82, ky + 22, 'the flow', 'ink', 0.8, anchor='middle'),
+             arrow((kx, ky - r - 2), (kx, ky - 1.55*r - 2), 'v', 1.4), arrow((kx, ky + r + 2), (kx, ky + 1.55*r + 2), 'v', 1.4),
+             text(kx + 12, ky - 1.55*r - 14, 'across the flow:', 'v', 0.8, anchor='middle'),
+             text(kx + 12, ky - 1.55*r + 0, 'stretched by u²/c²', 'v', 0.8, anchor='middle'),
+             line((kx - r, ky - 6), (kx - r, ky + 6), 'ink', width=1.2), line((kx + r, ky - 6), (kx + r, ky + 6), 'ink', width=1.2),
+             text(kx, ky + 1.55*r + 34, 'along the flow: unchanged,', 'ink', 0.8, anchor='middle'),
+             text(kx, ky + 1.55*r + 50, 'so shorter than across', 'ink', 0.8, anchor='middle'),
+             text(kx, ky + 1.55*r + 82, 'dashed: the circle in', 'faint', 0.8, anchor='middle'),
+             text(kx, ky + 1.55*r + 98, 'flat space', 'faint', 0.8, anchor='middle'),
+             text(kx, ky + 1.55*r + 126, 'much exaggerated: at the', 'faint', 0.8, anchor='middle'),
+             text(kx, ky + 1.55*r + 142, 'Earth\'s surface, 2 parts in 10⁸', 'faint', 0.8, anchor='middle'),
+             text(W/2, 414, 'Space round two bodies at rest: along the flow, lengths are as before; across it, stretched.', 'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def lunarranging():
+  """lunar laser ranging: laser pulses from the Earth to reflectors on the Moon and back, the Moon at angle D from the
+  Sun; in flat flowing space, where the Moon is on the Sun's side of the seam (D within about 60 degrees of the Sun)
+  the flow there points at the Sun, and the range comes out shorter - a term that follows D round each month"""
+  W, H = 760, 420
+  cx, cy, R = 340, 205, 140
+  shapes = []
+  #the Moon's orbit, the part on the Sun's side of the seam marked
+  shapes += poly(circle_points(cx, cy, R, 0, 2*math.pi, 120), 'faint', 1.0)
+  sunSide = circle_points(cx, cy, R, math.pi - math.radians(60), math.pi + math.radians(60), 60)
+  shapes += poly(sunSide, 'sun', 5.0)
+  #the seam between the Earth's region of flow and the Sun's (schematic): crossing the orbit 60 degrees either side
+  a = math.radians(60)
+  p1, p2 = (cx - R*math.cos(a), cy - R*math.sin(a)), (cx - R*math.cos(a), cy + R*math.sin(a))
+  shapes += poly([(p1[0] + 30*(t - 0.5)**2*4 - 30, p1[1] - 50 + (p2[1] - p1[1] + 100)*t) for t in [k/40 for k in range(41)]], 'v', 1.4, dash=True)
+  shapes += [text(p1[0] - 34, p1[1] - 56, 'seam', 'v', 0.85, anchor='middle')]
+  #the Earth, the Moon at D = 35 degrees, and the laser
+  D = math.radians(35)
+  mx, my = cx - R*math.cos(D), cy - R*math.sin(D)
+  shapes += [ellipse(cx, cy, 16, 16, 'u'), text(cx + 6, cy + 36, 'Earth', 'ink', 0.9, anchor='middle'),
+             ellipse(mx, my, 9, 9, 'faint'), text(mx - 12, my - 16, 'Moon', 'ink', 0.9, anchor='end')]
+  ux, uy = (mx - cx)/R, (my - cy)/R
+  shapes += [arrow((cx + 18*ux, cy + 18*uy - 4), (mx - 11*ux, my - 11*uy - 4), 'v', 1.6),
+             arrow((mx - 11*ux + 2, my - 11*uy + 5), (cx + 18*ux + 2, cy + 18*uy + 5), 'v', 1.6),
+             text(mx + 58, my - 20, 'laser pulses,', 'v', 0.8), text(mx + 58, my - 6, 'there and back', 'v', 0.8)]
+  #the angle D from the Sun's direction
+  shapes += [line((cx - 20, cy), (cx - R - 40, cy), 'ink', dash=True, width=0.8)]
+  shapes += poly(circle_points(cx, cy, 52, math.pi, math.pi + D, 20), 'ink', 0.9)
+  shapes += [text(cx - 64, cy - 14, 'D', 'ink', 1.0, math_=True)]
+  shapes += [arrow((cx - R - 50, cy), (30, cy), 'sun', 3.0), text(34, cy - 12, 'to the Sun, 1 AU', 'ink', 0.85)]
+  x0 = 540
+  shapes += [line((x0, 110), (x0 + 30, 110), 'sun', width=5.0), text(x0 + 40, 106, 'the Moon on the Sun\'s', 'ink', 0.85),
+             text(x0 + 40, 124, 'side of the seam:', 'ink', 0.85), text(x0 + 40, 142, 'in flat flowing space,', 'ink', 0.85),
+             text(x0 + 40, 160, 'the range is shorter', 'ink', 0.85),
+             text(x0, 220, 'Measured: the term that', 'ink', 0.85), text(x0, 238, 'follows D is (2.8 ± 4.1) mm.', 'ink', 0.85),
+             text(x0, 262, 'Flat flowing space: 11 cm.', 'ink', 0.85), text(x0, 286, 'Space stretched across', 'ink', 0.85),
+             text(x0, 304, 'the flow: as general', 'ink', 0.85), text(x0, 322, 'relativity has it.', 'ink', 0.85),
+             text(W/2, 400, 'Not to scale: the Moon is 384,000 km away, the Sun 150 million km.', 'faint', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def jupiterlight():
+  """light past Jupiter as radio telescopes see it: two sources, one whose light passes close to Jupiter and one far
+  from it, and the angle between them at the telescope; in general relativity the bending with the Sun and Jupiter
+  together is the two bendings added, in flat flowing space it is not"""
+  W, H = 760, 400
+  shapes = []
+  tx, ty = 650, 190                      #the telescope
+  jx, jy = 380, 222                      #Jupiter, below the ray passing it
+  #the ray passing Jupiter, bent towards it; the reference ray, far from it
+  near = [(60 + 630*t, 160 + 30*(1 - math.cos(math.pi*t))/2 + 18*math.exp(-((60 + 630*t - jx)/90)**2)*0) for t in [k/60 for k in range(61)]]
+  bend = lambda x: 165 + 25*(1/(1 + math.exp(-(x - jx)/30)))
+  near = [(x, bend(x)) for x in range(60, tx + 1, 10)]
+  shapes += poly(near, 'v', 1.8)
+  far = [(x, 60 + (ty - 60)*(x - 60)/(tx - 60)) for x in range(60, tx + 1, 10)]
+  shapes += poly(far, 'v', 1.2, dash=True)
+  shapes += [ellipse(jx, jy, 22, 22, 'sun', 0, 'sun'), text(jx, jy + 44, 'Jupiter', 'ink', 0.9, anchor='middle'),
+             ellipse(60, 165, 5, 5, 'v'), text(60, 152, 'a source', 'ink', 0.8, anchor='middle'),
+             ellipse(60, 60, 5, 5, 'v'), text(60, 47, 'a reference source', 'ink', 0.8, anchor='middle'),
+             rect(tx - 8, ty - 8, 16, 16, fill='u', colour='u'), text(tx, ty + 30, 'radio telescopes', 'ink', 0.85, anchor='middle'),
+             text(tx, ty + 48, 'on the Earth', 'ink', 0.85, anchor='middle')]
+  shapes += poly(circle_points(tx, ty, 70, math.pi + 0.035, math.pi + math.atan2(ty - 60, tx - 60), 20), 'ink', 0.9)
+  shapes += [text(tx - 60, ty - 62, 'the angle', 'ink', 0.8, anchor='end'), text(tx - 60, ty - 48, 'between them', 'ink', 0.8, anchor='end')]
+  shapes += [arrow((jx + 140, 290), (jx + 140, 345), 'sun', 3.0), text(jx + 150, 330, 'to the Sun, 5.2 AU', 'ink', 0.85)]
+  shapes += [text(40, 300, 'General relativity: the bending with the Sun and', 'ink', 0.85),
+             text(40, 318, 'Jupiter together is each one\'s bending added.', 'ink', 0.85),
+             text(40, 342, 'Flat flowing space: 300–400 µas more.', 'ink', 0.85),
+             text(40, 360, 'Radio telescopes measure positions to under 10 µas.', 'ink', 0.85),
+             text(W - 20, 385, 'the bending much exaggerated', 'faint', 0.8, anchor='end')]
+  return W, H, shapes
+
+
 TESTS = os.path.join(ROOT, 'docs', 'part1', 'tests', 'images')
 PART1 = os.path.join(ROOT, 'docs', 'part1', 'images')
+PART2 = os.path.join(ROOT, 'docs', 'part2', 'images')
 DIAGRAMS = {'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
             'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro,
             'funnel': funnel, 'falling': falling, 'spacetime': spacetime,
-            'spacefall': spacefall, 'twister': twister, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
+            'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
 FOLDER = {'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
           'funnel': PART1, 'falling': PART1, 'spacetime': PART1,
-          'spacefall': PART1, 'twister': PART1, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
+          'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
 
 
 # --- drawing ----------------------------------------------------------------------------------------------------------

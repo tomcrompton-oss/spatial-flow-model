@@ -1,0 +1,38 @@
+paths round two 1 MS holes at x = -0.5 and +0.5 AU, the flow down zero-energy paths from the nearest body (no curl; seam where the regions meet), exact two-body solution in elliptic coordinates (flow model) and newtonian
+
+around1.2AU  [bothHoles]  circular (for 2 MS at the centre), 1.2 AU from the centre of mass
+  flow:   time limit         t 9.294 yr    proper 9.294 yr    end (0.1712, -1.322) AU  |v| 0.0001178c  closest left 0.8028 AU right 0.8016 AU
+  newton: time limit         t 9.294 yr                       end (0.1714, -1.322) AU  |v| 0.0001178c  closest left 0.8028 AU right 0.8016 AU
+  flow    apsides: periapsis 1.246 AU apoapsis 1.456 AU, 9 orbits, period 301.1 d, precession 34.6594 deg/orbit
+  newton  apsides: periapsis 1.246 AU apoapsis 1.456 AU, 9 orbits, period 301.1 d, precession 34.6595 deg/orbit
+
+around2AU  [bothHoles]  circular (for 2 MS at the centre), 2 AU from the centre of mass
+  flow:   time limit         t 20 yr       proper 20 yr       end (0.1273, -2.013) AU  |v| 9.862e-05c  closest left 1.562 AU right 1.634 AU
+  newton: time limit         t 20 yr                          end (0.1278, -2.013) AU  |v| 9.862e-05c  closest left 1.562 AU right 1.634 AU
+  flow    apsides: periapsis 2.047 AU apoapsis 2.139 AU, 15 orbits, period 1.261 yr, precession -0.185054 deg/orbit
+  newton  apsides: periapsis 2.047 AU apoapsis 2.139 AU, 15 orbits, period 1.261 yr, precession -0.185003 deg/orbit
+
+around3AU  [bothHoles]  circular (for 2 MS at the centre), 3 AU from the centre of mass
+  flow:   time limit         t 36.74 yr    proper 36.74 yr    end (3.05, 0.6441) AU  |v| 8.109e-05c  closest left 2.545 AU right 2.586 AU
+  newton: time limit         t 36.74 yr                       end (3.05, 0.6448) AU  |v| 8.109e-05c  closest left 2.545 AU right 2.586 AU
+  flow    apsides: periapsis 3.033 AU apoapsis 3.098 AU, 14 orbits, period 2.386 yr, precession -2.53384 deg/orbit
+  newton  apsides: periapsis 3.033 AU apoapsis 3.098 AU, 14 orbits, period 2.386 yr, precession -2.53344 deg/orbit
+
+around5AU  [bothHoles]  circular (for 2 MS at the centre), 5 AU from the centre of mass
+  flow:   time limit         t 79.05 yr    proper 79.05 yr    end (2.334, 4.44) AU  |v| 6.285e-05c  closest left 4.539 AU right 4.55 AU
+  newton: time limit         t 79.05 yr                       end (2.333, 4.44) AU  |v| 6.285e-05c  closest left 4.539 AU right 4.55 AU
+  flow    apsides: periapsis 5.026 AU apoapsis 5.056 AU, 18 orbits, period 3.951 yr, precession -1.40159 deg/orbit
+  newton  apsides: periapsis 5.026 AU apoapsis 5.056 AU, 18 orbits, period 3.951 yr, precession -1.40122 deg/orbit
+
+aroundEllipse  [bothHoles]  periapsis 1.5 AU, e 0.5, round the centre of mass
+  flow:   time limit         t 36.74 yr    proper 36.74 yr    end (-2.187, 0.8774) AU  |v| 8.658e-05c  closest left 1 AU right 1 AU
+  newton: time limit         t 36.74 yr                       end (-2.187, 0.8778) AU  |v| 8.659e-05c  closest left 1 AU right 1 AU
+  flow    apsides: periapsis 1.451 AU apoapsis 2.476 AU, 17 orbits, period 2 yr, precession 19.5511 deg/orbit
+  newton  apsides: periapsis 1.451 AU apoapsis 2.476 AU, 17 orbits, period 2 yr, precession 19.5507 deg/orbit
+
+aroundBack2AU  [bothHoles]  as around2AU, going round clockwise
+  flow:   time limit         t 20 yr       proper 20 yr       end (-0.1273, 2.013) AU  |v| 9.862e-05c  closest left 1.634 AU right 1.562 AU
+  newton: time limit         t 20 yr                          end (-0.1278, 2.013) AU  |v| 9.862e-05c  closest left 1.634 AU right 1.562 AU
+  flow    apsides: periapsis 2.047 AU apoapsis 2.139 AU, 15 orbits, period 1.261 yr, precession -0.185054 deg/orbit
+  newton  apsides: periapsis 2.047 AU apoapsis 2.139 AU, 15 orbits, period 1.261 yr, precession -0.185003 deg/orbit
+

@@ -18,7 +18,8 @@ comparison; and GR's first post-Newtonian metric of the
 bodies at rest (engine/metric.py PostNewtonian)
 
 run: python3 studies/lapse_two_bodies.py [test ...]     (default both; prints, and writes
-     logs/modelChecks/lapseTwoBodies_<datetime>/summary.log)
+     logs/modelChecks/lapseTwoBodies_<datetime>/summary.log, and for lunar the extra range by D for the flat and
+     curved eikonal flows and GR, lapseTwoBodies_lunar.full.json)
 """
 import math
 import os
@@ -33,6 +34,7 @@ from engine.logger import LOG_DIR
 from engine.vectors import length
 from engine.constants import *
 from multi_body_pn import NODES, WEIGHTS, DMOON, MJ, RJ, DJ
+from two_body_escapes import writeViewerFiles
 
 SHARES = (0.0, 0.5, 1.0)
 MODELS = (['eikonal, lambda %g' % s for s in SHARES] + ['eikonal, N = 1, transverse space']
@@ -105,7 +107,7 @@ def lunar(model):
     extra = C*(roundTrip(both, a, b)*clockRate(both, a) - roundTrip(alone, a, b)*clockRate(alone, a))/2
     rows.append((math.radians(D), extra))
   Ds, ms = np.array([r[0] for r in rows]), np.array([r[1] for r in rows])
-  return model, {'cosD': 2*np.mean(ms*np.cos(Ds)), 'mean': ms.mean(), 'swing': (ms.max() - ms.min())/2}
+  return model, {'cosD': 2*np.mean(ms*np.cos(Ds)), 'mean': ms.mean(), 'swing': (ms.max() - ms.min())/2, 'rows': rows}
 
 
 def bend(S, b, half=10*AU, fraction=0.002):
@@ -126,6 +128,28 @@ def jupiter(job):
   return job, (both - s - j, j)
 
 
+VIEWED = {   #the lunar runs written for the viewer: the extra range by D, flat space against curved and GR
+  'eikonal, lambda 0': ('#e34948', 'solid'),
+  'eikonal, N = 1, space from u': ('#2a78d6', 'solid'),
+  'GR (first post-Newtonian)': ('#52514e', 'dashed'),
+}
+NAMES = {'eikonal, lambda 0': 'lunar_flat', 'eikonal, N = 1, space from u': 'lunar_curved', 'GR (first post-Newtonian)': 'lunar_gr'}
+
+
+def lunarCsv(folder, model, r):
+  """the extra range by the Moon's angle from the Sun (degrees, m) as a csv, with a log naming the bodies and model"""
+  path = os.path.join(folder, NAMES[model] + '.csv')
+  with open(path, 'w') as f:
+    f.write('D,range_m\n' + ''.join('%g,%.12g\n' % (math.degrees(D), m) for D, m in r['rows']))
+    f.write('%g,%.12g\n' % (360.0, r['rows'][0][1]))
+  with open(path[:-4] + '.log', 'w') as f:
+    f.write('bodies: 2\nbody 1: mass %.6e kg (1 MS)  x %.6e m  y 0.000000e+00 m  black\n'
+            'body 2: mass %.6e kg (%g MS)  x 0.000000e+00 m  y 0.000000e+00 m  black\n' % (MS, -AU, ME, ME/MS))
+    f.write('the extra lunar range (m) the Sun\'s potential makes, by the Moon\'s angle D from the Sun (degrees): %s;'
+            ' cos D part %+.4f m\n' % (model, r['cosD']))
+  return path
+
+
 def main():
   chosen = sys.argv[1:] or ['lunar', 'jupiter']
   folder = os.path.join(LOG_DIR, 'modelChecks', 'lapseTwoBodies_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
@@ -136,8 +160,14 @@ def main():
     if 'lunar' in chosen:
       lines.append('lunar: radar Earth -> Moon\'s distance -> Earth, the Sun 1 AU away, less the Earth alone, as a range:'
                    ' its cos D part (lunar laser ranging (2.8 +- 4.1) mm), mean and swing over the month')
+      made = []
       for model, r in pool.map(lunar, MODELS):
         lines.append('  %-34s cos D %+.4f m   mean %+.4f m   swing %.4f m' % (model, r['cosD'], r['mean'], r['swing']))
+        if model in VIEWED:
+          made.append((lunarCsv(folder, model, r), *VIEWED[model]))
+      writeViewerFiles(folder, 'lapseTwoBodies_lunar', made, selection=(('D', 'range_m'),),
+                       styles=lambda colour, style='solid': {'D / range_m': [colour, style, colour]},
+                       preferences={'equalAspect': False, 'showBodies': False, 'showSchwarzschild': False, 'showFlow': False})
       print('\n'.join(lines), flush=True)
     if 'jupiter' in chosen:
       lines.append('jupiter: light past Jupiter, the Sun 5.2 AU away: the bending with both less each alone (GR: 0 to first'

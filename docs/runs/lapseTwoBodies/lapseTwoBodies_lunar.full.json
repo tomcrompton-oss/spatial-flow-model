@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "lapseTwoBodies_lunar.prefs.json",
+  "config": "lapseTwoBodies_lunar.config.json"
+}
