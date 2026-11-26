@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "horizonPeeling.prefs.json",
+  "config": "horizonPeeling.config.json"
+}

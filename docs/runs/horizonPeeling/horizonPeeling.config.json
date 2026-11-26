@@ -1,0 +1,147 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "ray_eps0.1.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "t (rs/c) / log10 distance from the horizon (rs)": [
+          "#b5d4f4",
+          "solid",
+          "#b5d4f4"
+        ]
+      },
+      "selection": [
+        [
+          "t (rs/c)",
+          "log10 distance from the horizon (rs)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ray_eps0.01.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "t (rs/c) / log10 distance from the horizon (rs)": [
+          "#85b7eb",
+          "solid",
+          "#85b7eb"
+        ]
+      },
+      "selection": [
+        [
+          "t (rs/c)",
+          "log10 distance from the horizon (rs)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ray_eps0.001.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "t (rs/c) / log10 distance from the horizon (rs)": [
+          "#5ea0e6",
+          "solid",
+          "#5ea0e6"
+        ]
+      },
+      "selection": [
+        [
+          "t (rs/c)",
+          "log10 distance from the horizon (rs)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ray_eps0.0001.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "t (rs/c) / log10 distance from the horizon (rs)": [
+          "#378add",
+          "solid",
+          "#378add"
+        ]
+      },
+      "selection": [
+        [
+          "t (rs/c)",
+          "log10 distance from the horizon (rs)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ray_eps1e-05.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "t (rs/c) / log10 distance from the horizon (rs)": [
+          "#185fa5",
+          "solid",
+          "#185fa5"
+        ]
+      },
+      "selection": [
+        [
+          "t (rs/c)",
+          "log10 distance from the horizon (rs)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "ray_eps1e-06.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "t (rs/c) / log10 distance from the horizon (rs)": [
+          "#0c447c",
+          "solid",
+          "#0c447c"
+        ]
+      },
+      "selection": [
+        [
+          "t (rs/c)",
+          "log10 distance from the horizon (rs)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

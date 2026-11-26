@@ -1,0 +1,16 @@
+light straight out from just outside the horizon of a 1.989e+30 kg hole (rs 2954 m, rs/c 9.854e-06 s), to 3 rs
+  expected growth of ln(r - rs) near the horizon: |du/dr| = c/(2 rs) = 0.5000 c/rs
+
+  from rs (1 + 0.1): reaches 3 rs at 8.682361 rs/c (exact GR 8.682361, - 1 2.9e-09); ln(r - rs) grows at nan c/rs while within 0.001 rs (- 0.5000: nan)
+  from rs (1 + 0.01): reaches 3 rs at 13.421932 rs/c (exact GR 13.421932, - 1 4.0e-09); ln(r - rs) grows at nan c/rs while within 0.001 rs (- 0.5000: nan)
+  from rs (1 + 0.001): reaches 3 rs at 18.040596 rs/c (exact GR 18.040596, - 1 6.8e-09); ln(r - rs) grows at nan c/rs while within 0.001 rs (- 0.5000: nan)
+  from rs (1 + 0.0001): reaches 3 rs at 22.647116 rs/c (exact GR 22.647116, - 1 6.5e-09); ln(r - rs) grows at 0.499865 c/rs while within 0.001 rs (- 0.5000: -2.7e-04)
+  from rs (1 + 1e-05): reaches 3 rs at 27.252421 rs/c (exact GR 27.252421, - 1 6.3e-09); ln(r - rs) grows at 0.499938 c/rs while within 0.001 rs (- 0.5000: -1.2e-04)
+  from rs (1 + 1e-06): reaches 3 rs at 31.857605 rs/c (exact GR 31.857605, - 1 6.4e-09); ln(r - rs) grows at 0.499966 c/rs while within 0.001 rs (- 0.5000: -6.7e-05)
+
+  the growth rate, all rays: 0.499923 c/rs (expected 0.5000)
+
+the temperature that rate gives, k T = hbar (rate)/(2 pi), against Hawking's, hbar c^3/(8 pi G M k):
+  supermassive (4e6 solar masses)  rate 0.01268 /s: T 1.542e-14 K; Hawking 1.542e-14 K (- 1 -1.5e-04)
+  the Sun's mass                   rate 5.073e+04 /s: T 6.167e-08 K; Hawking 6.168e-08 K (- 1 -1.5e-04)
+  microscopic (5e11 kg)            rate 2.018e+23 /s: T 2.453e+11 K; Hawking 2.454e+11 K (- 1 -1.5e-04)
