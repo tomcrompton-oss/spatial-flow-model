@@ -1150,7 +1150,8 @@ def stretched():
     if len(pts) > 4:
       shapes += poly(pts, 'faint', 0.8)
   #small circles of space, stretched across the flow
-  grid = [(i*0.25, j*0.25) for i in range(-6, 7) for j in range(-4, 5)]
+  #columns either side of the seam (x = 0), none on it, where the flow has two directions
+  grid = [((i + 0.5)*0.25, j*0.25) for i in range(-7, 7) for j in range(-4, 5)]
   u2 = {}
   for x, y in grid:
     if min(math.hypot(x + 0.5, y), math.hypot(x - 0.5, y)) < 0.2 or abs(x) < 1e-9 and abs(y) < 1e-9:
@@ -1167,6 +1168,7 @@ def stretched():
     pts = [(px + r0*math.cos(t)*math.cos(a) - across*math.sin(t)*math.sin(a),
             py + r0*math.cos(t)*math.sin(a) + across*math.sin(t)*math.cos(a)) for t in [2*math.pi*k/40 for k in range(41)]]
     shapes += poly(pts, 'u', 1.1)
+  shapes += [line(P(0, 1.2), P(0, -1.2), 'v', dash=True, width=1.4), text(P(0, 1.2)[0], P(0, 1.2)[1] - 8, 'seam', 'v', 0.85, anchor='middle')]
   for bx in (-0.5, 0.5):
     shapes.append(ellipse(*P(bx, 0), 13, 13, 'sun', 0, 'sun'))
   #the key: one small circle of space, enlarged - flat (dashed), and stretched across the flow
