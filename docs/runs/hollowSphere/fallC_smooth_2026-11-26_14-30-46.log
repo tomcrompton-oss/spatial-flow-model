@@ -1,0 +1,5 @@
+bodies: 1
+body 1: mass 1.989000e+30 kg (1 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+option C: falling from rest far away through a hollow shell
+  C  stalled at x = -0.0000000 R, moving at 3.1e-07 c, with w 0.0000 c; 280372 steps
+     in to the shell: proper time 0.002845382 s (exact 0.002845382, - 1 -7.0e-09)

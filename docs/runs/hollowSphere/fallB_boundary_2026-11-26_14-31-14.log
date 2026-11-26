@@ -1,0 +1,8 @@
+bodies: 1
+body 1: mass 1.989000e+30 kg (1 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+option B: falling from rest far away through a hollow shell
+  B  reached +START; 560511 steps
+     in to the shell: proper time 0.002845382 s (exact 0.002845382, - 1 -7.0e-09)
+     across the inside: proper time 0.000623216 s (the model's 2R/u_R - 1 -3.0e-08; GR - 1 5.41e-02), flow time 0.000761708 s
+     out from the shell: proper time 0.002845382 s (exact 0.002845382, - 1 -4.7e-09)
+     the whole trip: proper time 0.006313980 s (GR 0.006281999, - 1 5.09e-03; the model with 2R/u_R inside, - 1 -8.3e-09), flow time 0.006641 s

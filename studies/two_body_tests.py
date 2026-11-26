@@ -21,7 +21,8 @@ light's bend with GR's at its impact parameter
 writes logs/twoBodyTests/twoBodyTests_<datetime>/ (twoBodyTests_<direction>_<datetime> for a direction other than g): a csv for each test (and <name>_newton.csv), summary.log, and a
 viewer config for each group (flow model solid, newtonian dashed)
 
-run: python3 studies/two_body_tests.py [direction]      (e.g. eikonal, or eikonal-exact)
+run: python3 studies/two_body_tests.py [direction] [groups...]      (e.g. eikonal, or eikonal-exact; groups: falls,
+     oneHole, nearHole, bothHoles, others, light - all by default)
 """
 import csv
 import json
@@ -46,6 +47,14 @@ YEAR = 365.25*DAY
 STEP = 0.002          #each step moves about this fraction of the distance to the nearest hole
 EVERY = 20            #steps between csv rows
 MAX_STEPS = 3000000
+BACKGROUND = {   #a written description of each direction's background, for the viewer's Background menu
+  'eikonal-exact': ('Space round two black holes of one solar mass each, 1 AU apart, flowing as a potential flow: its '
+                    'speed sqrt(2GM/d1 + 2GM/d2) from the two potentials added, and no swirl, so that it runs down the '
+                    'paths of things falling from rest far away (worked out exactly for two bodies). The grey arrows '
+                    'are the flow u, the dark ones g, its acceleration, which is Newton\'s gravity. Each hole has a '
+                    'region of its own, filled by the paths that fall into it; the dashed line is the seam where the '
+                    'two regions meet, through the point half way between, where g is zero.'),
+}
 BACKGROUND_FRAMES = True   #write each group's steady flow as one frame over its paths, for the browser viewer (web/)
 ESCAPE = 20*AU        #escaped this far from the centre of mass
 CAPTURE = 1.0         #captured this many Schwarzschild radii from a hole's centre
@@ -285,7 +294,7 @@ def duration(t):
   return '%.4g s' % t if t < DAY else '%.4g d' % (t/DAY) if t < YEAR else '%.4g yr' % (t/YEAR)
 
 
-def main(direction='g'):
+def main(direction='g', only=None):
   global DESCRIPTION
   folder = os.path.join(LOG_DIR, 'twoBodyTests', 'twoBodyTests_' + ('' if direction == 'g' else direction + '_')
                         + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
@@ -297,6 +306,8 @@ def main(direction='g'):
   summaries, groups = [], {}
   for test in tests():
     group, name, text, kind, pos, vel, centre, limit, round_ = test
+    if only and group not in only:
+      continue
     began = time.time()
     rows, reason, steps, rec, (v0, w0) = runFlow(calc, test)
     path = os.path.join(folder, name + '.csv')
@@ -338,7 +349,9 @@ def main(direction='g'):
     json.dump(summaries, f, indent=1, default=float)
   print('\n'.join(lines))
   for group, made in groups.items():
-    writeViewerFiles(folder, 'twoBodyTests_' + group, made, frames=calc if BACKGROUND_FRAMES else None)
+    writeViewerFiles(folder, 'twoBodyTests_' + group, made, frames=calc if BACKGROUND_FRAMES else None,
+                     background=('the flow', BACKGROUND.get(direction)) if BACKGROUND.get(direction) else None,
+                     preferences={'showFlow': True, 'showSeam': True})
   return folder
 
 
@@ -369,4 +382,4 @@ def report(summaries, description='along g'):
 
 
 if __name__ == '__main__':
-  main(sys.argv[1] if len(sys.argv) > 1 else 'g')
+  main(sys.argv[1] if len(sys.argv) > 1 else 'g', sys.argv[2:] or None)

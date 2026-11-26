@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "hollowSphere_boundary.prefs.json",
+  "config": "hollowSphere_boundary.config.json"
+}

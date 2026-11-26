@@ -1,0 +1,147 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "fallA_smooth_2026-11-26_14-30-37.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos_x / t": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "t"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "fallB_smooth_2026-11-26_14-30-39.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos_x / t": [
+          "#e34948",
+          "solid",
+          "#e34948"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "t"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "fallC_smooth_2026-11-26_14-30-46.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos_x / t": [
+          "#1baf7a",
+          "solid",
+          "#1baf7a"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "t"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "fallD_smooth_2026-11-26_14-30-48.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos_x / t": [
+          "#eda100",
+          "solid",
+          "#eda100"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "t"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "wallL_smooth_2026-11-26_14-31-40.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos_x / t": [
+          "#b8b8b8",
+          "solid",
+          "#b8b8b8"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "t"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "wallR_smooth_2026-11-26_14-31-40.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos_x / t": [
+          "#b8b8b8",
+          "solid",
+          "#b8b8b8"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "t"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

@@ -1,0 +1,13 @@
+lunar: radar Earth -> Moon's distance -> Earth, the Sun 1 AU away, less the Earth alone, as a range: its cos D part (lunar laser ranging (2.8 +- 4.1) mm), mean and swing over the month
+  eikonal, lambda 0                  cos D -0.1112 m   mean +3.6486 m   swing 0.2035 m
+  eikonal, lambda 0.5                cos D -0.0508 m   mean +3.6906 m   swing 0.1026 m
+  eikonal, lambda 1                  cos D +0.0096 m   mean +3.7325 m   swing 0.0096 m
+  eikonal, N = 1, transverse space   cos D +0.0096 m   mean +3.7325 m   swing 0.0096 m
+  eikonal, N = 1, space from u       cos D +0.0096 m   mean +3.7325 m   swing 0.0096 m
+  vectors, N = 1, space from u       cos D +1.0874 m   mean +3.7327 m   swing 1.0874 m
+  along g, N = 1, space from u       cos D +0.0096 m   mean +3.7325 m   swing 0.0096 m
+  vectors, flat                      cos D +1.0838 m   mean +1.8664 m   swing 2.4463 m
+  along g, flat                      cos D -0.5869 m   mean +2.8604 m   swing 0.8361 m
+  carried, flat                      cos D +0.0000 m   mean +0.0000 m   swing 0.0000 m
+  carried, N = 1, space from u       cos D +0.0000 m   mean +0.0000 m   swing 0.0000 m
+  GR (first post-Newtonian)          cos D +0.0096 m   mean +3.7325 m   swing 0.0096 m

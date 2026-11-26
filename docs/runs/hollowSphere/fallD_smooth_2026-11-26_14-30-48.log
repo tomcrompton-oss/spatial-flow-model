@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 1.989000e+30 kg (1 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+option D: falling from rest far away through a hollow shell
+  D  stalled at x = -1.0005001 R, moving at 3.0e-07 c, with w 0.0000 c; 112157 steps
