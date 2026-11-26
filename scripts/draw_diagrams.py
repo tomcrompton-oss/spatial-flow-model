@@ -8,7 +8,7 @@ can be chosen for the whole site:
 
 the site uses formal (CHOSEN); the other two are kept so a page can be tried in them
 
-run: python3 scripts/draw_diagrams.py [--all]     (writes docs/part1/mechanics/images/<diagram>.svg, and the tests'
+run: python3 scripts/draw_diagrams.py [--all] [names]     (writes docs/part1/mechanics/images/<diagram>.svg, and the tests'
                                                     diagrams to docs/part1/tests/images/, the black holes page's to docs/part1/images/)
 """
 import math
@@ -1866,6 +1866,303 @@ def movingbodies():
   return W, H, shapes
 
 
+
+# --- Part 2's Seams page -----------------------------------------------------------------------------------------
+
+def twoCentre(masses=(1.0, 1.0), shift=0.0):
+  """the engine's exact potential flow round two bodies 1 AU apart at x = -0.5 and +0.5 AU, its seam moved by shift
+  (the constant between the two S, in units of S at the saddle)"""
+  sys.path.insert(0, ROOT)
+  from engine.flow import Body, SpecialFlowCalculator
+  from engine.constants import MS, AU
+  calc = SpecialFlowCalculator([Body(masses[0]*MS, x=-0.5*AU), Body(masses[1]*MS, x=0.5*AU)], 2, 'eikonal-exact')
+  calc.warn = lambda m: None
+  field = calc.rayField()
+  if shift:
+    field.offsets[1] += shift*field.action(field.saddle(0, 1), 0)
+  return calc, field, AU
+
+
+def tracePath(direction, start, P, inside, stop, step=0.012, n=4000):
+  """a path down a direction field (unit vectors at a point in AU), as pixels, while inside"""
+  x, y = start
+  pts = []
+  for _ in range(n):
+    d = direction(x, y)
+    if d is None or stop(x, y):
+      break
+    x, y = x + step*d[0], y + step*d[1]
+    if inside(x, y):
+      pts.append(P(x, y))
+    elif pts:
+      break
+  return pts
+
+
+def seamwhy():
+  """why a seam: each body's own family of paths falling from rest far away (into it, in the pull of both) fills the
+  space round the pair, so at every point there are two, one into each body; the flow must follow one. left: the two
+  families over each other; right: the flow taking, at each point, the one with the smaller S, and the seam where
+  that changes"""
+  import numpy as np
+  calc, field, AU = twoCentre()
+  W, H = 760, 430
+  shapes = []
+  for left, title, both in ((20, 'two paths through every point', True), (400, 'the flow follows one: the seam', False)):
+    S, cx, cy = 118, left + 170, 205
+    P = lambda x, y, cx=cx, cy=cy, S=S: (cx + S*x, cy - S*y)
+    inside = lambda x, y: abs(x) < 1.42 and abs(y) < 1.42
+    stop = lambda x, y: min(math.hypot(x + 0.5, y), math.hypot(x - 0.5, y)) < 0.05
+    for i, colour in ((0, 'u'), (1, 'v')):
+      def direction(x, y, i=i):
+        q = np.array([x*AU, y*AU])
+        if not both and field.region(q) != i:
+          return None
+        d = field.sources[i].solve(q)[0]
+        return d
+      starts = [(3.0*math.cos(a), 3.0*math.sin(a)) for a in [2*math.pi*(k + 0.5)/24 for k in range(24)]]
+      if not both:      #and paths out of the seam, both sides
+        for y0 in [-1.3 + 2.6*k/10 for k in range(11)]:
+          starts.append((0.004*(1 if i else -1), y0))
+      for s in starts:
+        pts = tracePath(direction, s, P, inside, stop)
+        if len(pts) > 6:
+          shapes += poly(pts, colour, 0.9)
+          k = len(pts)//3
+          shapes.append(arrow(pts[k - 2], pts[k], colour, 1.1))
+    if both:
+      #a point and its two paths' directions
+      q = np.array([-0.15*AU, 0.62*AU])
+      px, py = P(-0.15, 0.62)
+      for i, colour, name in ((0, 'u', 'into the left body'), (1, 'v', 'into the right body')):
+        d = field.sources[i].solve(q)[0]
+        shapes.append(arrow((px, py), (px + 46*d[0], py - 46*d[1]), colour, 2.4))
+      shapes += [ellipse(px, py, 4.5, 4.5, 'ink'), text(px - 8, py - 12, 'P', 'ink', 1.1, anchor='end', math_=True)]
+    else:
+      sys.path.insert(0, ROOT)
+      from engine.backgrounds import seamAround
+      for line_ in seamAround(lambda q: field.region(q), np.zeros(2), 0.005*AU, 3*AU, cells=(120, 96)):
+        pts = [P(q[0]/AU, q[1]/AU) for q in line_ if inside(q[0]/AU, q[1]/AU)]
+        if len(pts) > 1:
+          shapes += poly(pts, 'ink', 1.8, dash=True)
+    for bx in (-0.5, 0.5):
+      shapes.append(ellipse(*P(bx, 0), 14, 14, 'sun', 0, 'sun'))
+    shapes.append(text(cx, 24, title, 'ink', 0.95, anchor='middle'))
+  shapes += [line((70, 402), (104, 402), 'u', width=1.2), text(112, 407, 'paths into the left body', 'ink', 0.85),
+             line((300, 402), (334, 402), 'v', width=1.2), text(342, 407, 'paths into the right body', 'ink', 0.85),
+             line((540, 402), (574, 402), 'ink', dash=True, width=1.8), text(582, 407, 'the seam', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def seamprofile():
+  """S along the line through two equal bodies: each body's S rises away from it; the flow takes the smaller, so the
+  seam is where they cross, a ridge in S that the flow runs down on both sides. adding a constant to one body's S
+  moves the crossing, and the seam with it"""
+  W, H = 760, 400
+  x0, x1, top, base = 70, 700, 70, 290
+  mid = (x0 + x1)/2
+  sx = (x1 - x0)/4.4                         #pixels per half separation; bodies at +-1
+  #S_k along the axis: the integral of the flow's speed sqrt(1/|x+1| + 1/|x-1|) from body k (substituting x = b + s^2
+  #to take out the square-root singularity at the body), on its own side of the other body
+  speed = lambda x: math.sqrt(1/max(abs(x + 1), 1e-9) + 1/max(abs(x - 1), 1e-9))
+  def S(b, x):
+    if x == b:
+      return 0.0
+    n, top_s = 300, math.sqrt(abs(x - b))
+    d = 1 if x > b else -1
+    total = 0.0
+    for j in range(n):
+      s_ = (j + 0.5)/n*top_s
+      total += speed(b + d*s_*s_)*2*s_*top_s/n
+    return total
+  xs0 = [-2.2 + (0.92 + 2.2)*i/600 for i in range(601)]
+  xs1 = [-x for x in xs0]
+  S0 = [S(-1, x) for x in xs0]
+  S1 = [S(1, x) for x in xs1]
+  top_ = max(S0)
+  sy = (base - top)/top_*0.95
+  P = lambda x, s: (mid + sx*x, base - sy*s)
+  c = 1.0
+  shapes = [line((x0, base), (x1, base), 'ink', width=0.8)]
+  shapes += poly([P(x, s) for x, s in zip(xs0, S0)], 'u', 1.2, dash=True)
+  shapes += poly([P(x, s) for x, s in zip(xs1, S1)], 'v', 1.2, dash=True)
+  shapes += poly([P(x, s + c) for x, s in zip(xs1, S1) if s + c < top_], 'v', 1.0, dash=True)
+  f0 = lambda x: S(-1, x) if x < 0.92 else 1e9
+  f1 = lambda x: S(1, x) if x > -0.92 else 1e9
+  xs = [-2.2 + 4.4*i/880 for i in range(881)]
+  shapes += poly([P(x, min(f0(x), f1(x))) for x in xs], 'ink', 2.2)
+  #where they cross: the engine's seam, and the moved one
+  def cross(k):
+    lo, hi = -0.9, 0.9
+    for _ in range(50):
+      m = (lo + hi)/2
+      if f0(m) < f1(m) + k:
+        lo = m
+      else:
+        hi = m
+    return lo
+  for k, label, dy in ((0.0, 'the seam', 20), (c, 'moved', 36)):
+    x = cross(k)
+    shapes += [line(P(x, 0), P(x, f0(x)), 'faint', dash=True, width=1.0),
+               text(P(x, 0)[0], base + dy, label, 'ink', 0.8, anchor='middle')]
+  for x in (-1, 1):
+    shapes.append(ellipse(*P(x, 0), 11, 11, 'sun', 0, 'sun'))
+  #the flow runs down S: arrows along the base, away from the seam between the bodies
+  for x in (-0.7, -0.4, 0.4, 0.7):
+    d = -1 if x < 0 else 1
+    px, py = P(x, 0)
+    shapes.append(arrow((px - d*12, py + 56), (px + d*12, py + 56), 'u', 1.4))
+  shapes += [text(P(0, 0)[0], base + 80, 'the flow runs down S, away from the seam on both sides', 'ink', 0.8, anchor='middle'),
+             text(x0, top - 22, 'S along the line through two equal bodies', 'ink', 0.9),
+             line((x0 + 360, top - 27), (x0 + 394, top - 27), 'u', dash=True, width=1.2), text(x0 + 402, top - 22, "the left body's S₀", 'ink', 0.8),
+             line((x0 + 360, top - 7), (x0 + 394, top - 7), 'v', dash=True, width=1.2), text(x0 + 402, top - 2, "the right body's S₁, and S₁ + c", 'ink', 0.8),
+             line((x0, top - 7), (x0 + 34, top - 7), 'ink', width=2.2), text(x0 + 42, top - 2, 'the flow\'s S: the smaller', 'ink', 0.8)]
+  return W, H, shapes
+
+
+def seamlevels():
+  """where a seam can go: any curve where the two bodies' S differ by a constant (the engine's passes through the
+  saddle, where g = 0), between the bodies, two equal and one four times the other; and two that can't be seams"""
+  import numpy as np
+  W, H = 760, 440
+  shapes = []
+  for left, masses, title in ((20, (1.0, 1.0), 'two equal bodies'), (400, (1.0, 0.25), 'one four times the other')):
+    S, cx, cy = 118, left + 170, 205
+    P = lambda x, y, cx=cx, cy=cy, S=S: (cx + S*x, cy - S*y)
+    inside = lambda x, y: abs(x) < 1.42 and abs(y) < 1.42
+    sys.path.insert(0, ROOT)
+    from engine.backgrounds import seamAround
+    for shift, colour, dash, width in ((-0.3, 'u', True, 1.2), (-0.15, 'u', True, 1.2), (0.0, 'ink', True, 2.0),
+                                       (0.15, 'v', True, 1.2), (0.3, 'v', True, 1.2)):
+      calc, field, AU = twoCentre(masses, shift)
+      for line_ in seamAround(lambda q: field.region(q), np.zeros(2), 0.005*AU, 3*AU, cells=(120, 96)):
+        pts = [P(q[0]/AU, q[1]/AU) for q in line_ if inside(q[0]/AU, q[1]/AU)]
+        if len(pts) > 1:
+          shapes += poly(pts, colour, width, dash=dash)
+    sad = field.saddle(0, 1)
+    shapes.append(ellipse(*P(sad[0]/AU, 0), 3.5, 3.5, 'ink'))
+    for bx, m in ((-0.5, masses[0]), (0.5, masses[1])):
+      r = 14*math.sqrt(m)
+      shapes.append(ellipse(*P(bx, 0), r, r, 'sun', 0, 'sun'))
+    if left == 20:
+      #not seams: a circle round one body, crossing the level sets
+      shapes += poly(circle_points(*P(0.5, 0), 0.62*S, 0, 2*math.pi, 90), 'faint', 1.4)
+      shapes += [text(*P(0.62, 0.72), '✗', 'v', 1.2, anchor='middle'),
+                 text(P(0.95, 0.75)[0], P(0.95, 0.75)[1], 'a circle:', 'ink', 0.8),
+                 text(P(0.95, 0.75)[0], P(0.95, 0.75)[1] + 16, 'not a seam', 'ink', 0.8)]
+    shapes.append(text(cx, 24, title, 'ink', 0.95, anchor='middle'))
+  shapes += [line((40, 400), (74, 400), 'ink', dash=True, width=2.0), text(82, 405, "the engine's seam, through the saddle (dot), where g = 0", 'ink', 0.85),
+             line((40, 422), (74, 422), 'u', dash=True, width=1.2), line((80, 422), (114, 422), 'v', dash=True, width=1.2),
+             text(122, 427, 'other seams: S₀ = S₁ + c, for other constants c, towards one body or the other', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def seamrule():
+  """crossing a seam at rest: left, the rule - the particle keeps its velocity v (to first order: its energy and its
+  momentum along the seam), and its velocity relative to space, w, changes by the jump in the flow; right, no rule -
+  w kept as it is, so v jumps by the flow's jump, and the path kinks"""
+  W, H = 760, 400
+  shapes = []
+  for left, title, rule in ((20, 'with the rule: v kept', True), (400, 'without it: w kept', False)):
+    cx, cy = left + 170, 200
+    shapes += [line((cx, 50), (cx, 340), 'ink', dash=True, width=1.6), text(cx, 362, 'the seam', 'ink', 0.85, anchor='middle'),
+               text(cx - 90, 70, 'region 0', 'ink', 0.85, anchor='middle'), text(cx + 90, 70, 'region 1', 'ink', 0.85, anchor='middle')]
+    u0, u1 = (-60, 22), (60, 22)                     #the flow either side: away from the seam, the same along it
+    for sx_, u in ((-1, u0), (1, u1)):
+      for y in (110, 290):
+        x = cx + sx_*120
+        shapes.append(arrow((x - u[0]/2, y - u[1]/2), (x + u[0]/2, y + u[1]/2), 'faint', 1.0))
+    #the particle comes in from the left, crossing at (cx, cy)
+    v0 = (110, -38)
+    w0 = (v0[0] - u0[0], v0[1] - u0[1])
+    v1 = v0 if rule else (w0[0] + u1[0], w0[1] + u1[1])
+    w1 = (v1[0] - u1[0], v1[1] - u1[1])
+    a = (cx - 150, cy - 150*v0[1]/v0[0])
+    shapes += poly([a, (cx, cy)], 'ink', 1.2)
+    end = (cx + 150, cy + 150*v1[1]/v1[0])
+    shapes += poly([(cx, cy), end], 'ink', 1.2)
+    if not rule:
+      shapes += poly([(cx, cy), (cx + 150, cy + 150*v0[1]/v0[0])], 'faint', 1.0, dash=True)
+    #vectors before (at the left) and after (at the right): u then w from its tip, v from the start
+    for (px, py), u, w, v, side in (((cx - 120, cy - 120*v0[1]/v0[0]), u0, w0, v0, 'before'), ((cx + 30, cy + 30*v1[1]/v1[0]), u1, w1, v1, 'after')):
+      s = 0.55
+      tip = (px + s*u[0], py + s*u[1])
+      shapes += [arrow((px, py), tip, 'u', 2.0), arrow(tip, (tip[0] + s*w[0], tip[1] + s*w[1]), 'w', 2.0),
+                 arrow((px, py), (px + s*v[0], py + s*v[1]), 'v', 2.2), ellipse(px, py, 3.5, 3.5, 'ink')]
+    shapes.append(text(cx, 24, title, 'ink', 0.95, anchor='middle'))
+    if not rule:
+      shapes += [text(cx + 155, cy + 150*v1[1]/v1[0] + 8, 'kink', 'v', 0.85), text(cx + 120, cy + 150*v0[1]/v0[0] - 10, 'GR', 'faint', 0.8)]
+  shapes += key(392, [(70, 'u', 'u', 'the flow'), (250, 'w', 'w', 'velocity through space'), (480, 'v', 'v', 'velocity, v = u + w')])
+  return W, H + 10, shapes
+
+
+def seamframes():
+  """the seam belongs to the observers: left, the model's - falling straight in from rest far away in every direction,
+  one body has no seam; right, observers arriving from rest far away on one side, on parabolas round the body: each
+  point behind it is passed by one that came round above and one that came round below, and the time switches from
+  one family to the other on the half-line behind the body, a seam"""
+  W, H = 760, 420
+  shapes = []
+  #left: radial
+  cx, cy = 190, 205
+  for k in range(16):
+    a = 2*math.pi*k/16
+    shapes += poly([(cx + r*math.cos(a), cy + r*math.sin(a)) for r in (160, 22)], 'ink', 1.0)
+    shapes.append(arrow((cx + 95*math.cos(a), cy + 95*math.sin(a)), (cx + 80*math.cos(a), cy + 80*math.sin(a)), 'ink', 1.2))
+  shapes += [ellipse(cx, cy, 14, 14, 'sun', 0, 'sun'), text(cx, 24, 'falling straight in: no seam', 'ink', 0.95, anchor='middle')]
+  #right: parabolas y^2 = 4q(q - x), arriving from the left and coming round the body at the origin: each family
+  #drawn on its way in, to where it crosses the line behind the body
+  cx, cy, S = 500, 205, 52
+  inside = lambda x, y: -3.1 < x < 4.3 and abs(y) < 3.3
+  for q in (0.15, 0.4, 0.75, 1.2, 1.8, 2.6):
+    for sign, colour in ((1, 'u'), (-1, 'v')):
+      xs = [-3.1 + (q + 3.1)*i/300 for i in range(301)]
+      arm = [(x, sign*math.sqrt(max(0, 4*q*(q - x)))) for x in xs]
+      arm = [(x, y) for x, y in arm if inside(x, y)]
+      if len(arm) < 10:
+        continue
+      shapes += poly([(cx + S*x, cy - S*y) for x, y in arm], colour, 1.0)
+      i = int(len(arm)*0.55)
+      a0, a1 = arm[i - 4], arm[i]
+      shapes.append(arrow((cx + S*a0[0], cy - S*a0[1]), (cx + S*a1[0], cy - S*a1[1]), colour, 1.2))
+  shapes += [line((cx, cy), (cx + S*4.2, cy), 'ink', dash=True, width=2.0), ellipse(cx, cy, 12, 12, 'sun', 0, 'sun'),
+             text(cx + S*2.75, cy + 22, 'their seam', 'ink', 0.85),
+             text(cx + 20, 24, 'arriving from one side: a seam', 'ink', 0.95, anchor='middle')]
+  shapes += [line((60, 392), (94, 392), 'u', width=1.2), text(102, 397, 'observers coming round above the body', 'ink', 0.85),
+             line((400, 392), (434, 392), 'v', width=1.2), text(442, 397, 'observers coming round below it', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def seamfold():
+  """what a seam is: in space and time (x across, t up), the two bodies' world lines are still; the flow's time
+  T = t + min(S0, S1)/c^2, so its surfaces of constant time are t = T - min(S0, S1)/c^2, each with a crease at the
+  seam. the spacetime is smooth there; only the slicing folds"""
+  W, H = 760, 380
+  x0, x1, base = 80, 680, 320
+  mid = (x0 + x1)/2
+  sx = (x1 - x0)/4.4
+  speed = lambda x: math.sqrt(1/max(abs(x + 1), 1e-3) + 1/max(abs(x - 1), 1e-3))
+  xs = [-2.2 + 4.4*i/440 for i in range(441)]
+  def S(b, x):
+    n = 120
+    return sum(speed(b + (x - b)*(j + 0.5)/n) for j in range(n))*abs(x - b)/n
+  m = [min(S(-1, x), S(1, x)) for x in xs]
+  scale = 22/max(m)
+  shapes = [arrow((x0 - 30, base + 20), (x0 - 30, 50), 'ink', 1.2), text(x0 - 38, 58, 't', 'ink', 1.2, anchor='end', math_=True),
+            arrow((x0 - 30, base + 20), (x1 + 20, base + 20), 'ink', 1.2), text(x1 + 24, base + 40, 'x', 'ink', 1.2, math_=True)]
+  for k in range(5):
+    T = base - 20 - 60*k
+    shapes += poly([(mid + sx*x, T + scale*s*1.0 - 0) for x, s in zip(xs, m)], 'u', 1.4)
+  for x in (-1, 1):
+    shapes += [line((mid + sx*x, base + 20), (mid + sx*x, 50), 'sun', width=4.0)]
+  shapes += [line((mid, 50), (mid, base + 20), 'ink', dash=True, width=1.2),
+             text(mid, 40, 'the seam', 'ink', 0.85, anchor='middle'),
+             text(mid + sx*1, 40, 'a body', 'ink', 0.85, anchor='middle'), text(mid - sx*1, 40, 'a body', 'ink', 0.85, anchor='middle'),
+             text(x1 - 4, base - 30, 'T = const', 'u', 0.85, anchor='end'),
+             text(W/2, base + 52, "The flow's moments, T = t + S/c²: each folds at the seam, where S switches from one body's to the other's.", 'ink', 0.82, anchor='middle')]
+  return W, H + 10, shapes
+
+
 TESTS = os.path.join(ROOT, 'docs', 'part1', 'tests', 'images')
 PART1 = os.path.join(ROOT, 'docs', 'part1', 'images')
 PART2 = os.path.join(ROOT, 'docs', 'part2', 'images')
@@ -1873,11 +2170,11 @@ PART6 = os.path.join(ROOT, 'docs', 'part6', 'images')
 PART3 = os.path.join(ROOT, 'docs', 'part3', 'images')
 PART4 = os.path.join(ROOT, 'docs', 'part4', 'images')
 SIMS = os.path.join(ROOT, 'docs', 'appendix-a', 'images')
-DIAGRAMS = {'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
+DIAGRAMS = {'seamwhy': seamwhy, 'seamprofile': seamprofile, 'seamlevels': seamlevels, 'seamrule': seamrule, 'seamframes': seamframes, 'seamfold': seamfold, 'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
             'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro,
             'funnel': funnel, 'falling': falling, 'spacetime': spacetime,
             'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'movingbodies': movingbodies, 'pipeline': pipeline, 'classes': classes, 'midpoint': midpoint, 'onepotential': onepotential, 'squeeze': squeeze, 'selfmoving': selfmoving, 'othersflow': othersflow, 'ownspace': ownspace, 'grazing': grazing, 'desitter': desitter, 'jupiterrays': jupiterrays, 'carrying': carrying, 'peeling': peeling, 'pairs': pairs, 'dumbhole': dumbhole, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'threebodies': threebodies, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
-FOLDER = {'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
+FOLDER = {'seamwhy': PART2, 'seamprofile': PART2, 'seamlevels': PART2, 'seamrule': PART2, 'seamframes': PART2, 'seamfold': PART2, 'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
           'funnel': PART1, 'falling': PART1, 'spacetime': PART1,
           'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'movingbodies': PART3, 'pipeline': SIMS, 'classes': SIMS, 'midpoint': SIMS, 'onepotential': PART3, 'squeeze': PART3, 'selfmoving': PART4, 'othersflow': PART4, 'ownspace': PART4, 'grazing': PART3, 'desitter': PART3, 'jupiterrays': PART3, 'carrying': PART3, 'peeling': PART6, 'pairs': PART6, 'dumbhole': PART6, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'threebodies': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
 
@@ -2019,7 +2316,10 @@ class Drawing:
 
 
 def main():
+  only = [a for a in sys.argv[1:] if not a.startswith('--')]      #names of diagrams to draw, or all
   for name, make in DIAGRAMS.items():
+    if only and name not in only:
+      continue
     W, H, shapes = make()
     folder = FOLDER.get(name, OUT)
     os.makedirs(folder, exist_ok=True)

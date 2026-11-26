@@ -1,0 +1,32 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "orbit energy.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "time (s) / energy change (parts in 10^6)": [
+          "#2a78d6",
+          "solid",
+          "#2a78d6"
+        ]
+      },
+      "selection": [
+        [
+          "time (s)",
+          "energy change (parts in 10^6)"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

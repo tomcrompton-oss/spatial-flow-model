@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "moving.prefs.json",
+  "config": "moving.config.json"
+}

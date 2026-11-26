@@ -394,7 +394,11 @@ function draw() {
   else for (const env of fieldEnvironments()) keys.push(...drawField(env));
   for (const result of state.results.filter(r => r.visible)) {
     const until = drawUntil(result);
-    if (until !== false) for (const p of result.paths) drawPath(result, p, until);
+    if (until !== false) for (const p of result.paths) if (!frontPath || frontPath.p !== p) drawPath(result, p, until);
+  }
+  if (frontPath && frontPath.result.visible) {
+    const until = drawUntil(frontPath.result);
+    if (until !== false) drawPath(frontPath.result, frontPath.p, until, 2.8);
   }
   flushDots();
   spinning.length = 0;
@@ -403,6 +407,7 @@ function draw() {
   ctx.restore();
   ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1; ctx.strokeRect(l, t, r - l, b - t);
   drawAxes(false);
+  boxButtons = []; boxRows = [];
   if (state.prefs.showPathLegend) drawLegend();
   if (state.prefs.showFieldKey && keys.length) drawKey(keys);
 }
@@ -445,9 +450,9 @@ function line(x0, y0, x1, y1) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(
 /* a path: up to the replay time while replaying (with a dot where it is), else all of it; broken at empty rows. with
    graduated orbits on, a path that goes round its body is drawn orbit by orbit: the current one (at the replay time, or
    the last) in full colour, each earlier one fainter, so the orbits' build-up shows */
-function drawPath(result, p, until = replayTime()) {
+function drawPath(result, p, until = replayTime(), width = 1.6) {
   const colour = p.color || result.color;
-  ctx.strokeStyle = colour; ctx.lineWidth = 1.6; ctx.setLineDash(DASHES[p.style] || []);
+  ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.setLineDash(DASHES[p.style] || []);
   const orbit = state.prefs.graduateOrbits ? orbitsOf(result, p) : null;
   let current = 0;
   if (orbit) {
@@ -927,37 +932,190 @@ function arrow(x0, y0, x1, y1) {
   ctx.closePath(); ctx.fill();
 }
 
-function drawBox(lines, anchor) {
-  const {l, t, r, b} = plotRect(), rowH = 18, swatch = 26;
+/* the legend boxes (the paths' names, top right; the background's key, bottom left) each have three states:
+   'hidden', just a button in the plot's corner; 'min', just the lines; 'max', the lines and their names. the one
+   button, beside the box's inner corner (top left of the top right box, bottom right of the bottom left one), is a
+   chevron: pointing into the plot it pulls the box out a step (hidden, then lines, then names), pointing back to the
+   edge it tucks it away a step. at either end it turns round. the box slides sideways from its edge, animated */
+const BOX_ANIM_MS = 220;
+const boxes = {legend: {mode: 'max', out: false, from: null}, key: {mode: 'max', out: false, from: null}};
+const BOX_WIDTH = {hidden: 0, min: 1, max: 2};          //how far out each state is
+const BOX_OUT = {hidden: 'min', min: 'max'}, BOX_IN = {max: 'min', min: 'hidden'};
+let boxButtons = [];                //this frame's buttons: {x, y, w, h, box, tip}
+let boxRows = [];                   //this frame's rows: {x, y, w, h, tip, path}
+let boxFrame = null;
+let frontPath = null;               //a path whose legend row is under the pointer: drawn last, on top
+
+const ease = f => f < 0.5 ? 2 * f * f : 1 - 2 * (1 - f) * (1 - f);
+const inside = (h, x, y) => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h;
+
+/* where a box's animation is now, 0 (hidden) to 1 (lines) to 2 (names), easing to its state's */
+function boxProgress(box) {
+  const goal = BOX_WIDTH[box.mode];
+  if (!box.from) return goal;
+  const f = Math.min(1, (performance.now() - box.from.at) / BOX_ANIM_MS);
+  if (f >= 1) { box.from = null; return goal; }
+  return box.from.w + (goal - box.from.w) * ease(f);
+}
+
+/* which way the button points: out at hidden, in at max, and between, the way it was last going */
+const boxGoesOut = box => box.mode === 'hidden' ? true : box.mode === 'max' ? false : box.out;
+
+function stepBox(name) {
+  const box = boxes[name], out = boxGoesOut(box);
+  box.from = {w: boxProgress(box), at: performance.now()};
+  box.mode = out ? BOX_OUT[box.mode] : BOX_IN[box.mode];
+  box.out = out;
+  const step = () => { draw(); boxFrame = Object.values(boxes).some(b => b.from) ? requestAnimationFrame(step) : null; };
+  if (boxFrame === null) boxFrame = requestAnimationFrame(step);
+}
+
+/* the button: a chevron, < or > */
+function drawBoxButton(x, y, size, left) {
+  ctx.fillStyle = css('--surface'); ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1; ctx.setLineDash([]);
+  ctx.fillRect(x, y, size, size); ctx.strokeRect(x, y, size, size);
+  const cx = x + size / 2, cy = y + size / 2, k = size * 0.2, d = left ? 1 : -1;
+  ctx.strokeStyle = css('--ink2'); ctx.lineWidth = 1.6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(cx + d * k * 0.6, cy - k * 1.3); ctx.lineTo(cx - d * k * 0.6, cy); ctx.lineTo(cx + d * k * 0.6, cy + k * 1.3); ctx.stroke();
+  ctx.lineCap = 'butt'; ctx.lineJoin = 'miter';
+}
+
+//each button's tip: what a press does, from a state, going out or in
+const BOX_TIPS = {legend: {'hidden>': 'Show the paths\' lines', 'min>': 'Show the paths\' names',
+                           'max<': 'Hide the paths\' names', 'min<': 'Hide the paths\' legend'},
+                  key: {'hidden>': 'Show the key\'s lines', 'min>': 'Show the key\'s names',
+                        'max<': 'Hide the key\'s names', 'min<': 'Hide the key'}};
+
+/* lines: [colour, text, dash, path] - path, for a path's row, is {result, p} */
+function drawBox(lines, anchor, name) {
+  const {l, t, r, b} = plotRect(), rowH = 18, swatch = 26, btn = 18;
+  const box = boxes[name], f = boxProgress(box), right = anchor === 'top-right';
   //the text shrinks (to 9px) to keep the box inside the plot
   let size = 12, widest;
   for (; ; size--) {
     ctx.font = size + 'px -apple-system, Helvetica, Arial, sans-serif';
     widest = Math.max(...lines.map(([, text]) => ctx.measureText(text).width));
-    if (size <= 9 || widest + swatch + 22 <= r - l - 16) break;
+    if (size <= 9 || widest + swatch + 22 + btn <= r - l - 16) break;
   }
-  const width = widest + swatch + 22;
+  const full = widest + swatch + 22, slim = swatch + 16;
+  const width = f <= 1 ? slim * f : slim + (full - slim) * (f - 1);
   const height = rowH * lines.length + 8;
-  const x = anchor === 'top-right' ? r - width - 8 : l + 8, y = anchor === 'top-right' ? t + 8 : b - height - 8;
-  ctx.fillStyle = css('--surface'); ctx.strokeStyle = css('--grid');
-  ctx.fillRect(x, y, width, height); ctx.strokeRect(x, y, width, height);
-  lines.forEach(([colour, text, dash], i) => {
-    const cy = y + 4 + rowH * i + rowH / 2;
-    ctx.strokeStyle = colour; ctx.lineWidth = 1.6; ctx.setLineDash(dash || []);
-    line(x + 8, cy, x + 8 + swatch, cy); ctx.setLineDash([]);
-    ctx.fillStyle = css('--ink2'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(text, x + swatch + 14, cy);
-  });
+  //the box keeps its edge, sliding out from it: the right edge at the top right, the left at the bottom left
+  const x = right ? r - 8 - width : l + 8;
+  const y = right ? t + 8 : b - 8 - height;
+  //the button beside the box's inner corner: left of the top right box's top, right of the bottom left box's bottom;
+  //hidden, in the plot's corner
+  const bx = right ? x - btn - (width > 0 ? 2 : 0) : x + width + (width > 0 ? 2 : 0), by = right ? y : y + height - btn;
+  if (width >= 1) {
+    ctx.save();
+    ctx.fillStyle = css('--surface'); ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1;
+    ctx.fillRect(x, y, width, height); ctx.strokeRect(x, y, width, height);
+    ctx.beginPath(); ctx.rect(x, y, width, height); ctx.clip();
+    //the rows slide with the box's inner edge: from hidden to the lines, they come out from the edge
+    const lx = x - Math.max(0, slim - width) * (right ? 0 : 1);
+    lines.forEach(([colour, text, dash, path], i) => {
+      const ry = y + 4 + rowH * i, cy = ry + rowH / 2;
+      ctx.strokeStyle = colour; ctx.lineWidth = 1.6; ctx.setLineDash(dash || []);
+      line(lx + 8, cy, lx + 8 + swatch, cy); ctx.setLineDash([]);
+      ctx.fillStyle = css('--ink2'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.globalAlpha = 0.25 + 0.75 * Math.max(0, f - 1);
+      ctx.fillText(text, lx + swatch + 14, cy);
+      ctx.globalAlpha = 1;
+      boxRows.push({x, y: ry, w: width, h: rowH, tip: text, path});
+    });
+    ctx.restore();
+  }
+  const out = boxGoesOut(box);
+  //pointing into the plot pulls the box out: < at the top right, > at the bottom left
+  drawBoxButton(bx, by, btn, right ? out : !out);
+  boxButtons.push({x: bx, y: by, w: btn, h: btn, box: name, tip: BOX_TIPS[name][box.mode + (out ? '>' : '<')]});
+}
+
+/* a press on a box's button: a step out or in; true if it was one */
+function boxPress(e) {
+  const hit = boxButtons.find(h => inside(h, e.offsetX, e.offsetY));
+  if (!hit) return false;
+  stepBox(hit.box);
+  $('tip').style.display = 'none';           //the button moves: its tip comes back with the next move of the pointer
+  return true;
+}
+
+/* a position as the axes show it: each coordinate its own line */
+function positionLines(x, y) {
+  const [ax, ay] = axes();
+  return [ax.label + ': ' + fmt(x / ax.scale), ay.label + ': ' + fmt(y / ay.scale)];
+}
+
+/* hover text on the plot, as lines (a description, then each value on its own): a box's button or row, a body, or
+   the nearest drawn path within a few pixels */
+function hoverText(sx, sy) {
+  const button = boxButtons.find(h => inside(h, sx, sy));
+  if (button) return {lines: [button.tip], pointer: true};
+  const row = boxRows.find(h => inside(h, sx, sy));
+  if (row) return {lines: [row.tip], path: row.path};
+  const {l, t, r, b} = plotRect();
+  if (sx < l || sx > r || sy < t || sy > b || !state.view) return null;
+  if (state.prefs.showBodies) for (const env of fieldEnvironments()) for (const body of env.bodies || []) {
+    const [bx, by] = toScreen(body.x, body.y);
+    if (Math.hypot(sx - bx, sy - by) <= 8) {
+      const m = body.mass / MS;
+      return {lines: [body.black ? 'a black hole' : 'a body', 'mass: ' + (+m.toPrecision(4)) + ' solar mass' + (m === 1 ? '' : 'es'),
+                      ...positionLines(body.x, body.y)]};
+    }
+  }
+  let best = null, bestD = 6;
+  for (const result of state.results.filter(r => r.visible)) {
+    const until = drawUntil(result);
+    if (until === false) continue;
+    for (const p of result.paths) {
+      let last = null;
+      for (let i = 0; i < p.x.length; i++) {
+        if (until !== null && p.t && p.t[i] > until) break;
+        if (!(isFinite(p.x[i]) && isFinite(p.y[i]))) { last = null; continue; }
+        const [px, py] = toScreen(p.x[i], p.y[i]);
+        if (last) {
+          const [qx, qy] = last, dx = px - qx, dy = py - qy, len2 = dx * dx + dy * dy;
+          const f = len2 ? Math.max(0, Math.min(1, ((sx - qx) * dx + (sy - qy) * dy) / len2)) : 0;
+          const d = Math.hypot(sx - qx - f * dx, sy - qy - f * dy);
+          if (d < bestD) {
+            bestD = d;
+            const at = k => p[k][i - 1] + f * (p[k][i] - p[k][i - 1]);
+            best = [result.name + (result.paths.length > 1 ? ' ' + p.name : '')];
+            if (p.t && isFinite(at('t'))) best.push('t: ' + fmt(at('t')) + ' s');
+            best.push(...positionLines(at('x'), at('y')));
+          }
+        }
+        last = [px, py];
+      }
+    }
+  }
+  return best ? {lines: best} : null;
+}
+
+function hoverAt(e) {
+  const found = hoverText(e.offsetX, e.offsetY);
+  canvas.style.cursor = found && found.pointer ? 'pointer' : '';
+  const front = found && found.path || null;
+  if ((front && front.p) !== (frontPath && frontPath.p)) { frontPath = front; draw(); }
+  const tip = $('tip');
+  if (!found) { if (!tipFor) tip.style.display = 'none'; return; }
+  tipFor = null;
+  tip.textContent = found.lines.join('\n');
+  tip.style.whiteSpace = 'pre-line';
+  tip.style.display = 'block';
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, e.clientX + 12)) + 'px';
+  tip.style.top = (e.clientY - h - 10 < 4 ? e.clientY + 16 : e.clientY - h - 10) + 'px';
 }
 
 function drawLegend() {
   const lines = [];
   for (const r of state.results.filter(r => r.visible))
-    for (const p of r.paths) lines.push([p.color || r.color, r.name + (r.paths.length > 1 ? ' ' + p.name : ''), DASHES[p.style]]);
-  if (lines.length) drawBox(lines.slice(0, 16), 'top-right');
+    for (const p of r.paths) lines.push([p.color || r.color, r.name + (r.paths.length > 1 ? ' ' + p.name : ''), DASHES[p.style], {result: r, p}]);
+  if (lines.length) drawBox(lines.slice(0, 16), 'top-right', 'legend');
 }
 
-function drawKey(keys) { drawBox(keys, 'bottom-left'); }
+function drawKey(keys) { drawBox(keys, 'bottom-left', 'key'); }
 
 //---------------------------------------------------------------- replay
 /* the replay runs a clock across a timeline. played together (mode 'together') the timeline is the shown results'
@@ -1292,10 +1450,22 @@ function setup() {
   $('openFolder').onclick = () => $('folderInput').click();
   $('folderInput').onchange = () => openFiles([...$('folderInput').files]);
 
+  //the legend boxes' buttons, in the player too, and hover text over them, their rows, bodies and paths
+  if (PLAYER) canvas.onpointerdown = boxPress;
+  let hoverFrame = null, hoverEvent = null;
+  canvas.addEventListener('pointermove', e => {
+    hoverEvent = e;
+    if (hoverFrame === null) hoverFrame = requestAnimationFrame(() => { hoverFrame = null; hoverAt(hoverEvent); });
+  });
+  canvas.addEventListener('pointerleave', () => {
+    if (!tipFor) $('tip').style.display = 'none';
+    canvas.style.cursor = '';
+    if (frontPath) { frontPath = null; draw(); }
+  });
   //pan by dragging, zoom with the wheel at the pointer, fit with a double click (not in the player, which stays fitted)
   let dragging = null;
   if (!PLAYER) {
-  canvas.onpointerdown = e => { if (state.view) { dragging = [e.offsetX, e.offsetY, state.view.slice()]; canvas.setPointerCapture(e.pointerId); } };
+  canvas.onpointerdown = e => { if (boxPress(e)) return; if (state.view) { dragging = [e.offsetX, e.offsetY, state.view.slice()]; canvas.setPointerCapture(e.pointerId); } };
   canvas.onpointermove = e => {
     if (!dragging) return;
     const {l, t, r, b} = plotRect(), [px, py, v] = dragging;
@@ -1304,7 +1474,7 @@ function setup() {
     draw();
   };
   canvas.onpointerup = () => { dragging = null; };
-  canvas.ondblclick = fit;
+  canvas.ondblclick = e => { if (!boxButtons.some(h => inside(h, e.offsetX, e.offsetY))) fit(); };
   canvas.addEventListener('wheel', e => {
     if (!state.view) return;
     e.preventDefault();

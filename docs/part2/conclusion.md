@@ -49,9 +49,11 @@ order beyond Newton, it is general relativity, written as flowing space.
 
 Two things.
 
-The first is an open question about the flow itself. Where space meets itself, at the hollow sphere's walls or at the
-seams between bodies, the rule says how things cross, but not what the space does: it flows into a seam, or out of
-one, from both sides at once. The flow describes how space moves, not where it comes from or goes.
+The first was an open question about the flow itself. Where space meets itself, at the hollow sphere's walls or at
+the seams between bodies, the rule says how things cross, but not what the space does: it flows into a seam, or out of
+one, from both sides at once. [Seams](seams.md) finds that this is bookkeeping. A seam is a fold in the flow's time,
+where it hands over from one body's observers to the other's, and how much space it seems to make depends on where it
+is put, with no effect on any path.
 
 The second is the bodies. Every test in Part 2 held them still. Real bodies move: the Moon round the Earth, the Earth
 round the Sun, two stars round each other. Moving bodies carry their flows with them, and that is where the next tests

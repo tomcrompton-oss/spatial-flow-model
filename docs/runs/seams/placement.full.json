@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "placement.prefs.json",
+  "config": "placement.config.json"
+}

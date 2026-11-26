@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "orbitEnergy.prefs.json",
+  "config": "orbitEnergy.config.json"
+}

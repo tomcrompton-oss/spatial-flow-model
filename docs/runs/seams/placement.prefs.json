@@ -1,0 +1,17 @@
+{
+  "kind": "preferences",
+  "version": 1,
+  "preferences": {
+    "mode": "xy",
+    "equalAspect": true,
+    "showFlow": false,
+    "showTimeMarks": false,
+    "showMarkers": false,
+    "showBodies": true,
+    "showPathLegend": true,
+    "showFieldKey": true,
+    "showSeam": false,
+    "unit": 4,
+    "replaySpeed": "1"
+  }
+}

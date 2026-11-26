@@ -1,0 +1,12 @@
+crossing: light across the middle, 30,000 km off the line, the model: 1 crossings
+crossing: light across the middle, 30,000 km off the line, general relativity: 0 crossings
+crossing: light at 45 degrees to the seam, the model: 1 crossings
+crossing: light at 45 degrees to the seam, general relativity: 0 crossings
+crossing: light crossing near a body, the model: 1 crossings
+crossing: light crossing near a body, general relativity: 0 crossings
+crossing: light across, 300,000 km off the line, the model: 1 crossings
+crossing: light across, 300,000 km off the line, general relativity: 0 crossings
+orbit: 27 crossings in 20000 s; the energy changed by at most 1.62e-05 of itself
+moving: GR: 0 crossings, turns 
+moving: level set: 1 crossings, turns 3.7e-08
+moving: circle: 2 crossings, turns 9.8e-02, 7.9e-07
