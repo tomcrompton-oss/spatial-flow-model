@@ -1,0 +1,6 @@
+bodies: 3
+body 1: mass 1.989000e+30 kg (1 MS)  x 5.288661e-06 m  y 8.637039e+10 m  black
+body 2: mass 1.989000e+30 kg (1 MS)  x -7.479895e+10 m  y -4.318519e+10 m  black
+body 3: mass 1.989000e+30 kg (1 MS)  x 7.479895e+10 m  y -4.318519e+10 m  black
+newtonian gravity (RK4): from 5 AU out at 40 km/s, aimed just off the centre, through the middle of the three
+backgrounds: threeBodies.backgrounds.json

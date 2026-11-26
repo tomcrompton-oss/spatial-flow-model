@@ -5,7 +5,7 @@
 Part 1 took one idea: that space flows into a body at the escape speed, $u = \sqrt{2GM/r}$, and that clocks run slow
 by their speed through that space. Adding only Newton's mechanics and special relativity, it gave Newton's gravity,
 all four classic tests of general relativity, and black holes, all in agreement with exact general relativity. For a
-single body, the flowing space *is* general relativity.
+single, non-rotating body, the flowing space *is* general relativity.
 
 But a single body is the easy case. Space flows straight towards it, at a speed that depends only on the distance, and
 symmetry settles everything else. The universe has more than one body in it.

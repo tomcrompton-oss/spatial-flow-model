@@ -1080,6 +1080,64 @@ def potentialflow():
   return W, H, shapes
 
 
+def threebodies():
+  """the potential flow round three equal bodies at the corners of a triangle (the engine's eikonal flow from tables):
+  each body's region filled by the flow into it, and three seams meeting at the centre, where g is zero"""
+  sys.path.insert(0, ROOT)
+  import numpy as np
+  from engine.flow import Body, SpecialFlowCalculator
+  from engine.constants import MS, AU
+  from engine.backgrounds import seamAround
+  W, H = 760, 450
+  side = 1.0
+  bodies = [(side/math.sqrt(3)*math.cos(a), side/math.sqrt(3)*math.sin(a)) for a in (math.pi/2, math.pi/2 + 2*math.pi/3, math.pi/2 + 4*math.pi/3)]
+  calc = SpecialFlowCalculator([Body(MS, x=bx*AU, y=by*AU) for bx, by in bodies], 2, 'eikonal')
+  calc.warn = lambda m: None
+  S, cx, cy = 150, 290, 220
+  P = lambda x, y: (cx + S*x, cy - S*y)
+  inside = lambda x, y: abs(x) < 1.75 and abs(y) < 1.3
+  starts = [(3.0*math.cos(a), 3.0*math.sin(a)) for a in [2*math.pi*(k + 0.5)/30 for k in range(30)]]
+  #and paths leaving each seam on both sides, all along it
+  for a in (-math.pi/2, math.pi/6, 5*math.pi/6):
+    for k in range(1, 9):
+      d = 0.15*k
+      x0, y0 = d*math.cos(a), d*math.sin(a)
+      n = (-math.sin(a), math.cos(a))
+      for s_ in (-0.004, 0.004):
+        starts.append((x0 + s_*n[0], y0 + s_*n[1]))
+  for sx, sy in starts:
+    x, y = sx, sy
+    pts = []
+    for _ in range(3000):
+      q = np.array([x*AU, y*AU])
+      u = calc.flow(q, calc.region(q), 0.0)
+      n_ = math.hypot(*u)
+      if not n_ or min(math.hypot(x - bx, y - by) for bx, by in bodies) < 0.05:
+        break
+      x, y = x + 0.012*u[0]/n_, y + 0.012*u[1]/n_
+      if inside(x, y):
+        pts.append(P(x, y))
+    if len(pts) > 6:
+      shapes = locals().setdefault('shapes', [])
+      shapes += poly(pts, 'u', 1.0)
+      k = len(pts)//3
+      shapes.append(arrow(pts[k - 2], pts[k], 'u', 1.2))
+  shapes = locals()['shapes']
+  for line_ in seamAround(lambda q: calc.region(q), np.zeros(2), 0.005*AU, 3*AU, cells=(160, 120)):
+    pts = [P(q[0]/AU, q[1]/AU) for q in line_ if inside(q[0]/AU, q[1]/AU)]
+    if len(pts) > 1:
+      shapes += poly(pts, 'v', 1.8, dash=True)
+  for bx, by in bodies:
+    shapes.append(ellipse(*P(bx, by), 15, 15, 'sun', 0, 'sun'))
+  x0 = 580
+  shapes += [line((x0, 150), (x0 + 30, 150), 'u', width=1.0), text(x0 + 38, 146, 'the flow: in from', 'ink', 0.85),
+             text(x0 + 38, 164, 'far away, or out of', 'ink', 0.85), text(x0 + 38, 182, 'a seam', 'ink', 0.85),
+             line((x0, 222), (x0 + 30, 222), 'v', dash=True, width=1.8), text(x0 + 38, 218, 'the seams, meeting', 'ink', 0.85),
+             text(x0 + 38, 236, 'at the centre, where', 'ink', 0.85), text(x0 + 38, 254, 'g is zero', 'ink', 0.85),
+             text(W/2, 438, 'Three equal bodies at rest, at the corners of a triangle 1 AU across.', 'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
 def watershed():
   """the seam and the hollow sphere's boundaries, along a line: inside the hollow sphere (option D) space splits at the
   centre; between two bodies, the potential flow splits at the seam, flowing away towards each body - and something
@@ -1382,10 +1440,10 @@ PART6 = os.path.join(ROOT, 'docs', 'part6', 'images')
 DIAGRAMS = {'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
             'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro,
             'funnel': funnel, 'falling': falling, 'spacetime': spacetime,
-            'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'peeling': peeling, 'pairs': pairs, 'dumbhole': dumbhole, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
+            'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'peeling': peeling, 'pairs': pairs, 'dumbhole': dumbhole, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'threebodies': threebodies, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
 FOLDER = {'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
           'funnel': PART1, 'falling': PART1, 'spacetime': PART1,
-          'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'peeling': PART6, 'pairs': PART6, 'dumbhole': PART6, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
+          'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'peeling': PART6, 'pairs': PART6, 'dumbhole': PART6, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'threebodies': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
 
 
 # --- drawing ----------------------------------------------------------------------------------------------------------

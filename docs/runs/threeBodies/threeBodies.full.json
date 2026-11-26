@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "threeBodies.prefs.json",
+  "config": "threeBodies.config.json"
+}

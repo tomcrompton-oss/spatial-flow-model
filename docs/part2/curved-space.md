@@ -40,6 +40,10 @@ $$
 \gamma = \delta + \frac{u^2\,\delta - \mathbf u\,\mathbf u}{c^2}
 $$
 
+Here $\gamma$ is the metric of space: the rule that turns small steps into lengths. $\delta$ is flat space's rule,
+Pythagoras', the same in every direction. The last term, $\mathbf u\,\mathbf u$, picks out the direction of the flow,
+and takes the stretch away again along it.
+
 ![Small circles of space round two bodies at rest, each stretched across the potential flow and not along it, more strongly where the flow is faster, close to the bodies. A key enlarges one: the dashed circle of flat space, and the ellipse it becomes, stretched across the flow by u squared over c squared and unchanged along it; the stretch is much exaggerated](images/stretched.svg)
 
 Compared with across the flow, space along it is shorter by $u^2/c^2$: the same amount as special relativity's
@@ -47,10 +51,10 @@ length contraction for something moving at the flow's speed, to this order. Movi
 motion, compared with across it.
 
 This isn't a guess. Take general relativity's description of bodies at rest, and measure time by clocks falling from
-rest far away, as the flow model does. To the first order beyond Newton (first post-Newtonian order), what comes out
+rest far away, as the flow model does ([Deriving Curved Space](deriving-curved-space.md) shows the steps). To the first order beyond Newton (first post-Newtonian order), what comes out
 is exactly this: clocks slowed only by their speed through space, space flowing as the potential flow (very slightly
-slower, by a quarter of $u^2/c^2$), and space stretched across the flow by $u^2/c^2$. The flow's speed says how much, its direction which way, and nothing else goes
-in.
+slower, by a quarter of $u^2/c^2$), and space stretched across the flow by $u^2/c^2$. The flow's speed says how much,
+its direction which way, and nothing else goes in.
 
 For a single body, this curved space is flat space in other coordinates. Part 1 is unchanged: every result there
 still stands. With two bodies it isn't flat, and the stretch is where the bodies' effects on each other go.
@@ -109,17 +113,28 @@ than general relativity says, whichever way space flowed. That came from flat fl
 in space flowing past them measure distances along the flow stretched, by $1/\sqrt{1 - u^2/c^2}$, so the inside of the
 shell measures longer than its true diameter.
 
-Curved space removes it. Give the space inside the shell the same shape as above, shorter along the flow than across
-it by $u^2/c^2$, so that observers held still inside measure the shell's true diameter, $2R$. The simulation's faller
-then crosses the inside in 0.000591234 s of its own time: general relativity's figure, to 7 parts in 10⁸, against
-flat space's 0.000623216 s.
+Curved space removes almost all of it. With space stretched across the flow, the shell's size is set by its
+circumference, $2\pi R$, measured across the flow; in the flow's own coordinates its radius is then a little less than
+$R$, $\rho = 9.51\,r_s$ for $R = 10\,r_s$. Along the flow, lengths are unchanged, so the faller, moving with the space
+inside, crosses $2\rho$ at the escape speed:
+
+| Space | The faller's clock across the inside (s) | Against general relativity |
+| --- | --- | --- |
+| Flat | 0.000623216 | 5.4% longer |
+| Stretched across the flow by $u^2/c^2$ | 0.000592850 | 0.27% longer |
+| General relativity | 0.000591234 | |
+
+What is left is second order: the curved space here is general relativity's to the first order beyond Newton, and the
+inside of this shell, where space flows at $0.316c$, is strong enough for the next order to show. Shaping space inside
+the shell exactly as general relativity has it, shorter along the flow by $1 - r_s/R$, takes even that away: the
+simulation's faller then crosses in 0.000591234 s, general relativity's figure to 7 parts in 10⁸.
 
 ## Where it stops
 
 With the bodies held still, the potential flow with space stretched across it passes every test so far: Newton's
 gravity, the clocks, lunar laser ranging and light past Jupiter, all as general relativity has them at first
-post-Newtonian order. Every test so far has held the bodies still, though. Real bodies move, and the next tests need
-them to.
+post-Newtonian order. Nothing in it is special to two bodies: [Multiple Bodies](multiple-bodies.md) takes it to three.
+Every test so far has held the bodies still, though. Real bodies move, and the next tests need them to.
 
 *The code: studies/lapse_two_bodies.py (lunar ranging and light past Jupiter, flat and curved, against general
 relativity's first post-Newtonian metric), studies/hollow_sphere_curved.py (the hollow sphere); the curved-space

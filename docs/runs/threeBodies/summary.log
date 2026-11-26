@@ -1,0 +1,20 @@
+three 1 MS holes at the corners of a triangle 1 AU across; the flow down zero-energy paths from the nearest body (no curl; seam where the regions meet) (tables built in 0 s)
+
+around2AU  a circle (for 3 solar masses at the centre) 2 AU from the centre
+  flow:   time limit         t 16.33 yr  end (-1.63338, -0.62118) AU  (162536 steps)
+  newton: time limit         t 16.33 yr  end (-1.63307, -0.62201) AU  apart 0.000878 AU
+  closest approach to the centre moves on: flow 32.87745 deg an orbit (10 orbits), newton 32.87814 (10)
+around4AU  a circle (for 3 solar masses at the centre) 4 AU from the centre
+  flow:   time limit         t 46.18 yr  end (-1.77059, 3.56168) AU  (126680 steps)
+  newton: time limit         t 46.18 yr  end (-1.77070, 3.56165) AU  apart 0.000118 AU
+  closest approach to the centre moves on: flow 7.30134 deg an orbit (9 orbits), newton 7.30240 (9)
+ellipse    periapsis 1.4 AU, e 0.4, round the centre
+  flow:   time limit         t 16.46 yr  end (-1.26501, -1.43421) AU  (154108 steps)
+  newton: time limit         t 16.46 yr  end (-1.26818, -1.43267) AU  apart 0.00352 AU
+  closest approach to the centre moves on: flow 33.61676 deg an orbit (8 orbits), newton 33.61607 (8)
+through    from 5 AU out at 40 km/s, aimed just off the centre, through the middle of the three
+  flow:   time limit         t 1.2 yr  end (7.38384, -1.10938) AU  (14728 steps)
+  newton: time limit         t 1.2 yr  end (7.38385, -1.10933) AU  apart 4.76e-05 AU
+fall       from rest 3 AU out, just off the seam below the centre
+  flow:   time limit         t 3 yr  end (1.88192, 0.85983) AU  (84677 steps)
+  newton: time limit         t 3 yr  end (2.14314, 0.06788) AU  apart 0.834 AU
