@@ -59,7 +59,7 @@ so nothing carried with the space is carried into it. Only something moving thro
 passes straight through.
 
 What the seam doesn't say is where the space flowing away from it comes from. That is the same open question as
-the hollow sphere's meeting points.
+the hollow sphere's meeting points. [Seams](seams.md) takes both up, along with where a seam can be and what crossing it does.
 
 ## Does it work?
 

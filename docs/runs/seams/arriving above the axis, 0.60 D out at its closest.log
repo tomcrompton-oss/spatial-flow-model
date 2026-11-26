@@ -1,0 +1,3 @@
+bodies: 1
+body 1: mass 1.989000e+30 kg (1 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+a zero-energy path arriving from far away at -x, above the axis: the parabola y^2 = 4q(q - x), q = 1.200e+08 m

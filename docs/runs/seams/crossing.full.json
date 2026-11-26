@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "crossing.prefs.json",
+  "config": "crossing.config.json"
+}
