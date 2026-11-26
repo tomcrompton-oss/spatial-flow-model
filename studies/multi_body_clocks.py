@@ -102,7 +102,8 @@ def rates(folder):
                           ' %s; the steady part taken out' % (clockName, title), lines[-1]]), colour))
   writeViewerFiles(folder, 'multiBody_clocks', made, selection=(('t', 'rate_ppb'),),
                    styles=lambda colour, style='solid': {'t / rate_ppb': [colour, style, colour]},
-                   preferences={'mode': 'xy', 'equalAspect': False, 'showBodies': False, 'showFlow': False})
+                   preferences={'mode': 'xy', 'equalAspect': False, 'showBodies': False, 'showFlow': False,
+                                'showPathLegend': False})
   lines.append('  the cross term u_E . u_S/c^2 at the surface: %.3e; at GPS: %.3e'
                % (math.sqrt(2*G*ME/REARTH)*math.sqrt(2*G*MS/AU)/C**2, math.sqrt(2*G*ME/GPS_RADIUS)*math.sqrt(2*G*MS/AU)/C**2))
   return lines, found

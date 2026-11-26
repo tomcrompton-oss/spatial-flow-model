@@ -98,7 +98,10 @@ being carried up to it, and once past it, the space on the other side carries it
 
 The boundaries where space meets itself are a special case. Crossing one isn't the ordinary step of moving between
 regions of space: the faller changes reference frame. It passes through the boundary keeping its velocity relative to
-the boundary, which is at rest, and carries on in the space on the other side. At the far wall in option A, it has been
+the boundary, which is at rest, and carries on in the space on the other side. This isn't arbitrary. Nothing about
+the shell changes with time, so the faller's energy, as measured far away, should be the same on both sides; and
+nothing along the boundary changes either, so its momentum along the boundary should be too. Keeping both is what its
+velocity relative to a boundary at rest comes to. At the far wall in option A, it has been
 moving with the space inside; beyond it, the space flows back in towards the sphere, so the faller is now moving
 outward *against* the flow, just like [clock 4](../part1/mechanics/four-clocks.md#clock-4-escaping), and it climbs away
 and slows.
@@ -146,6 +149,14 @@ Inside the sphere space is flat, so there is no preferred frame of reference the
 "really" at rest. But frames inside can be connected to frames outside. The faller's frame is the one it carried in
 from far away, and the stationary clock's is the shell's, at rest relative to clocks far away. Through those
 connections, a clock inside is compared with a clock outside.
+
+### What the space does
+
+The rule says how something *crosses* a place where space meets itself head on. It doesn't say what happens to the
+space there. At the far wall in option A, space flows into the wall from both sides, and has nowhere to go; in option
+D, space flows out of the centre both ways, from nowhere. Something carried with the space never gets past such a
+place, but the space itself would have to disappear into it, or appear out of it. That is a question this page leaves
+open, and one that comes up again at the seams of [Potential Flow](potential-flow.md).
 
 !!! note "Reader's note"
     The faller's clock across the inside, 0.000623216 s, is 5.4% more than general relativity's 0.000591234 s. That

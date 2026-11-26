@@ -26,7 +26,8 @@ $$
 $$
 
 Then space moving with the flow falls at exactly Newton's $g$ for both bodies together, and clocks held still keep
-general relativity's rates. The flow's lines are the paths of things falling from rest far away, as they are round
+general relativity's rates. Nothing here depends on there being two bodies: the same rule works for any number, which
+[Multiple Bodies](multiple-bodies.md) shows. The flow's lines are the paths of things falling from rest far away, as they are round
 one body. (This is the eikonal, or zero-energy Hamilton–Jacobi, equation; for two bodies it can be solved exactly.)
 
 ## The flow round two bodies
@@ -95,7 +96,9 @@ relativity over a day, in the potential flow and with the two bodies' flows simp
 
 <iframe src="../../viewer/index.html?player&run=../runs/multiBodyClocks/multiBody_clocks.full.json" width="100%" height="440" loading="lazy" title="Clocks on the Earth and in GPS orbit"></iframe>
 
-*Each clock's rate less general relativity's, over a day, in parts in 10⁹.*
+*Each clock's rate less general relativity's, over a day, in parts in 10⁹: the flows added as vectors, on the equator
+(blue) and in GPS orbit (green); the potential flow, on the equator (orange) and in GPS orbit (yellow), both flat at
+zero.*
 [Open full screen](../../viewer/index.html?run=../runs/multiBodyClocks/multiBody_clocks.full.json){ target=_blank }
 
 | Clock | Flows added as vectors | Potential flow |

@@ -8,7 +8,7 @@
     "showTimeMarks": false,
     "showMarkers": false,
     "showBodies": false,
-    "showPathLegend": true,
+    "showPathLegend": false,
     "showFieldKey": true
   }
 }
