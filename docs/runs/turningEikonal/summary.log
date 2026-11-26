@@ -5,8 +5,8 @@ paths: out of each body, run back in time in the turning frame, the Coriolis for
 
 newton: let go beside the moving Earth (moving with the turning frame), its acceleration over 0.01 s against Newton's
     distance              0 deg     45 deg     90 deg    135 deg    180 deg    225 deg    270 deg    315 deg   (|a - g_Newton|, m/s^2)
-    surface            5.72e-05   0.000235   2.78e-06   0.000237   5.69e-05   0.000235   2.79e-06   0.000237
-    Moon               4.48e-07   5.09e-07   1.02e-06   8.12e-08   2.52e-07   2.68e-07    1.1e-06    2.2e-07
+    surface            4.44e-05   2.25e-05   8.57e-05   7.33e-05   4.44e-05   2.25e-05   8.57e-05   7.33e-05
+    Moon               5.83e-10   3.28e-07   2.06e-07   3.21e-07   1.66e-10   3.29e-07   2.06e-07   3.22e-07
     (the Sun's tide at the surface, for scale: 5.05e-07 m/s^2)
 
 einstein: (div u)^2 - du_i/dx_j du_j/dx_i round the Earth, over 4 c0/r^2 (c0 = GM_S/AU); the bodies at rest gave 1
@@ -21,8 +21,8 @@ lunar: radar from the Earth's surface to a mirror at the Moon's distance, both t
 
 swirl: light passing the Sun through the flow that would fill the plane past 1.125 AU (L = -J/Omega = 6.6846e+15 m^2/s), against the Sun's own flow straight in (GR); 20 AU either side
       b (AU)         GR (uas)      swirl (uas)     difference
-         2.0           4073.0           4070.5          -0.1%
-         3.0           2714.9           2711.5          -0.1%
+         2.0           4073.0           4076.8           0.1%
+         3.0           2714.9           2715.8           0.0%
          5.0           1627.1           1622.0          -0.3%
   (4GM/bc^2 at 2 AU is 4073.1 uas, less over a finite path; VLBI measures the Sun's bending, gamma, to about 1 part in 10^4)
 
@@ -33,7 +33,7 @@ sun: round the Sun the flow is its paths with energy J (they leave it with no an
           0.30    0.9398    0.9599    0.9700    0.9800    1.0001
   light passing the Sun, 0.5 AU either side (inside its region): the turning flow's bending against the Sun's own flow straight in (GR)
      b (R_sun)       GR (mas)  turning (mas)     less (mas)        of GR
-             2       870.4774       860.8803        -9.5971      -1.103%
-            10       174.0901       164.4964        -9.5938      -5.511%
-            50        34.3697        25.1012        -9.2685     -26.967%
+             2       870.4776       860.8817        -9.5959      -1.102%
+            10       174.0902       164.4982        -9.5920      -5.510%
+            50        34.3697        25.1148        -9.2549     -26.928%
   pi J/c^2 = -9.60 mas (a cone's worth); Cassini measured gamma to 2.3 x 10^-5, about 0.010 mas at 2 solar radii

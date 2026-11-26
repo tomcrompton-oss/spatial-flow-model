@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "binary_periastron.prefs.json",
+  "config": "binary_periastron.config.json"
+}

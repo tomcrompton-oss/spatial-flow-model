@@ -1,0 +1,18 @@
+{
+  "kind": "preferences",
+  "version": 1,
+  "preferences": {
+    "mode": "xy",
+    "equalAspect": true,
+    "showFlow": false,
+    "showTimeMarks": false,
+    "showMarkers": false,
+    "showBodies": false,
+    "showPathLegend": true,
+    "showFieldKey": true,
+    "showSchwarzschild": false,
+    "unit": 2,
+    "showGrid": true,
+    "replaySpeed": "1"
+  }
+}

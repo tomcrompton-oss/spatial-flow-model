@@ -5,7 +5,8 @@ in the clocks, space curved to match (kappa = lambda), and lambda of GR's moving
 its lapse's psi), so that lambda = 1 is GR's first post-Newtonian metric of the same bodies; and with the clocks left
 alone (N = 1) and space curved across the flow, by 2 Phi/c^2 or by the flow's own |u|^2/c^2 (FlowSpacetime transverse
 True or 'flow'; the turning flow's |u|^2 is not 2 Phi, so the two differ); and the carried flow (engine/carried.py:
-each body's river carried at its velocity, with the other's tide), flat and with space curved across it:
+each body's river carried at its velocity, with the other's tide), flat and with space curved across it; and the
+turning flow with Jacobi constant 0 (one potential over the whole plane), space from Einstein's constraint:
 
   sun      light passing the Sun, 0.5 AU either side (inside the turning flow's Sun region, where its paths' energy
            J squeezes space): the bending at 2, 10 and 50 solar radii, less the same family's bending with the Sun
@@ -19,6 +20,7 @@ studies/de_sitter.py does
 
 run: python3 studies/lapse_moving.py     (prints, and writes
      logs/modelChecks/lapseMoving_<datetime>/summary.log)
+     python3 studies/lapse_moving.py "models=turning J = 0, Einstein's space"     (a chosen set of models)
 """
 import math
 import os
@@ -37,10 +39,12 @@ from turning_eikonal import bodies, OMEGA
 SHARES = (0.0, 0.5, 1.0)
 MODELS = (['turning, lambda %g' % s for s in SHARES] + ['turning, N = 1, transverse space',
           'turning, N = 1, space from u', 'turning, N = 1, from its body', 'carried, flat', 'carried, N = 1, from its body', "carried, N = 1, GR's space",
-          'GR (first post-Newtonian)'])
+          "turning J = 0, Einstein's space", 'GR (first post-Newtonian)'])
 
 
 def mode(model):
+  if "Einstein's space" in model:
+    return 'constraint'   #space from Einstein's constraint: (2 Phi delta - u u)/c^2
   return 'source' if 'from its body' in model else 'flow' if 'space from u' in model else True
 
 
@@ -54,12 +58,16 @@ def spacetime(model, alone=False):
     sun = [Body(MS, *bodies()[0].pos)]
     if model.startswith('GR'):
       return PostNewtonian(sun)
-    if 'N = 1' in model:
+    if 'N = 1' in model or 'J = 0' in model:
       return FlowSpacetime(SpecialFlowCalculator(sun, 2), transverse=mode(model))
     share = float(model.split('lambda ')[1])
     return FlowSpacetime(SpecialFlowCalculator(sun, 2), share=share, curve=share)
   if model.startswith('GR'):
     return PostNewtonian(bodies())
+  if 'J = 0' in model:
+    flow = SpecialFlowCalculator(bodies(), 2, combine='turning')
+    flow.jacobi = 0.0   #one potential over the whole plane (the Sun's paths reach everywhere)
+    return FlowSpacetime(flow, transverse=mode(model))
   if 'N = 1' in model:
     return FlowSpacetime(SpecialFlowCalculator(bodies(), 2, combine='turning'), transverse=mode(model))
   share = float(model.split('lambda ')[1])
@@ -84,6 +92,10 @@ def sun(job):
 
 
 def main():
+  global MODELS
+  for a in sys.argv[1:]:
+    if a.startswith('models='):   #a chosen set of models, | between them (GR is added: the rest are against it)
+      MODELS = [m.strip() for m in a[len('models='):].split('|')] + ['GR (first post-Newtonian)']
   folder = os.path.join(LOG_DIR, 'modelChecks', 'lapseMoving_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder, exist_ok=True)
   mas = 180/math.pi*3600e3

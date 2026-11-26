@@ -137,7 +137,7 @@ are Newton's.
 ## A binary: the Hulse–Taylor pulsar
 
 With two bodies of similar mass, each moves with the regular part of its own space, and the model's two-body motion is
-GR's first post-Newtonian motion (Einstein–Infeld–Hoffmann; [to be written up](part4.md)). Bernoulli's equation holds
+GR's first post-Newtonian motion (Einstein–Infeld–Hoffmann; see [Moving With Its Own Space](part4/moving-with-its-own-space.md)). Bernoulli's equation holds
 for that flow too, so a body moving with its space feels $-\nabla\Phi_{RR}$ at itself, whatever the masses. The binary
 then moves by EIH plus the reaction:
 

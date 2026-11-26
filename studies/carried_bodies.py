@@ -10,8 +10,10 @@ of the others, its own left out), flat space or space curved across the flow rel
              the pair falls, in units of g E/Mc^2 - Nordtvedt's eta (GR 0, lunar laser ranging 10^-4). the carried
              flow's tides are Newton's only approximately, so both are run at c and at c x 1000 and the difference
              taken (the Sun held still)
+  plots      for the viewer: the equal-mass binary's periastron direction orbit by orbit (to zero step), against GR's,
+             and at mass ratio 0.1 the pair's centre of mass drifting off
 
-run: python3 studies/carried_bodies.py [test ...] [--flat] [--curved] [--gr]     (default both tests, all three spaces:
+run: python3 studies/carried_bodies.py [test ...] [--flat] [--curved] [--gr]     (default all three tests, all three spaces:
      flat, space from u relative to its body, and GR's 2 Phi delta - u u; prints,
      and writes logs/modelChecks/carriedBodies_<datetime>/summary.log)
 """
@@ -140,7 +142,91 @@ def nordtvedt(pool, spaces):
   return lines
 
 
-TESTS = {'binary': binary, 'nordtvedt': nordtvedt}
+PLOTS = None   #the run's folder, for plots
+
+
+def plotRun(job):
+  """the binary at mass ratio ratio in flat space, steps an orbit: each periastron's direction, by orbit, and the
+  pair's centre of mass every tenth of an orbit"""
+  ratio, steps = job
+  from engine.carried import CarriedBodies
+  setC(1.0)
+  m1 = MTOTAL/(1 + ratio)
+  m2 = MTOTAL - m1
+  rp = A*(1 - E)
+  vrel = math.sqrt(G*MTOTAL*(1 + E)/rp)
+  sim = CarriedBodies([m1, m2], [[m2/MTOTAL*rp, 0.0], [-m1/MTOTAL*rp, 0.0]],
+                      [[0.0, m2/MTOTAL*vrel], [0.0, -m1/MTOTAL*vrel]], transverse=False)
+  period = 2*math.pi*math.sqrt(A**3/(G*MTOTAL))
+  dt = period/steps
+  seps, centre, n = [], [], 0
+  while sim.t < (ORBITS + 0.5)*period:
+    sim.step(dt)
+    n += 1
+    x = sim.places()
+    rel = x[0] - x[1]
+    seps.append((sim.t, math.sqrt(rel @ rel), math.atan2(rel[1], rel[0])))
+    if n % (steps//10) == 0:
+      centre.append((sim.t, *((m1*x[0] + m2*x[1])/MTOTAL)))
+  peri = []
+  for i in range(1, len(seps) - 1):
+    if seps[i][1] < seps[i - 1][1] and seps[i][1] <= seps[i + 1][1]:
+      (t0, r0, a0), (t1, r1, a1), (t2, r2, a2) = seps[i - 1], seps[i], seps[i + 1]
+      f = 0.5*(r0 - r2)/(r0 - 2*r1 + r2)
+      peri.append((t1 + f*dt, a1 + f*math.remainder(a2 - a0, 2*math.pi)/2))
+  return job, (peri, centre, period)
+
+
+def plots(pool, spaces):
+  """for the viewer: the equal-mass binary's periastron direction orbit by orbit, the model's (to zero step from 2000
+  and 4000 steps an orbit, as the binary test's numbers are) and GR's; and at mass ratio 0.1 the pair's centre of mass
+  (4000 steps an orbit), which in GR stays put"""
+  sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+  from two_body_escapes import writeViewerFiles
+  folder = PLOTS
+  found = dict(pool.map(plotRun, [(r, s) for r in (1.0, 0.1) for s in (STEPS, 2*STEPS)]))
+  lines, made = ['plots: written for the viewer in %s' % os.path.basename(folder)], []
+  (p1, _, period), (p2, _, _) = found[(1.0, STEPS)], found[(1.0, 2*STEPS)]
+  n = min(len(p1), len(p2))
+  a1, a2 = np.unwrap([p[1] for p in p1])[:n], np.unwrap([p[1] for p in p2])[:n]
+  turned = (4*(a2 - a2[0]) - (a1 - a1[0]))/3
+  gr = 3*(G*MTOTAL*2*math.pi/period)**(2/3)/(C*C*(1 - E*E))*2*math.pi
+  deg = 180/math.pi*3600   #arcseconds
+  model = [(k, turned[k]*deg) for k in range(n)]
+  for name, rows, colour, style in (("each body in the others' flow", model, '#eb6834', 'solid'),
+                                    ('general relativity', [(k, k*gr*deg) for k in range(n)], '#7a7a74', 'dashed')):
+    path = os.path.join(folder, name + '.csv')
+    with open(path, 'w') as f:
+      f.write('orbit (n),periastron turned (arcsec)\n')
+      for k, a in rows:
+        f.write('%d,%.6g\n' % (k, a))
+    with open(path[:-4] + '.log', 'w') as f:
+      f.write('an equal-mass binary, 2 solar masses, a = %.0e m, e = %.1f: how far its periastron has turned, orbit by'
+              ' orbit (to zero step from %d and %d steps an orbit); %s\n' % (A, E, STEPS, 2*STEPS, name))
+    made.append((path, colour, style))
+  lines.append('  equal masses: periastron turned after %d orbits %.1f arcsec, GR %.1f' % (model[-1][0], model[-1][1],
+                                                                                         model[-1][0]*gr*deg))
+  writeViewerFiles(folder, 'binary_periastron', made, selection=(('orbit (n)', 'periastron turned (arcsec)'),),
+                   styles=lambda colour, style='solid': {'orbit (n) / periastron turned (arcsec)': [colour, style, colour]},
+                   preferences={'equalAspect': False, 'showBodies': False, 'showSchwarzschild': False, 'showGrid': True})
+  _, centre, period = found[(0.1, 2*STEPS)]
+  made = []
+  rows = [(t/period, x/1e3, y/1e3) for t, x, y in centre]
+  path = os.path.join(folder, "the pair's centre, each body in the others' flow.csv")
+  with open(path, 'w') as f:
+    f.write('t,pos_x,pos_y\n')
+    for t, x, y in rows:
+      f.write('%.6g,%.6g,%.6g\n' % (t*period, x*1e3, y*1e3))
+  with open(path[:-4] + '.log', 'w') as f:
+    f.write('a binary of mass ratio 0.1, 2 solar masses, a = %.0e m, e = %.1f, %d steps an orbit: its centre of mass'
+            ' (GR: it stays put)\n' % (A, E, 2*STEPS))
+  made.append((path, '#eb6834', 'solid'))
+  lines.append('  mass ratio 0.1: the centre of mass moved %.0f km in %d orbits' % (math.hypot(rows[-1][1], rows[-1][2]),
+                                                                                round(rows[-1][0])))
+  writeViewerFiles(folder, 'binary_centre', made,
+                   preferences={'equalAspect': True, 'showBodies': False, 'showSchwarzschild': False, 'unit': 2,
+                                'showGrid': True, 'replaySpeed': '1'})
+  return lines
 
 
 def main():
@@ -149,6 +235,8 @@ def main():
   names = args or list(TESTS)
   folder = os.path.join(LOG_DIR, 'modelChecks', 'carriedBodies_' + datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
   os.makedirs(folder, exist_ok=True)
+  global PLOTS
+  PLOTS = folder
   lines = []
   with Pool(8) as pool:
     for name in names:
@@ -158,6 +246,9 @@ def main():
   with open(os.path.join(folder, 'summary.log'), 'w') as f:
     f.write('\n'.join(lines) + '\n')
   print('written to', folder)
+
+
+TESTS = {'binary': binary, 'nordtvedt': nordtvedt, 'plots': plots}
 
 
 if __name__ == '__main__':

@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "lapseMoon_residuals.prefs.json",
+  "config": "lapseMoon_residuals.config.json"
+}

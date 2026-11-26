@@ -32,7 +32,7 @@ cancels. The delay is the round trip less the time to cover the straight-line di
 
 *(Step: 1 × 10⁻⁴ of the distance to the Sun; the next column at a third of that.)* The simulation agrees with
 **exact** general relativity (from the full integral for the light's time along its path; see
-[References](../../appendix-c.md)) to 5 parts in 10⁸ for light grazing the Sun at the finer step. Further out the light
+[References](../../appendix-c/references.md)) to 5 parts in 10⁸ for light grazing the Sun at the finer step. Further out the light
 takes longer steps, and the difference grows, but it falls as the step squared: tenfold at a third of the step.
 
 The approximation, written for the experiment as

@@ -20,7 +20,7 @@ The simulation can use different calculators:
 The simulation sends light from 10 AU on the far side of the Sun to 10 AU on the near side, on a path passing the
 Sun's centre at $b = 7\times10^8$ m, one solar radius, with steps that shrink as the light nears the Sun. The general
 relativity approximation is $\delta\phi \approx 4GM/c^2b$; exact general relativity is the full deflection integral
-(see [References](../../appendix-c.md)).
+(see [References](../../appendix-c/references.md)).
 
 | Calculator | Simulated deflection (rad) | Deflection (arcsec) | Exact GR (rad) |
 | --- | --- | --- | --- |

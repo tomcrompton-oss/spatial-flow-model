@@ -152,12 +152,20 @@ class LocalTurningFlow:
     return tuple(q + h/6*(a + 2*b + 2*c + d) for q, a, b, c, d in zip((th, vx, vy), k1, k2, k3, k4))
 
   def covers(self, y):
-    r = math.hypot(y[0] - self.z[0], y[1] - self.z[1])
-    return self.rlo <= r <= self.rhi
+    return self.coversRel(np.asarray(y, dtype=float) - self.z)
+
+  def coversRel(self, d):
+    return self.rlo <= math.hypot(d[0], d[1]) <= self.rhi
 
   def w(self, y):
     """the flow relative to the turning frame at y (turning-frame coordinates, within rlo..rhi of the body)"""
-    d = np.asarray(y, dtype=float) - self.z
+    return self.wRel(np.asarray(y, dtype=float) - self.z)
+
+  def wRel(self, d):
+    """the same at d from the body (turning-frame axes): given d itself, worked out in the lab before turning (the
+    body's place less a point's, both ~1.5e11 m, is exact; turning the point first rounds it to 3e-5 m, which this
+    flow's gradient, |w|/r ~ 1e-4 /s, turns into 1e-9 m/s of noise - and the force, a difference of H, into 5e-12
+    m/s^2)"""
     r = math.hypot(d[0], d[1])
     x = 2*(math.log(r) - self.ulo)/(self.uhi - self.ulo) - 1
     T = np.cos(np.arange(len(self.cheb))*math.acos(max(-1.0, min(1.0, x))))

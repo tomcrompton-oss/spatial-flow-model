@@ -1433,17 +1433,453 @@ def dumbhole():
   return W, H, shapes
 
 
+def carrying():
+  """a ball let go beside the moving Earth, both panels seen from the Earth (which moves up the page at V). left, the
+  flow's pattern taken along: the space streams past at -V, bent in towards the Earth, and the ball, moving through it
+  at V, is thrown forward and over the top (its path from studies/moving_bodies.py, let go one Earth radius up);
+  right, the space carried: from the Earth it falls straight in, and the ball falls straight down"""
+  W, H = 760, 440
+  R = 30                                     #the Earth's radius, px
+  V, s0 = 29.78, 11.19                       #km/s: the Earth's speed, and the escape speed at its surface
+  #the ball's path taken along, in Earth radii from the Earth (moving_bodies.py, from 0 deg, every 300 s)
+  path = [(-2.0, 0.0), (-1.98, 0.13), (-1.90, 0.52), (-1.67, 1.13), (-1.25, 1.86), (-0.67, 2.56), (-0.02, 3.18),
+          (0.64, 3.73), (1.27, 4.21)]
+  shapes = []
+  for left, carried, title in ((20, False, 'the pattern taken along'), (390, True, 'the space carried')):
+    ex, ey = left + 150, 250
+    shapes += [text(left + 175, 34, title, 'ink', 0.95, anchor='middle', bold=True)]
+    for gx in range(-4, 5):
+      for gy in range(-5, 4):
+        x, y = gx*0.9, gy*0.9 + 0.45           #in Earth radii; y up the page
+        r = math.hypot(x, y)
+        if r < 1.35 or abs(x) > 4.4 or y > 4.6 or y < -4.4:
+          continue
+        s = s0/math.sqrt(r)
+        ux, uy = -s*x/r, -s*y/r
+        if not carried:
+          uy -= V
+        k = (24/V) if not carried else (24/s0)
+        px, py = ex + x*R, ey - y*R
+        shapes.append(arrow((px, py), (px + ux*k, py - uy*k), 'faint', 1.1))
+    shapes += [ellipse(ex, ey, R, R, 'u'), text(ex, ey + 5, 'Earth', 'fill', 0.8, anchor='middle')]
+    bx, by = ex - 2*R, ey
+    if carried:
+      shapes.append(arrow((bx + 6, by), (ex - R - 3, by), 'w', 2.2))
+      shapes.append(text(bx - 10, by + 26, 'falls straight', 'w', 0.85, anchor='end'))
+      shapes.append(text(bx - 10, by + 42, 'down', 'w', 0.85, anchor='end'))
+    else:
+      pts = [(ex + x*R, ey - y*R) for x, y in path]
+      shapes += poly(pts[:-1], 'w', 2.2, dash=True) + [arrow(pts[-2], pts[-1], 'w', 2.2)]
+      shapes.append(text(bx - 8, by + 22, 'thrown forward', 'w', 0.85, anchor='end'))
+      shapes.append(text(bx - 8, by + 38, 'and over the top', 'w', 0.85, anchor='end'))
+    shapes += [ellipse(bx, by, 6, 6, 'w'), text(bx - 10, by + 5, 'ball', 'ink', 0.8, anchor='end')]
+    shapes += [arrow((left + 330, ey + 20), (left + 330, ey - 40), 'ink', 2.0),
+               text(left + 330, ey + 40, 'the Earth', 'ink', 0.8, anchor='middle'),
+               text(left + 330, ey + 56, 'moves at V', 'ink', 0.8, anchor='middle')]
+  shapes += [arrow((40, 418), (70, 418), 'faint', 1.1), text(78, 423, 'the space, as seen from the Earth', 'ink', 0.85),
+             ellipse(410, 418, 6, 6, 'w'), text(424, 423, 'a ball let go at rest beside the Earth', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def grazing():
+  """light grazing the Sun on its way to the Earth: undeflected it would go straight on; general relativity bends it
+  towards the Sun (870 mas at 2 solar radii); the turning flow, its space squeezed, bends it 9.6 mas less (both
+  exaggerated)"""
+  W, H = 760, 330
+  sx, sy, R = 300, 210, 46
+  b = sy - R - 24                              #the ray's closest approach, px
+  shapes = [ellipse(sx, sy, R, R, 'sun', 0, 'sun'), text(sx, sy + 5, 'Sun', 'ink', 0.9, anchor='middle'),
+            text(30, b - 30, 'a radio signal', 'ink', 0.85), text(30, b - 14, 'from a spacecraft', 'ink', 0.85)]
+  x0, x1 = 40, 600
+  shapes += [line((x0, b), (x1, b), 'faint', dash=True, width=1.0), text(x1, b - 8, 'undeflected', 'ink', 0.8, anchor='end')]
+  W = 800
+  def ray(bend):
+    pts = []
+    for k in range(121):
+      x = x0 + (x1 - x0)*k/120
+      d = (x - sx)/90.0
+      y = b + 90*bend*(d + math.sqrt(1 + d*d))/2   #straight before, turned by bend (as a slope) after
+      pts.append((x, y))
+    return pts
+  gr, turning = ray(0.17), ray(0.11)
+  shapes += poly(gr[:-1], 'v', 2.2) + [arrow(gr[-2], gr[-1], 'v', 2.2)]
+  shapes += poly(turning[:-1], 'u', 2.0, dash=True) + [arrow(turning[-2], turning[-1], 'u', 2.0, dash=True)]
+  shapes += [text(x1 + 12, gr[-1][1] + 5, 'general relativity: 870 mas', 'v', 0.85),
+             text(x1 + 12, turning[-1][1] + 5, 'the turning flow: 9.6 mas less', 'u', 0.85),
+             text(x1 + 12, gr[-1][1] + 30, '(on to the Earth)', 'ink', 0.8),
+             line((sx, sy - R), (sx, b), 'ink', width=0.8), text(sx - 8, sy - R - 4, '2 solar radii from its centre', 'ink', 0.75, anchor='end'),
+             text(W/2, H - 12, 'Bends exaggerated, and the turning flow\'s shortfall far more so.', 'ink', 0.8, anchor='middle')]
+  return W, H, shapes
+
+
+def desitter():
+  """the Moon's orbit as a gyroscope carried round the Sun: at four places on the Earth's orbit, a quarter of a year
+  apart, the Moon's orbit's long axis is drawn against a fixed direction; it turns a little each time (de Sitter's
+  precession, 19.2 mas a year, hugely exaggerated). the turning flow's Moon turns half as much"""
+  W, H = 800, 460
+  sx, sy, A = 290, 230, 170
+  shapes = poly(circle_points(sx, sy, A, 0, 2*math.pi, 120), 'faint', 1.0, dash=True)
+  shapes += [ellipse(sx, sy, 30, 30, 'sun', 0, 'sun'), text(sx, sy + 5, 'Sun', 'ink', 0.85, anchor='middle')]
+  for k, place in enumerate((0.0, -0.5*math.pi, -math.pi, -1.5*math.pi)):
+    ex, ey = sx + A*math.cos(place), sy + A*math.sin(place)
+    turn = math.radians(12*k)                  #the axis, turned a little more each quarter (exaggerated)
+    shapes += [line((ex - 40, ey), (ex + 40, ey), 'faint', dash=True, width=0.8)]
+    pts = [(ex + 38*math.cos(a)*math.cos(turn) - 22*math.sin(a)*math.sin(turn),
+            ey - 38*math.cos(a)*math.sin(turn) - 22*math.sin(a)*math.cos(turn)) for a in [2*math.pi*k/59 for k in range(60)]]
+    shapes += poly(pts, 'w', 1.6)
+    c, s_ = math.cos(turn), math.sin(turn)
+    shapes += [line((ex - 38*c, ey + 38*s_), (ex + 38*c, ey - 38*s_), 'v', width=1.8), ellipse(ex, ey, 7, 7, 'u')]
+  shapes += [arrow((sx + A*math.cos(0.35), sy - A*math.sin(0.35)), (sx + A*math.cos(0.6), sy - A*math.sin(0.6)), 'ink', 1.4),
+             text(sx + A*math.cos(0.6) + 8, sy - A*math.sin(0.6) - 8, 'a year round', 'ink', 0.8)]
+  x0 = 580
+  shapes += [line((x0, 110), (x0 + 30, 110), 'v', width=1.8), text(x0 + 38, 114, 'the Moon\'s orbit\'s long axis', 'ink', 0.85),
+             line((x0, 140), (x0 + 30, 140), 'faint', dash=True, width=0.8), text(x0 + 38, 144, 'a fixed direction', 'ink', 0.85),
+             text(x0, 200, 'Each quarter of a year the', 'ink', 0.85), text(x0, 218, 'axis has turned a little', 'ink', 0.85),
+             text(x0, 236, 'further: 19.2 mas a year in', 'ink', 0.85), text(x0, 254, 'general relativity, beyond', 'ink', 0.85),
+             text(x0, 272, 'Newton. The turning flow\'s', 'ink', 0.85), text(x0, 290, 'Moon turns half as much.', 'ink', 0.85),
+             text(x0, 326, '(Hugely exaggerated.)', 'ink', 0.8)]
+  return W, H, shapes
+
+
+def jupiterrays():
+  """light past a moving Jupiter, as radio telescopes measured it in 2002: a quasar far away, two rays to one
+  observer - one passing Jupiter close, one 100 Jupiter radii out - and the angle between them where they arrive.
+  part of the near ray's bending comes from Jupiter's motion"""
+  W, H = 760, 340
+  jx, jy, R = 330, 200, 22
+  qx, qy = 30, 140
+  ox, oy = 720, 140
+  shapes = [text(qx, qy - 22, 'a quasar', 'ink', 0.85), text(qx, qy - 6, 'far away', 'ink', 0.85),
+            ellipse(qx + 6, qy + 10, 5, 5, 'ink')]
+  near = [(qx + 6, qy + 10), (jx - 12, jy - R - 10), (jx + 12, jy - R - 10), (ox, oy)]
+  far = [(qx + 6, qy + 10), (jx, 60), (ox, oy)]
+  def smooth(pts):
+    out = []
+    for i in range(len(pts) - 1):
+      for k in range(20):
+        f = k/20
+        out.append((pts[i][0] + (pts[i + 1][0] - pts[i][0])*f, pts[i][1] + (pts[i + 1][1] - pts[i][1])*f))
+    return out + [pts[-1]]
+  a, b2 = smooth(near), smooth(far)
+  shapes += poly(a[:-1], 'v', 2.0) + [arrow(a[-2], a[-1], 'v', 2.0)]
+  shapes += poly(b2[:-1], 'w', 1.6, dash=True) + [arrow(b2[-2], b2[-1], 'w', 1.6, dash=True)]
+  shapes += [ellipse(jx, jy, R, R, 'sun', 0, 'sun'), text(jx, jy + 5, 'Jupiter', 'ink', 0.8, anchor='middle'),
+             arrow((jx + R + 8, jy + 30), (jx + R + 58, jy + 30), 'ink', 1.8), text(jx + R + 64, jy + 35, '13 km/s', 'ink', 0.8),
+             text(jx + 40, jy - R + 14, 'passing 1 to 10 Jupiter radii out', 'v', 0.8),
+             text(jx, 50, 'a reference ray, 100 Jupiter radii out', 'w', 0.8, anchor='middle'),
+             ellipse(ox, oy, 7, 7, 'u'), text(ox, oy + 26, 'radio', 'ink', 0.8, anchor='middle'),
+             text(ox, oy + 42, 'telescopes', 'ink', 0.8, anchor='middle'),
+             text(ox + 2, oy - 36, 'the angle', 'ink', 0.8, anchor='middle'), text(ox + 2, oy - 20, 'between them', 'ink', 0.8, anchor='middle'),
+             text(W/2, H - 12, 'Not to scale. Part of the near ray\'s bending, about 50 µas, comes from Jupiter\'s motion.', 'ink', 0.8, anchor='middle')]
+  return W, H, shapes
+
+
+def binarypair(ax, ay, bx, by, ra, rb, shapes, own=(True, True), faint=False):
+  """two bodies with inflow round each: own[i] False draws body i's flow dashed and faint (left out)"""
+  for (cx, cy, r, keep) in ((ax, ay, ra, own[0]), (bx, by, rb, own[1])):
+    for k in range(10):
+      a = 2*math.pi*k/10 + 0.3
+      for d in (r + 26, r + 56):
+        x, y = cx + d*math.cos(a), cy + d*math.sin(a)
+        L = 20*math.sqrt((r + 26)/d)
+        if keep:
+          shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'u', 1.1))
+        else:
+          shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'faint', 0.8, dash=True))
+
+
+def selfmoving():
+  """two bodies going round each other, each moved by the flow: each has its own flow, and moves through the
+  space the other's flow makes; what it does in its own flow, where the flow is fastest, is the question"""
+  W, H = 800, 380
+  shapes = [text(W/2, 30, 'two bodies going round each other, each moved by the flow', 'ink', 0.9, anchor='middle')]
+  cx, cy = 360, 200
+  shapes += poly(circle_points(cx, cy, 110, 0, 2*math.pi, 100), 'faint', 1.0, dash=True)
+  ax, ay, bx, by = cx - 110, cy, cx + 110, cy
+  binarypair(ax, ay, bx, by, 18, 18, shapes)
+  shapes += [ellipse(ax, ay, 18, 18, 'sun', 0, 'sun'), ellipse(bx, by, 18, 18, 'sun', 0, 'sun'),
+             text(ax, ay + 5, 'A', 'ink', 0.9, anchor='middle'), text(bx, by + 5, 'B', 'ink', 0.9, anchor='middle'),
+             arrow((ax, ay - 26), (ax, ay - 90), 'v', 2.2), arrow((bx, by + 26), (bx, by + 90), 'v', 2.2),
+             text(ax - 10, ay - 70, 'v', 'v', 1.1, anchor='end', math_=True), text(bx + 10, by + 76, 'v', 'v', 1.1, math_=True),
+             text(570, 120, 'Each body moves through', 'ink', 0.85), text(570, 138, 'the space round it. But', 'ink', 0.85),
+             text(570, 156, 'much of that space is', 'ink', 0.85), text(570, 174, 'its own flow, falling in', 'ink', 0.85),
+             text(570, 192, 'faster and faster the', 'ink', 0.85), text(570, 210, 'closer it gets. How does', 'ink', 0.85),
+             text(570, 228, 'a body move in its own', 'ink', 0.85), text(570, 246, 'flow?', 'ink', 0.85),
+             arrow((40, 350), (70, 350), 'u', 1.1), text(78, 355, 'space flowing in', 'ink', 0.85),
+             arrow((260, 350), (290, 350), 'v', 2.0), text(298, 355, 'the body\'s velocity', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def othersflow():
+  """each body in the others' flow: two panels, the same pair; in each, one body moves as a test body in the
+  other's flow, its own flow left out (dashed)"""
+  W, H = 760, 360
+  shapes = []
+  for left, which in ((20, 0), (390, 1)):
+    ax, ay, bx, by = left + 95, 180, left + 255, 180
+    title = 'A moves in B\'s flow' if which == 0 else 'B moves in A\'s flow'
+    shapes.append(text(left + 175, 34, title, 'ink', 0.95, anchor='middle', bold=True))
+    binarypair(ax, ay, bx, by, 16, 16, shapes, own=(which == 1, which == 0))
+    shapes += [ellipse(ax, ay, 16, 16, 'sun', 0, 'sun'), ellipse(bx, by, 16, 16, 'sun', 0, 'sun'),
+               text(ax, ay + 5, 'A', 'ink', 0.9, anchor='middle'), text(bx, by + 5, 'B', 'ink', 0.9, anchor='middle')]
+    mx = ax if which == 0 else bx
+    shapes += [poly(circle_points(mx, ay, 24, 0, 2*math.pi, 40), 'v', 2.0)[0]]
+  shapes += [arrow((40, 320), (70, 320), 'u', 1.1), text(78, 325, 'the flow the body moves in', 'ink', 0.85),
+             arrow((330, 320), (360, 320), 'faint', 0.8, dash=True), text(368, 325, 'its own flow, left out', 'ink', 0.85),
+             text(626, 325, 'the body moving', 'ink', 0.85)] + poly(circle_points(610, 320, 9, 0, 2*math.pi, 30), 'v', 2.0)
+  return W, H, shapes
+
+
+def ownspace():
+  """a body moving with its own space: the flow round a body moving at v is v plus its own inflow, equal from every
+  side; averaged over a small sphere round the body, the inflow cancels and what is left is v. left, the two parts of
+  the flow round the moving body (the inflow drawn alone, and v); right, their average"""
+  W, H = 760, 360
+  shapes = [text(200, 34, 'round a moving body: its velocity, plus its inflow', 'ink', 0.95, anchor='middle', bold=True),
+            text(570, 34, 'averaged over a small circle round it', 'ink', 0.95, anchor='middle', bold=True)]
+  bx, by, R = 200, 190, 18
+  V = (24, -13)
+  for k in range(12):
+    a = 2*math.pi*k/12 + 0.1
+    for d in (48, 92):
+      x, y = bx + d*math.cos(a), by + d*math.sin(a)
+      L = 30*math.sqrt(48/d)
+      ux, uy = -L*math.cos(a), -L*math.sin(a)
+      shapes.append(arrow((x, y), (x + ux, y + uy), 'u', 1.1))
+  shapes += poly(circle_points(bx, by, 48, 0, 2*math.pi, 60), 'faint', 1.0, dash=True)
+  shapes += [ellipse(bx, by, R, R, 'sun', 0, 'sun'), arrow((bx + R + 4, by - 2), (bx + R + 4 + V[0]*1.6, by - 2 + V[1]*1.6), 'v', 2.4),
+             text(bx + R + 8 + V[0]*1.6, by - 8 + V[1]*1.6, 'v', 'v', 1.1, math_=True)]
+  cx, cy = 570, 190
+  shapes += [text(cx - 110, cy - 70, 'its own inflow, the same', 'ink', 0.85), text(cx - 110, cy - 52, 'from every side: cancels', 'ink', 0.85),
+             text(cx - 110, cy + 70, 'what is left: the body\'s', 'ink', 0.85), text(cx - 110, cy + 88, 'own velocity', 'ink', 0.85),
+             ellipse(cx, cy, R, R, 'sun', 0, 'sun'), arrow((cx + R + 4, cy - 2), (cx + R + 4 + V[0]*1.6, cy - 2 + V[1]*1.6), 'v', 2.4),
+             text(cx + R + 8 + V[0]*1.6, cy - 8 + V[1]*1.6, 'v', 'v', 1.1, math_=True)]
+  shapes += poly(circle_points(cx, cy, 48, 0, 2*math.pi, 60), 'faint', 1.0, dash=True)
+  shapes += [arrow((330, 190), (420, 190), 'ink', 1.6),
+             text(W/2, 330, 'So a body moves with the space it is in, averaged round it: the rule general relativity uses.', 'ink', 0.85, anchor='middle')]
+  return W, H, shapes
+
+
+def squeeze():
+  """the turning flow round the Sun: its paths' energy is the constant J chosen for the Earth, so u^2 = 2GM/r + 2J
+  falls short of the escape speed's 2GM/r by the same amount everywhere, and reaches zero at 2/3 AU, where the Sun's
+  flow stops; light passing the Sun goes through squeezed space and is bent less"""
+  W, H = 760, 390
+  X0, X1, Y0, Y1 = 90, 560, 320, 50                   #plot box: r 0.05 to 1 AU, u^2 in units of 2GM/AU, 0 to 6
+  rmin, rmax, top = 0.08, 1.0, 6.0
+  P = lambda r, v: (X0 + (r - rmin)/(rmax - rmin)*(X1 - X0), Y0 - v/top*(Y0 - Y1))
+  J = -1.5                                            #2J in units of 2GM/AU: -3/2 GM/a over GM/a, the turning flow's
+  shapes = [arrow((X0, Y0), (X1 + 14, Y0), 'ink', 1.0), arrow((X0, Y0), (X0, Y1 - 14), 'ink', 1.0),
+            text((X0 + X1)/2, Y0 + 46, 'distance from the Sun (AU)', 'ink', 0.85, anchor='middle'),
+            text(X0 - 10, Y1 - 20, 'u² (the speed of space, squared)', 'ink', 0.85)]
+  for r in (0.25, 0.5, 0.75, 1.0):
+    shapes += [line(P(r, 0), (P(r, 0)[0], Y0 + 6), 'ink', width=0.8), text(P(r, 0)[0], Y0 + 22, '%g' % r, 'ink', 0.8, anchor='middle')]
+  esc = [P(r, 1/r) for r in [rmin + (rmax - rmin)*k/200 for k in range(201)] if 1/r <= top]
+  turn = [P(r, 1/r + J) for r in [rmin + (rmax - rmin)*k/200 for k in range(201)] if 0 <= 1/r + J <= top]
+  shapes += poly(esc, 'u', 1.6, dash=True) + poly(turn, 'u', 2.2)
+  r0 = 2/3
+  shapes += [line(P(r0, 0), P(r0, 2.2), 'v', dash=True, width=1.2), text(P(r0, 0)[0] + 6, P(0, 2.4)[1], '2/3 AU: the Sun\'s', 'v', 0.85),
+             text(P(r0, 0)[0] + 6, P(0, 2.4)[1] + 16, 'flow stops', 'v', 0.85),
+             arrow(P(0.2, 1/0.2), P(0.2, 1/0.2 + J), 'v', 1.4), text(P(0.2, 0)[0] + 14, P(0, 1/0.2 - 0.6)[1], '2J: the same', 'v', 0.85),
+             text(P(0.2, 0)[0] + 14, P(0, 1/0.2 - 0.6)[1] + 16, 'everywhere', 'v', 0.85)]
+  x0 = 590
+  shapes += [line((x0, 110), (x0 + 30, 110), 'u', dash=True, width=1.6), text(x0 + 38, 106, 'the escape speed:', 'ink', 0.85),
+             text(x0 + 38, 124, '2GM/r', 'ink', 0.85),
+             line((x0, 170), (x0 + 30, 170), 'u', width=2.2), text(x0 + 38, 166, 'the turning flow:', 'ink', 0.85),
+             text(x0 + 38, 184, '2GM/r + 2J', 'ink', 0.85),
+             text(x0, 240, 'Space round the Sun', 'ink', 0.85), text(x0, 258, 'falls slower than its', 'ink', 0.85),
+             text(x0, 276, 'escape speed: light', 'ink', 0.85), text(x0, 294, 'through it is bent', 'ink', 0.85),
+             text(x0, 312, '9.6 mas less.', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def onepotential():
+  """the turning flow against one potential: left, the turning flow's paths share an energy J below zero, chosen for
+  the Earth, so the Sun's flow stops at 2/3 AU and the Earth's region reaches far round it; right, J = 0: Bernoulli's
+  equation with no constant, the Sun's flow reaching everywhere and the Earth's region only its own"""
+  W, H = 760, 400
+  shapes = []
+  for left, one, title in ((20, False, 'the turning flow: energy J, chosen for the Earth'), (390, True, 'one potential: no constant, J = 0')):
+    sx, sy = left + 125, 190
+    ex, ey = left + 290, 190
+    reach = 110
+    shapes.append(text(left + 175, 34, title, 'ink', 0.9, anchor='middle'))
+    seam = 40 if one else 55
+    for k in range(14):
+      a = 2*math.pi*k/14 + 0.15
+      for r in (45, 75, 105, 135):
+        if not one and r > reach - 8:
+          continue
+        x, y = sx + r*math.cos(a), sy + r*math.sin(a)
+        if math.hypot(x - ex, y - ey) < seam + 6 or x > left + 345 or x < left + 5 or y < 55 or y > 320:
+          continue
+        L = 24*math.sqrt(45/r)
+        shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'u', 1.2))
+    if not one:
+      shapes += poly(circle_points(sx, sy, reach, 0, 2*math.pi, 80), 'v', 1.0, dash=True)
+      shapes += [text(sx, sy - reach - 8, "the Sun's flow stops", 'v', 0.8, anchor='middle')]
+    shapes += poly(circle_points(ex, ey, seam, 0, 2*math.pi, 80), 'v', 1.4, dash=True)
+    for k in range(10):
+      a = 2*math.pi*k/10 + 0.2
+      for r in ((30,) if one else (30, 48)):
+        x, y = ex + r*math.cos(a), ey + r*math.sin(a)
+        if x > left + 348:
+          continue
+        L = 13*math.sqrt(30/r)
+        shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'u', 1.1))
+    shapes += [ellipse(sx, sy, 24, 24, 'sun', 0, 'sun'), text(sx, sy + 5, 'Sun', 'ink', 0.85, anchor='middle'),
+               ellipse(ex, ey, 8, 8, 'u'), text(ex, ey + seam + 18, "the Earth's region", 'ink', 0.8, anchor='middle')]
+  shapes += [line((70, 360), (100, 360), 'v', dash=True, width=1.4), text(108, 365, 'a seam, or where a flow stops', 'ink', 0.85),
+             arrow((420, 360), (450, 360), 'u', 1.2), text(458, 365, 'space flowing in', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def box(x, y, w, h, title, lines=(), colour='ink', fill='fill', dash=False, code=True):
+  """a labelled box: a title (code-like names in monospace are not available, so plain) and smaller lines under it"""
+  out = [rect(x, y, w, h, fill=fill, dash=dash, colour=colour, radius=6),
+         text(x + w/2, y + 22, title, colour if colour != 'faint' else 'ink', 0.9, anchor='middle', bold=True)]
+  for k, line_ in enumerate(lines):
+    out.append(text(x + w/2, y + 42 + 17*k, line_, 'ink', 0.78, anchor='middle'))
+  return out
+
+
+def pipeline():
+  """how a simulation runs: a study sets up bodies and a calculator, the run loop steps a particle, the log folder
+  holds the results, the viewer files and the backgrounds; the desktop viewer reads the folder, and publish_run copies
+  it to docs/runs for the browser viewer in these pages"""
+  W, H = 860, 480
+  shapes = []
+  shapes += box(20, 40, 180, 110, 'a study', ('studies/*.py', 'bodies, starts, models', 'what to compare'))
+  shapes += box(240, 40, 180, 110, 'a calculator', ('engine/', 'the flow, or a spacetime', 'and its step'))
+  shapes += box(460, 40, 180, 110, 'the run loop', ('step after step, until', 'an end condition', '(engine/run.py)'))
+  shapes += box(680, 40, 160, 110, 'a log folder', ('logs/<study>/<run>/', '.log  .csv  summary.log', '.backgrounds.json'))
+  shapes += box(680, 200, 160, 110, 'viewer files', ('<view>.full.json', '.prefs.json', '.config.json'))
+  shapes += box(460, 200, 180, 110, 'publish_run.py', ('copies the folder to', 'docs/runs/<name>/,', 'paths made relative'))
+  shapes += box(240, 200, 180, 110, 'browser viewer', ('web/ (docs/viewer/)', 'pan, zoom, replay,', 'backgrounds'), colour='w')
+  shapes += box(20, 200, 180, 110, 'a page', ('an embedded player:', 'viewer/index.html', '?player&run=...'), colour='faint')
+  shapes += box(680, 350, 160, 110, 'desktop viewer', ('viewer/csv_viewer.py', 'any run in logs/,', 'and a Sim tab'), colour='u')
+  for a, b in (((200, 95), (236, 95)), ((420, 95), (456, 95)), ((640, 95), (676, 95)), ((760, 150), (760, 196)),
+               ((680, 255), (644, 255)), ((460, 255), (424, 255)), ((240, 255), (204, 255)), ((760, 310), (760, 346))):
+    shapes.append(arrow(a, b, 'ink', 1.6))
+  return W, H, shapes
+
+
+def classes():
+  """the core classes: Body and Particle; the flow calculators (engine/flow.py), each giving the flow u and moving a
+  particle through it; the spacetimes (engine/metric.py, engine/carried.py), each giving a lapse, a flow and a curved
+  space, moved through by MetricCalculator; FlowSpacetime wraps any flow calculator"""
+  W, H = 900, 580
+  shapes = [text(225, 30, 'the flow model (engine/flow.py)', 'ink', 0.95, anchor='middle', bold=True),
+            text(675, 30, 'spacetimes (engine/metric.py, carried.py)', 'ink', 0.95, anchor='middle', bold=True),
+            line((450, 20), (450, 545), 'faint', dash=True, width=0.8)]
+  shapes += box(20, 50, 180, 80, 'Body', ('mass, place, black/white', 'spin, velocity, circling'), colour='faint')
+  shapes += box(240, 50, 190, 80, 'Particle', ('pos, v = u + w', 't, pt (proper time)'), colour='faint')
+  shapes += box(95, 165, 230, 96, 'Calculator', ('flow(pos, region, t): u', 'combine, direction, seams', 'the run loop'))
+  shapes += box(20, 310, 170, 80, 'NewtonianCalculator', ('Newton\'s g',))
+  shapes += box(20, 440, 170, 80, 'GeodesicCalculator', ('the metric\'s own paths,', 'fourth-order steps'))
+  shapes += box(230, 310, 200, 96, 'SpecialFlowCalculator', ('the flow model:', 'dx/dt = u + w', 'the momentum step'), colour='u')
+  shapes += box(230, 440, 200, 80, 'KerrFlowCalculator', ('a rotating hole:', 'the river and its twist'), colour='u')
+  bus = 210
+  shapes += [line((bus, 300), (bus, 480), 'ink', width=1.2), line((bus, 280), (bus, 300), 'ink', width=1.2),
+             arrow((bus, 285), (bus, 265), 'ink', 1.2),
+             line((190, 350), (bus, 350), 'ink', width=1.2), line((190, 480), (bus, 480), 'ink', width=1.2),
+             line((bus, 358), (230, 358), 'ink', width=1.2), arrow((330, 440), (330, 410), 'ink', 1.2)]
+  shapes += box(560, 50, 230, 96, 'Spacetime', ('lapseOffset(x, t): N - 1', 'flow(x, t, region): u', 'space(x, t, region): gamma - delta'))
+  shapes += box(470, 200, 190, 96, 'FlowSpacetime', ('any calculator\'s flow,', 'with a lapse and', 'a curved space'), colour='u')
+  shapes += box(690, 200, 190, 96, 'PostNewtonian', ('general relativity,', 'first post-Newtonian,', 'the reference'), colour='w')
+  shapes += box(470, 330, 190, 80, 'CarriedSpacetime', ('each body\'s flow', 'carried at its velocity'))
+  shapes += box(690, 330, 190, 96, 'FreeFallTurning', ('general relativity in', 'the one-potential flow\'s', 'time (FreeFallPN)'), colour='w')
+  bus = 675
+  shapes += [line((bus, 170), (bus, 370), 'ink', width=1.2), arrow((bus, 170), (bus, 150), 'ink', 1.2)]
+  for y, x0, x1 in ((248, 660, bus), (248, bus, 690), (370, 660, bus), (378, bus, 690)):
+    shapes.append(line((x0, y), (x1, y), 'ink', width=1.2))
+  shapes += box(530, 460, 290, 80, 'MetricCalculator', ('a Calculator: moves a particle through', 'any Spacetime, by Hamilton\'s equations'))
+  shapes += [arrow((430, 358), (468, 262), 'u', 1.2, dash=True), text(455, 330, 'wraps', 'u', 0.8, anchor='end')]
+  shapes += [arrow((40, 562), (70, 562), 'ink', 1.2), text(78, 566, 'is a kind of', 'ink', 0.8),
+             arrow((200, 562), (230, 562), 'u', 1.2, dash=True), text(238, 566, 'holds one, and uses its flow', 'ink', 0.8)]
+  return W, H, shapes
+
+
+def midpoint():
+  """the midpoint step, on Hamilton's equations: the rates at the start take x and p half a step on; the rates at
+  that middle take the whole step from the start"""
+  W, H = 760, 330
+  a, b = (90, 250), (650, 200)
+  half = (300, 95)
+  d = ((b[0] - a[0])/4.0, (b[1] - a[1])/4.0)
+  shapes = [ellipse(a[0], a[1], 7, 7, 'ink'), text(a[0] - 4, a[1] + 30, 'start: x, p', 'ink', 0.9, anchor='middle'),
+            arrow(a, (half[0] - 6, half[1] + 4), 'faint', 1.6, dash=True),
+            ellipse(half[0], half[1], 6, 6, 'faint'), text(half[0], half[1] - 16, 'the middle', 'ink', 0.85, anchor='middle'),
+            text(150, 140, '1. half a step, at the', 'ink', 0.85), text(150, 158, 'start\'s rates', 'ink', 0.85),
+            arrow((half[0] + 10, half[1]), (half[0] + 10 + d[0], half[1] + d[1]), 'w', 1.8),
+            text(half[0] + 24 + d[0], half[1] + d[1] + 4, 'the rates there: dx/dt, dp/dt', 'w', 0.85),
+            arrow(a, (b[0] - 8, b[1] + 2), 'v', 2.4), ellipse(b[0], b[1], 7, 7, 'ink'),
+            text(b[0] + 6, b[1] + 30, 'the end', 'ink', 0.9, anchor='middle'),
+            text(400, 270, '2. the whole step from the start,', 'ink', 0.85), text(400, 288, 'at the middle\'s rates', 'ink', 0.85)]
+  return W, H, shapes
+
+
+def movingbodies():
+  """setting the scene for moving bodies: left, the Sun and the Earth held still (Part 2), the flow steady, a seam
+  round the Earth's region; right, the Earth going round the Sun, carrying its region of flow and its seam with it,
+  v from where it was to where it is - the flow now changes with time"""
+  W, H = 760, 400
+  shapes = []
+  for left, moving, title in ((20, False, 'held still: the flow never changes'), (390, True, 'moving: the flow moves with the bodies')):
+    sx, sy = left + 70, 200                      #the Sun
+    ex, ey = left + 255, 200                     #the Earth
+    shapes += [text(left + 175, 34, title, 'ink', 0.9, anchor='middle')]
+    #the Sun's flow, in towards it
+    for k in range(10):
+      a = 2*math.pi*k/10 + 0.3
+      for r in (55, 95):
+        x, y = sx + r*math.cos(a), sy + r*math.sin(a)
+        if math.hypot(x - ex, y - ey) < 70 or x > left + 345 or x < left + 5:
+          continue
+        L = 26*math.sqrt(55/r)
+        shapes.append(arrow((x, y), (x - L*math.cos(a), y - L*math.sin(a)), 'u', 1.2))
+    if moving:
+      #the Earth's orbit, and where it was
+      orbit = circle_points(sx, sy, ex - sx, -0.75, 0.75, 60)
+      shapes += poly(orbit, 'faint', 1.0, dash=True)
+      for a in (0.62,):
+        px, py = sx + (ex - sx)*math.cos(a), sy + (ex - sx)*math.sin(a)
+        shapes += poly(circle_points(px, py, 46, 0, 2*math.pi, 50), 'faint', 0.8, dash=True)
+        shapes.append(ellipse(px, py, 5, 5, 'faint'))
+    #the Earth's region: its own flow, and the seam round it
+    shapes += poly(circle_points(ex, ey, 46, 0, 2*math.pi, 60), 'v', 1.4, dash=True)
+    for k in range(8):
+      a = 2*math.pi*k/8 + 0.2
+      x, y = ex + 34*math.cos(a), ey + 34*math.sin(a)
+      shapes.append(arrow((x, y), (x - 14*math.cos(a), y - 14*math.sin(a)), 'u', 1.1))
+    shapes += [ellipse(sx, sy, 26, 26, 'sun', 0, 'sun'), text(sx, sy + 5, 'Sun', 'ink', 0.85, anchor='middle'),
+               ellipse(ex, ey, 9, 9, 'u'), text(ex, ey + (-56 if moving else 66), 'Earth', 'ink', 0.85, anchor='middle')]
+    if moving:
+      #v: from where the Earth was to where it is now, along its orbit
+      arc = circle_points(sx, sy, ex - sx, 0.58, 0.075, 30)
+      mid = 0.33
+      shapes += poly(arc[:-1], 'ink', 1.8) + [arrow(arc[-2], arc[-1], 'ink', 1.8),
+                                              text(sx + (ex - sx + 14)*math.cos(mid), sy + (ex - sx + 14)*math.sin(mid) + 6, 'v', 'ink', 1.1, math_=True)]
+  shapes += [line((70, 345), (100, 345), 'v', dash=True, width=1.4), text(108, 350, 'the seam round the Earth\'s region of flow', 'ink', 0.85),
+             arrow((420, 345), (450, 345), 'u', 1.2), text(458, 350, 'space flowing in', 'ink', 0.85),
+             line((70, 372), (100, 372), 'faint', dash=True, width=0.8), text(108, 377, 'where the Earth and its region were', 'ink', 0.85)]
+  return W, H, shapes
+
+
 TESTS = os.path.join(ROOT, 'docs', 'part1', 'tests', 'images')
 PART1 = os.path.join(ROOT, 'docs', 'part1', 'images')
 PART2 = os.path.join(ROOT, 'docs', 'part2', 'images')
 PART6 = os.path.join(ROOT, 'docs', 'part6', 'images')
+PART3 = os.path.join(ROOT, 'docs', 'part3', 'images')
+PART4 = os.path.join(ROOT, 'docs', 'part4', 'images')
+SIMS = os.path.join(ROOT, 'docs', 'appendix-a', 'images')
 DIAGRAMS = {'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
             'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro,
             'funnel': funnel, 'falling': falling, 'spacetime': spacetime,
-            'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'peeling': peeling, 'pairs': pairs, 'dumbhole': dumbhole, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'threebodies': threebodies, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
+            'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'movingbodies': movingbodies, 'pipeline': pipeline, 'classes': classes, 'midpoint': midpoint, 'onepotential': onepotential, 'squeeze': squeeze, 'selfmoving': selfmoving, 'othersflow': othersflow, 'ownspace': ownspace, 'grazing': grazing, 'desitter': desitter, 'jupiterrays': jupiterrays, 'carrying': carrying, 'peeling': peeling, 'pairs': pairs, 'dumbhole': dumbhole, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'threebodies': threebodies, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
 FOLDER = {'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
           'funnel': PART1, 'falling': PART1, 'spacetime': PART1,
-          'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'peeling': PART6, 'pairs': PART6, 'dumbhole': PART6, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'threebodies': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
+          'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'movingbodies': PART3, 'pipeline': SIMS, 'classes': SIMS, 'midpoint': SIMS, 'onepotential': PART3, 'squeeze': PART3, 'selfmoving': PART4, 'othersflow': PART4, 'ownspace': PART4, 'grazing': PART3, 'desitter': PART3, 'jupiterrays': PART3, 'carrying': PART3, 'peeling': PART6, 'pairs': PART6, 'dumbhole': PART6, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'threebodies': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
 
 
 # --- drawing ----------------------------------------------------------------------------------------------------------

@@ -13,11 +13,13 @@ Body.velocity, Calculator.carried), in the Earth's frame:
             Sun), the flows added as vectors (the eikonal flows are for bodies at rest); the Earth carries its flow
             near it (Calculator.carry: its velocity through the Sun's space, with its share of g): the same g, and
             clock rates round the equator against GR's
-  drops     balls let go at rest beside the moving Earth, 100 km up, for 150 s, drawn in the Earth's frame: the flow
-            taken along (solid) - they scatter; carried (dashed) - they fall straight down
+  drops     balls let go at rest beside the moving Earth, from eight places round it: 100 km up for 150 s (the
+            numbers), and one Earth radius up until they land (the viewer), drawn in the Earth's frame - the flow
+            taken along (solid) - they are swept off; carried (dashed) - they fall straight down. the viewer's
+            backgrounds are the space as the Earth sees it, each way, with its surface
 
-writes logs/multiBody/movingBodies_<datetime>/: a csv and log for each drop, a viewer file (multiBody_moving.full.json)
-and summary.log
+writes logs/multiBody/movingBodies_<datetime>/: a csv and log for each motion (a path per ball), a viewer file
+(multiBody_moving.full.json), its backgrounds (multiBody_moving.backgrounds.json) and summary.log
 
 run: python3 studies/moving_bodies.py      (then: python3 scripts/publish_run.py logs/multiBody/movingBodies_<datetime>)
 """
@@ -152,33 +154,91 @@ def clockRates(bodies, lines, share=1):
   return found
 
 
+HIGH = REARTH                   #the player's balls are let go this far up (m), so their paths show at the Earth's scale
+
+
+class EarthFrame:
+  """a calculator's flow seen from the moving Earth: u at the place that far from the Earth, less its velocity"""
+
+  def __init__(self, calc, earth):
+    self.calc, self.earth = calc, earth
+
+  def flow(self, q, region=None, t=0.0):
+    if np.linalg.norm(q) < REARTH:
+      raise ValueError('inside the Earth')
+    return self.calc.flow(q + self.earth.at(t), None, t) - self.earth.velocity
+
+
+def drop(calc, earth, out, height, until):
+  """a ball let go at rest beside the moving Earth, height up on the side out: its rows (t, place and velocity in the
+  Earth's frame) every 10 s and at the end, until it lands, gets 6 Earth radii away, or the time until"""
+  p = Particle()
+  p.pos = earth.at(0.0) + (REARTH + height)*out
+  calc.initPV(p, earth.velocity.copy())
+  rows, dt = [(0.0, *(p.pos - earth.at(0.0)), 0.0, 0.0)], 0.5
+  while p.t < until - 1e-9:
+    calc.move(p, dt)
+    rel = p.pos - earth.at(p.t)
+    done = np.linalg.norm(rel) <= REARTH or np.linalg.norm(rel) > 6*REARTH
+    if done or round(p.t/dt) % 20 == 0:
+      rows.append((p.t, *rel, *(p.v - earth.velocity)))
+    if done:
+      break
+  return rows
+
+
 def drops(folder):
-  """balls let go beside the moving Earth, each motion, drawn in the Earth's frame"""
+  """balls let go beside the moving Earth, each motion: 100 km up for the numbers, and one Earth radius up for the
+  viewer, drawn in the Earth's frame over a background of the space as the Earth sees it"""
+  from engine.backgrounds import Backgrounds, polar, LOG_LINE
   made, lines = [], []
+  bg = Backgrounds()
   for (carried, title), colour, style in zip(MOTIONS, (COLOURS[1], COLOURS[0]), ('solid', 'dashed')):
     bodies = earthAlone()
     earth = bodies[0]
     calc = SpecialFlowCalculator(bodies, 2, carried=carried)
+    rows = []
     for a in ANGLES:
       out = np.array([-math.cos(math.radians(a)), math.sin(math.radians(a))])
-      p = Particle()
-      p.pos = (REARTH + 1e5)*out
-      calc.initPV(p, earth.velocity.copy())
-      rows = [(0.0, *p.pos, 0.0, 0.0)]
-      while p.t < 150 - 1e-9 and np.linalg.norm(p.pos - earth.at(p.t)) > REARTH:
-        calc.move(p, 0.5)
-        rel, vrel = p.pos - earth.at(p.t), p.v - earth.velocity
-        if round(p.t/0.5) % 4 == 0:
-          rows.append((p.t, *rel, *vrel))
-      rel = p.pos - earth.at(p.t)
-      moved = rel - (REARTH + 1e5)*out
-      lines.append('drops, %s: from %d deg (90 = ahead), after %.0f s: %.1f km down, %.1f km sideways'
-                   % (title, a, p.t, -(moved @ out)/1000, np.linalg.norm(moved - (moved @ out)*out)/1000))
-      made.append((write(folder, 'drop_%s_%03d' % ('carried' if carried else 'along', a), calc, rows,
-                         ['t', 'pos_x', 'pos_y', 'v_x', 'v_y'],
-                         ['a ball let go at rest beside the Earth (moving at %.0f m/s along +y), 100 km up, %d degrees'
-                          ' round; its flow %s; in the Earth\'s frame' % (V, a, title), lines[-1]]), colour, style))
-  writeViewerFiles(folder, 'multiBody_moving', made, styles=lambda colour, style='solid': {'pos': [colour, style, colour]})
+      low = drop(calc, earth, out, 1e5, 150.0)
+      moved = np.array(low[-1][1:3]) - (REARTH + 1e5)*out
+      lines.append('drops, %s: from %d deg (90 = ahead), 100 km up, after %.0f s: %.1f km down, %.1f km sideways'
+                   % (title, a, low[-1][0], -(moved @ out)/1000, np.linalg.norm(moved - (moved @ out)*out)/1000))
+      high = drop(calc, earth, out, HIGH, 3000.0)
+      moved = np.array(high[-1][1:3]) - (REARTH + HIGH)*out
+      lines.append('drops, %s: from %d deg, %.0f km up, after %.0f s: %.0f km down, %.0f km sideways, %s'
+                   % (title, a, HIGH/1000, high[-1][0], -(moved @ out)/1000,
+                      np.linalg.norm(moved - (moved @ out)*out)/1000,
+                      'landed' if np.linalg.norm(high[-1][1:3]) <= REARTH else 'still falling'))
+      rows += high + [None]
+    name = 'the space carried' if carried else 'the pattern taken along'
+    path = write(folder, name, calc, [], ['t', 'pos_x', 'pos_y', 'v_x', 'v_y'],
+                 ['balls let go at rest beside the Earth (moving at %.0f m/s along +y), %.0f km up, from eight places'
+                  ' round it; its flow %s; in the Earth\'s frame, a path per ball' % (V, HIGH/1000, title)])
+    with open(path, 'w') as f:
+      f.write('t,pos_x,pos_y,v_x,v_y\n')
+      for row in rows[:-1]:
+        f.write(',,,,\n' if row is None else ','.join('%.12g' % v for v in row) + '\n')
+    with open(path[:-4] + '.log', 'a') as f:
+      f.write('%s multiBody_moving.backgrounds.json\n' % LOG_LINE)
+    made.append((path, colour, style))
+    #the space as the Earth sees it, with the Earth's surface
+    b = bg.add('Seen from the Earth: %s' % name,
+               ('The space round the Earth, as seen from the Earth, which moves up the page at 29.8 km/s. '
+                + ('Carried: the space moves with the Earth, so from the Earth it falls straight in, as round an Earth '
+                   'at rest. A ball let go falls straight down.' if carried else
+                   'Taken along: the flow\'s pattern moves with the Earth but the space does not, so from the Earth the '
+                   'space streams past downwards at 29.8 km/s, bent in towards it. A ball let go beside the Earth is '
+                   'moving through that space at 29.8 km/s, and is thrown off its fall.')))
+    b.field('the flow of space, seen from the Earth', EarthFrame(calc, earth), polar(REARTH, 7*REARTH, 60, 48),
+            steady=True)
+    b.lines('the Earth\'s surface', lambda t: [np.array([[REARTH*math.cos(x), REARTH*math.sin(x)]
+                                                         for x in np.linspace(0, 2*math.pi, 97)])])
+  bg.items.reverse()   #carried first: the model
+  bg.write(os.path.join(folder, 'multiBody_moving.backgrounds.json'))
+  writeViewerFiles(folder, 'multiBody_moving', made, styles=lambda colour, style='solid': {'pos': [colour, style, colour]},
+                   preferences={'showPathLegend': True, 'replaySpeed': '10', 'unit': 2, 'showFlow': True,
+                                'showSeam': True})
   return lines
 
 
