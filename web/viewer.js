@@ -28,7 +28,7 @@ const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showG
                showBodies: true, showSchwarzschild: true, showSpin: false, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false,
                mode: 'xy', logX: false, logY: false, ctTime: false, reverseX: true, showMarkers: false, showTimeMarks: false, timeColumn: 't',
                showContours: false, showFlowLines: false, showCones: false, showSpecialOrbits: false, showMarkNote: true, showMarkLabels: true,
-               showBodyLabels: false};
+               showBodyLabels: false, showPeri: false, showApo: false, apsisEvery: 1};
 //the columns each time option matches, by name, any case (the desktop's TIME_COLUMNS)
 const TIME_OPTIONS = {t: ['t', 'time', 'coord_time'], pt: ['pt', 'tau', 'proper_time', 'proper_t']};
 const TIME_LABELS = {t: 'global time (t)', pt: 'proper time (pt)'};
@@ -47,7 +47,7 @@ const state = {
   prefs: {...PREFS},
   background: SELECTED,
   replay: {state: 'stopped', t: null, last: 0, mode: 'together'},   //mode 'together' or 'sequence' (in turn)
-  trailStart: null,    //replay: paths are drawn from this time (Clear trails), or from the start (null)
+  trailStart: null,    //replay: paths drawn from this time, or from the start (null); nothing sets it at present (Clear trails was taken out)
   timeInterval: '',    //time markers: every this much of the marker column ('' = a round interval, about 10)
   sources: [],         //what is open: [{source, fullName}], for Reload
 };
@@ -267,11 +267,16 @@ async function loadRun(source, fullName, {add = false, keep = null} = {}) {
       const file = files[i], log = logs[i], kept = keep && keep.get(file);
       const settings = kept ? {...entry, ...kept} : entry;
       const result = {name: studyName(file), file, data: parseCsv(texts[i][0]), log, visible: settings.visible !== false,
-                      color: SERIES[(first + i) % SERIES.length], source,
-                      straight: !!settings.straight, ends: !!settings.ends, peri: !!settings.periapsis, apo: !!settings.apoapsis};
+                      color: SERIES[(first + i) % SERIES.length], source, ends: !!settings.ends,
+                      tangent: {on: !!(settings.tangent ? settings.tangent.on : settings.straight), t: settings.tangent ? settings.tangent.t : null,
+                                color: settings.tangent ? settings.tangent.color : null, style: settings.tangent ? settings.tangent.style : 'dashed'}};
+      //the desktop's apsides are each result's; here they are the markers', on for all if a config asks for them
+      if (!keep && settings.periapsis) state.prefs.showPeri = true;
+      if (!keep && settings.apoapsis) state.prefs.showApo = true;
       result.paths = buildPaths(result, settings);
       result.env = environmentFor(log, frameCache);
       result.orbits = buildOrbits(result, settings.hiddenOrbits || []);
+      result.orbitEvery = settings.orbitEvery || 1;
       state.results.push(result);
     });
     if (!state.selected) state.selected = state.results[0] || null;
@@ -286,8 +291,8 @@ async function loadRun(source, fullName, {add = false, keep = null} = {}) {
 
 /* the settings a result has now, as a config entry has them (for Reload, and Choose paths) */
 function resultSettings(r) {
-  return {visible: r.visible, straight: r.straight, ends: r.ends, periapsis: r.peri, apoapsis: r.apo,
-          styles: Object.fromEntries(r.paths.map(p => [p.name, [p.color || r.color, p.style, p.color2 || null]])),
+  return {visible: r.visible, straight: r.tangent.on, tangent: {...r.tangent}, ends: r.ends, orbitEvery: r.orbitEvery || 1,
+          styles: Object.fromEntries(r.paths.map(p => [p.name, [p.color || r.color, p.style, p.color2 || null, p.mode]])),
           selection: r.selection, group: r.group,
           hiddenOrbits: (r.orbits || []).filter(o => !o.visible).map(o => o.name.split('  ')[0])};
 }
@@ -350,8 +355,10 @@ function buildPaths(result, entry) {
         const keepRow = result.data.text(result.group).map(v => v === g);
         x = x.map((v, i) => keepRow[i] ? v : NaN); y = y.map((v, i) => keepRow[i] ? v : NaN);
       }
-      out.push({name: label, xName: xc, yName: yc, x, y, t: time, color: style[0] || null,
-                style: style[1] || 'solid', color2: style[2] && style[2] !== style[0] ? style[2] : null});
+      const color2 = style[2] && style[2] !== style[0] ? style[2] : null;
+      //how the colour goes through the orbits: one colour, a transition from the first to the last, or earlier ones shaded
+      const mode = ['single', 'transition', 'shade'].includes(style[3]) ? style[3] : color2 ? 'transition' : state.prefs.graduateOrbits ? 'shade' : 'single';
+      out.push({name: label, xName: xc, yName: yc, x, y, t: time, color: style[0] || null, style: style[1] || 'solid', color2, mode});
     }
   }
   return out;
@@ -420,15 +427,34 @@ function buildOrbits(result, hidden) {
   return orbits;
 }
 
-/* an orbit's colour on path p: the first shown whole orbit p's colour, the last its second colour, those between an
-   even mix; the parts before the first crossing and after the last take the first and last colours */
+/* a path's last colour, for a transition: its own, or one far round the palette from its first */
+function secondColour(result, p) {
+  if (p.color2) return p.color2;
+  const i = SERIES.indexOf(p.color || result.color);
+  return SERIES[((i < 0 ? 0 : i) + 4) % SERIES.length];
+}
+
+/* the orbit each row of a path is in, and how many there are: the log's orbits where it has them, else whole turns
+   round the result's first body counted along the path; null for a path that doesn't go round */
+function pathOrbits(result, p) {
+  if (result.orbits && result.orbits.length) return {index: result.rowOrbit, last: result.orbits.length - 1, log: true};
+  const counted = orbitsOf(result, p);
+  return counted ? {index: counted, last: counted[counted.length - 1], log: false} : null;
+}
+
+/* an orbit's colour on path p, for a transition: the first shown whole orbit p's colour, the last its second colour,
+   those between an even mix; the parts before the first crossing and after the last take the first and last colours */
 function orbitColour(result, p, k) {
-  const first = p.color || result.color;
-  if (!p.color2 || !result.orbits.length) return first;
-  const o = result.orbits[k];
-  if (!o.full) return k === 0 ? first : p.color2;
-  const shown = result.orbits.filter(q => q.visible && q.full), f = shown.length > 1 ? shown.indexOf(o) / (shown.length - 1) : 0;
-  return mixColour(first, p.color2, Math.max(0, f));
+  const first = p.color || result.color, second = secondColour(result, p);
+  if (result.orbits && result.orbits.length) {
+    const o = result.orbits[k];
+    if (!o) return first;
+    if (!o.full) return k === 0 ? first : second;
+    const shown = result.orbits.filter(q => q.visible && q.full), f = shown.length > 1 ? shown.indexOf(o) / (shown.length - 1) : 0;
+    return mixColour(first, second, Math.max(0, f));
+  }
+  const orbits = pathOrbits(result, p);
+  return orbits && orbits.last > 0 ? mixColour(first, second, Math.min(1, k / orbits.last)) : first;
 }
 
 function mixColour(a, b, f) {
@@ -702,7 +728,7 @@ function draw() {
     const until = drawUntil(result);
     if (until === false) continue;
     for (const p of result.paths) {
-      if (result.straight && state.replay.state === 'stopped') drawStraight(result, p);
+      if (result.tangent.on) drawTangent(result, p, until);
       if (!frontPath || frontPath.p !== p) drawPath(result, p, until);
     }
   }
@@ -717,7 +743,7 @@ function draw() {
     for (const p of result.paths) {
       drawTimeMarks(result, p, until);
       if (result.ends && planeView() && state.replay.state === 'stopped') drawEndArrows(result, p);
-      if (result.orbits.length && (result.peri || result.apo)) drawApsides(result, p, until);
+      if (result.orbits.length && (state.prefs.showPeri || state.prefs.showApo)) drawApsides(result, p, until);
       if (state.prefs.showMarkers) drawEnds(result, p, until);
     }
   }
@@ -784,7 +810,10 @@ function shownRow(result, i) {
 
 /* a row's colour: its orbit's (first to last orbit, for a path with two colours), else the path's */
 function rowColour(result, p, i) {
-  if (p.color2 && result.orbits.length && result.rowOrbit[i] >= 0) return orbitColour(result, p, result.rowOrbit[i]);
+  if (p.mode === 'transition') {
+    const orbits = pathOrbits(result, p);
+    if (orbits && orbits.index[i] >= 0) return orbitColour(result, p, orbits.index[i]);
+  }
   return p.color || result.color;
 }
 
@@ -796,13 +825,13 @@ function drawPath(result, p, until = replayTime(), width = 1.6) {
   plotted(result, p);
   const from = until !== null && state.trailStart !== null && p.t ? state.trailStart : null;
   ctx.lineWidth = width; ctx.setLineDash(DASHES[p.style] || []);
-  const orbit = state.prefs.graduateOrbits ? orbitsOf(result, p) : null;
+  const found = p.mode === 'shade' ? pathOrbits(result, p) : null, orbit = found && found.index;
   let current = 0;
   if (orbit) {
     current = orbit[orbit.length - 1];
     if (until !== null && p.t) for (let i = 0; i < p.x.length; i++) { if (p.t[i] > until) break; current = orbit[i]; }
   }
-  const shade = k => k <= 0 ? 1 : Math.max(0.12, 0.55 * Math.pow(0.8, k - 1));
+  const shade = k => k <= 0 || k > 1e9 ? 1 : Math.max(0.12, 0.55 * Math.pow(0.8, k - 1));
   //a new stroke for each orbit (its shade), and each change of colour
   let pen = false, colour = null, stretch = null, open = false, last = -1;
   const begin = (c, k) => {
@@ -833,32 +862,60 @@ function drawPath(result, p, until = replayTime(), width = 1.6) {
   ctx.setLineDash([]); ctx.globalAlpha = 1;
 }
 
-/* the path with no gravity, dashed under it: its first point carried on at its first velocity (the velocity columns,
-   else the first step), against time if the result has t, else a step a row */
-function drawStraight(result, p) {
-  const n = p.x.length, ok = [];
-  for (let i = 0; i < n && ok.length < 2; i++) if (isFinite(p.x[i]) && isFinite(p.y[i])) ok.push(i);
-  if (ok.length < 2) return;
-  const [i0, i1] = ok, tName = timeColumnOf(result, 't'), t = tName ? result.data.columns[tName] : null, v = velocityPair(result);
-  let vx, vy, time;
-  if (t && v) { vx = result.data.columns[v[1]][i0]; vy = result.data.columns[v[2]][i0]; time = t; }
-  else if (t && t[i1] !== t[i0]) { vx = (p.x[i1] - p.x[i0]) / (t[i1] - t[i0]); vy = (p.y[i1] - p.y[i0]) / (t[i1] - t[i0]); time = t; }
-  else { time = Float64Array.from({length: n}, (_, i) => i); vx = (p.x[i1] - p.x[i0]) / (i1 - i0); vy = (p.y[i1] - p.y[i0]) / (i1 - i0); }
-  const step = Math.max(1, Math.floor(n / 2000)), xs = [], ys = [], ts = [];
-  for (let i = 0; i < n; i += step) { xs.push(p.x[i0] + vx * (time[i] - time[i0])); ys.push(p.y[i0] + vy * (time[i] - time[i0])); ts.push(t ? t[i] : NaN); }
-  const tAxisName = timeMode() ? timeColumnOf(result, state.prefs.timeColumn) : null;
-  const tAxis = tAxisName ? ts.map((_, k) => result.data.columns[tAxisName][k * step]) : null;
-  const [X, Y] = plotValues(result, xs, ys, tAxis);
-  ctx.strokeStyle = p.color || result.color; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+/* a result's time for its tangent: its t column, else the row number (each row a step); and that time's range */
+function tangentTimes(result) {
+  const name = timeColumnOf(result, 't');
+  const t = name ? result.data.columns[name] : Float64Array.from({length: result.data.rows}, (_, i) => i);
+  let lo = Infinity, hi = -Infinity;
+  for (const v of t) if (isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  return {t, lo, hi, rows: !name};
+}
+
+/* the tangent's time: the one chosen, held inside the run, or the start */
+function tangentAt(result) {
+  const {lo, hi} = tangentTimes(result), T = result.tangent.t;
+  return T === null || !isFinite(T) ? lo : Math.min(hi, Math.max(lo, T));
+}
+
+/* the path's tangent at the chosen time T: the straight line through where it is then, along its velocity then (the
+   velocity columns, else the step either side), drawn across the run's whole time - where it would have gone with no
+   gravity from T, and come from before it. a dot marks the point. replaying, drawn once the replay has passed T */
+function drawTangent(result, p, until) {
+  const {t, lo, hi} = tangentTimes(result), T = tangentAt(result);
+  if (until !== null && until < T) return;
+  let i = -1;
+  for (let k = 0; k + 1 < t.length; k++)
+    if (isFinite(t[k]) && isFinite(t[k + 1]) && isFinite(p.x[k]) && isFinite(p.x[k + 1]) && t[k] <= T && T <= t[k + 1]) { i = k; break; }
+  if (i < 0) return;
+  const f = t[i + 1] === t[i] ? 0 : (T - t[i]) / (t[i + 1] - t[i]), lerp = c => c[i] + f * (c[i + 1] - c[i]);
+  const x0 = lerp(p.x), y0 = lerp(p.y), v = velocityPair(result), dt = t[i + 1] - t[i];
+  const vx = v && !tangentTimes(result).rows ? lerp(result.data.columns[v[1]]) : (p.x[i + 1] - p.x[i]) / dt;
+  const vy = v && !tangentTimes(result).rows ? lerp(result.data.columns[v[2]]) : (p.y[i + 1] - p.y[i]) / dt;
+  if (!isFinite(vx) || !isFinite(vy)) return;
+  //the time axis's values along the line, in distance / time mode (another time column only inside the run)
+  const axisName = timeMode() ? timeColumnOf(result, state.prefs.timeColumn) : null, tName = timeColumnOf(result, 't');
+  const n = 240, xs = [], ys = [], at = [];
+  for (let k = 0; k <= n; k++) {
+    const s = lo + (hi - lo) * k / n;
+    xs.push(x0 + vx * (s - T)); ys.push(y0 + vy * (s - T));
+    at.push(!axisName ? NaN : axisName === tName ? s : interpolate(result.data.columns[tName], result.data.columns[axisName], s));
+  }
+  const [X, Y] = plotValues(result, xs, ys, at), colour = result.tangent.color || p.color || result.color;
+  ctx.strokeStyle = colour; ctx.lineWidth = 1.5; ctx.setLineDash(DASHES[result.tangent.style] || DASHES.dashed);
   ctx.beginPath();
   let pen = false;
-  for (let k = 0; k < X.length; k++) {
+  for (let k = 0; k <= n; k++) {
     if (!isFinite(X[k]) || !isFinite(Y[k])) { pen = false; continue; }
     const [sx, sy] = toScreen(X[k], Y[k]);
     if (pen) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
     pen = true;
   }
   ctx.stroke(); ctx.setLineDash([]);
+  const [px, py] = plotValues(result, [x0], [y0], [axisName === tName ? T : axisName ? interpolate(result.data.columns[tName], result.data.columns[axisName], T) : NaN]);
+  if (isFinite(px[0]) && isFinite(py[0])) {
+    const [sx, sy] = toScreen(px[0], py[0]);
+    ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(sx, sy, 3.5, 0, 2 * Math.PI); ctx.fill();
+  }
 }
 
 /* the start (open) and end (filled) of each stretch of a path that is shown; replaying, the start only */
@@ -880,14 +937,17 @@ function drawEnds(result, p, until) {
   }
 }
 
-/* each shown whole orbit's periapsis (an open square) and apoapsis (an open diamond), as picked, in the orbit's
-   colour; replaying, only those already passed */
+/* the periapsis (an open square) and apoapsis (an open diamond) of each shown whole orbit, as picked under Markers,
+   on every Nth orbit (the first, then every N on), in the orbit's colour; replaying, only those already passed */
 function drawApsides(result, p, until) {
-  const {l, t, r, b} = plotRect();
+  const {l, t, r, b} = plotRect(), every = Math.max(1, Math.round(+state.prefs.apsisEvery) || 1);
+  let number = 0;
   result.orbits.forEach((o, k) => {
-    if (!o.visible || !o.full) return;
-    const colour = p.color2 ? orbitColour(result, p, k) : p.color || result.color;
-    for (const [on, point, kind] of [[result.peri, o.peri, 'peri'], [result.apo, o.apo, 'apo']]) {
+    if (!o.full) return;
+    number++;
+    if (!o.visible || (number - 1) % every) return;
+    const colour = p.mode === 'transition' ? orbitColour(result, p, k) : p.color || result.color;
+    for (const [on, point, kind] of [[state.prefs.showPeri, o.peri, 'peri'], [state.prefs.showApo, o.apo, 'apo']]) {
       if (!on || !point) continue;
       if (until !== null && !(point.t <= until && (state.trailStart === null || point.t >= state.trailStart))) continue;
       const [sx, sy] = toScreen(...plotPoint(result, point.x, point.y, point.t));
@@ -949,8 +1009,9 @@ function pathKeys() {
         if (!keys.some(e => e[1] === text)) keys.push([END_COLORS[k], text]);
       });
     }
-  if (shown.some(r => r.orbits.length && r.peri)) keys.push([css('--ink2'), 'periapsis of each orbit', null, null, 'peri']);
-  if (shown.some(r => r.orbits.length && r.apo)) keys.push([css('--ink2'), 'apoapsis of each orbit', null, null, 'apo']);
+  const every = Math.max(1, Math.round(+state.prefs.apsisEvery) || 1), which = every === 1 ? 'each orbit' : 'every ' + every + ' orbits';
+  if (shown.some(r => r.orbits.length) && state.prefs.showPeri) keys.push([css('--ink2'), 'periapsis of ' + which, null, null, 'peri']);
+  if (shown.some(r => r.orbits.length) && state.prefs.showApo) keys.push([css('--ink2'), 'apoapsis of ' + which, null, null, 'apo']);
   if (PLAYER && markState.note) keys.push(['transparent', markState.note]);
   return keys;
 }
@@ -1089,10 +1150,11 @@ function syncAvailable() {
       ['showBodies', bodies, 'no bodies in ' + which],
       ['showSchwarzschild', bodies, 'no bodies, so no horizons, in ' + which],
       ['showSpin', envs.some(e => e.bodies.some(b => b.spin)), 'no spinning bodies in ' + which]]) {
-    const box = $(id);
+    const box = $(id), label = box.parentElement;
     if (box.disabled === !ok) continue;
     box.disabled = !ok;
-    box.parentElement.title = ok ? '' : 'Not available: ' + missing;
+    if (label.dataset.help === undefined) label.dataset.help = label.dataset.tip || '';
+    label.dataset.tip = ok ? label.dataset.help : 'Not available: ' + missing + (label.dataset.help ? '. ' + label.dataset.help : '');
   }
 }
 
@@ -2314,6 +2376,7 @@ function showTip(el) {
   tipFor = el;
   const tip = $('tip');
   tip.textContent = el.dataset.tip;
+  tip.style.whiteSpace = 'pre-line';
   tip.style.display = 'block';
   const r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
   tip.style.left = Math.max(4, Math.min(innerWidth - w - 4, r.left + r.width / 2 - w / 2)) + 'px';
@@ -2327,7 +2390,7 @@ function message(text) { $('message').textContent = text; }
 
 //the checkboxes that are just a display option, by the option's name
 const OPTION_BOXES = ['showFlow', 'showGravity', 'showScalar', 'showTwist', 'showSeam', 'showBodies', 'showSchwarzschild', 'showSpin',
-                      'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey', 'showMarkers', 'showTimeMarks', 'showContours',
+                      'showGrid', 'showPathLegend', 'showPeri', 'showApo', 'showFieldKey', 'showMarkers', 'showTimeMarks', 'showContours',
                       'showFlowLines', 'showSpecialOrbits', 'showCones', 'showMarkNote', 'showMarkLabels', 'showBodyLabels', 'reverseX'];
 //those that change what is plotted (the paths' plotted values), or the aspect
 const PLOT_BOXES = ['logX', 'logY', 'ctTime', 'equalAspect'];
@@ -2350,6 +2413,7 @@ function syncControls() {
   column.value = state.prefs.timeColumn;
   $('timeColumnLabel').textContent = timeMode() ? 'Time axis (markers use the other)' : 'Markers use';
   $('timeInterval').value = state.timeInterval;
+  $('apsisEvery').value = Math.max(1, Math.round(+state.prefs.apsisEvery) || 1);
   $('timeInterval').placeholder = autoInterval() ? 'auto (' + fmt(autoInterval()) + ')' : 'auto';
   const background = $('background');
   background.innerHTML = '';
@@ -2363,59 +2427,72 @@ function syncControls() {
   showReplay();
 }
 
-/* the results list: grouped by environment when there are several, each result with its rows and end time, and its
-   orbits folded under it */
-const unfolded = new Set();
+/* the results tree: each environment (the bodies results share), its results, and each result's orbits, every level
+   folding open and shut. a level's box shows or hides everything under it (a dash: some of it is hidden) */
+const folds = new Map();     //'env:<key>' or 'res:<file>' -> open
+const isOpen = (key, otherwise) => folds.has(key) ? folds.get(key) : otherwise;
 function showResults() {
   const list = $('results');
   list.innerHTML = '';
+  if (!state.results.length) { list.innerHTML = '<p class="note">No results open.</p>'; return; }
   const envs = [...new Set(state.results.map(r => r.env))], drawn = fieldEnvironments();
-  for (const env of envs) {
-    if (envs.length > 1) {
-      const head = document.createElement('div');
-      head.className = 'envHead'; head.textContent = env.name + (drawn.includes(env) ? '   ◆ background' : '');
-      list.append(head);
+  const node = (cls, tip) => { const n = document.createElement('div'); n.className = 'node ' + cls; n.dataset.tip = tip; return n; };
+  const fold = (key, open, count, what) => {
+    const f = document.createElement('span');
+    f.className = 'fold'; f.textContent = count ? (open ? '▾' : '▸') : '';
+    if (count) {
+      f.dataset.tip = (open ? 'Hide' : 'List') + ' its ' + count + ' ' + what;
+      f.onclick = e => { e.stopPropagation(); folds.set(key, !open); showResults(); };
     }
-    for (const r of state.results.filter(x => x.env === env)) {
-      const row = document.createElement('div');
-      row.className = 'result' + (r === state.selected ? ' selected' : '');
-      row.title = r.file + '\n' + r.env.name;
-      const fold = document.createElement('span');
-      fold.className = 'fold'; fold.textContent = r.orbits.length ? (unfolded.has(r.file) ? '▾' : '▸') : '';
-      fold.title = r.orbits.length ? 'Show or hide its ' + r.orbits.length + ' orbits' : '';
-      fold.onclick = e => { e.stopPropagation(); if (unfolded.has(r.file)) unfolded.delete(r.file); else unfolded.add(r.file); showResults(); };
-      const box = document.createElement('input');
-      box.type = 'checkbox'; box.checked = r.visible;
-      box.indeterminate = r.visible && r.orbits.some(o => !o.visible);
-      box.onclick = e => { e.stopPropagation(); r.visible = box.checked; resultsChanged(); };
+    return f;
+  };
+  const box = (on, some, tip, change) => {
+    const b = document.createElement('input');
+    b.type = 'checkbox'; b.checked = on; b.indeterminate = some; b.dataset.tip = tip;
+    b.onclick = e => { e.stopPropagation(); change(b.checked); };
+    return b;
+  };
+  const text = (t, cls = 'name') => { const s = document.createElement('span'); s.className = cls; s.textContent = t; return s; };
+  for (const env of envs) {
+    const results = state.results.filter(r => r.env === env), key = 'env:' + env.key, open = isOpen(key, true);
+    const shown = results.filter(r => r.visible).length;
+    const head = node('env', env.name + (drawn.includes(env) ? '\nIts background is the one drawn' : '') + '\nClick to fold its results away, or open them');
+    head.append(fold(key, open, results.length, 'results'),
+                box(shown > 0, shown > 0 && shown < results.length, 'Show or hide every result in this environment',
+                    on => { results.forEach(r => { r.visible = on; }); resultsChanged(); }),
+                text(env.name));
+    if (drawn.includes(env)) head.append(text('◆', 'mark'));
+    head.onclick = () => { folds.set(key, !open); showResults(); };
+    list.append(head);
+    if (!open) continue;
+    for (const r of results) {
+      const rkey = 'res:' + r.file, ropen = isOpen(rkey, false), end = endTime(r);
+      const row = node('res' + (r === state.selected ? ' selected' : ''),
+                       r.name + ': ' + r.data.rows + ' rows' + (end !== null ? ', to t = ' + fmt(end) + ' s' : '') + '\n' + r.file +
+                       '\nClick to select it (its options are below); double-click to show only it');
       const swatch = document.createElement('div');
-      swatch.className = 'swatch'; swatch.style.background = r.paths.length > 1 || r.paths.some(p => p.color2)
-        ? 'linear-gradient(90deg,' + r.paths.flatMap(p => [p.color || r.color, p.color2 || p.color || r.color]).join(',') + ')'
+      swatch.className = 'swatch';
+      swatch.style.background = r.paths.length > 1 || r.paths.some(p => p.mode === 'transition')
+        ? 'linear-gradient(90deg,' + r.paths.flatMap(p => [p.color || r.color, p.mode === 'transition' ? secondColour(r, p) : p.color || r.color]).join(',') + ')'
         : (r.paths[0] && r.paths[0].color) || r.color;
-      const name = document.createElement('span'); name.textContent = r.name;
-      const count = document.createElement('span'); count.className = 'count';
-      const end = endTime(r);
-      count.textContent = r.data.rows + ' rows' + (end !== null ? ', t ' + fmt(end) + ' s' : '');
-      row.append(fold, box, swatch, name, count);
+      row.append(fold(rkey, ropen, r.orbits.length, 'orbits'),
+                 box(r.visible, r.visible && r.orbits.some(o => !o.visible), 'Show or hide this result' + (r.orbits.length ? ' (a dash: some of its orbits are hidden)' : ''),
+                     on => { r.visible = on; resultsChanged(); }),
+                 swatch, text(r.name));
       row.onclick = () => { state.selected = r; showResults(); showDetails(); draw(); };
       row.ondblclick = () => { for (const x of state.results) x.visible = x === r; resultsChanged(); };
       list.append(row);
-      if (unfolded.has(r.file)) r.orbits.forEach((o, k) => {
-        const orow = document.createElement('label');
-        orow.className = 'result orbit';
-        const obox = document.createElement('input');
-        obox.type = 'checkbox'; obox.checked = o.visible;
-        obox.onchange = () => { o.visible = obox.checked; orbitsChanged(r); };
-        const sw = document.createElement('div'); sw.className = 'swatch';
-        sw.style.background = r.paths[0] ? orbitColour(r, r.paths[0], k) : r.color;
-        const text = document.createElement('span'); text.textContent = o.name;
-        const c = document.createElement('span'); c.className = 'count'; c.textContent = 't ' + fmt(o.t1) + ' s';
-        orow.append(obox, sw, text, c);
+      if (!ropen) continue;
+      r.orbits.forEach((o, k) => {
+        const orow = node('orb', o.name + ': from t = ' + fmt(o.t0) + ' to ' + fmt(o.t1) + ' s\nShow or hide this orbit');
+        const sw = document.createElement('div');
+        sw.className = 'swatch'; sw.style.background = r.paths[0] ? (r.paths[0].mode === 'transition' ? orbitColour(r, r.paths[0], k) : r.paths[0].color || r.color) : r.color;
+        orow.append(box(o.visible, false, 'Show or hide this orbit', on => { o.visible = on; orbitsChanged(r); }), sw, text(o.name));
+        orow.onclick = () => { o.visible = !o.visible; orbitsChanged(r); };
         list.append(orow);
       });
     }
   }
-  if (!state.results.length) list.innerHTML = '<p class="note">No results open.</p>';
 }
 
 function endTime(r) {
@@ -2429,89 +2506,156 @@ function endTime(r) {
 function resultsChanged() { invalidatePlot(); markState.key = null; showResults(); showDetails(); showReplay(); }
 function orbitsChanged(r) { invalidatePlot(); markState.key = null; showResults(); showDetails(); draw(); }
 
-/* the selected result: its options, its paths' colours and styles, which paths it plots, a summary and its log */
+/* the selected result, in three tabs: Appearance (each path's colour, how it goes through the orbits and its line;
+   the tangent; end arrows; orbits shown), Details (a summary and the log) and Choose paths (which columns are drawn) */
+let detailTab = 'appearance';
 function showDetails() {
   const box = $('details'), r = state.selected;
+  $('markersHolder').append($('markersBlock'));   //the markers' controls, kept while the panel is rebuilt
   box.innerHTML = '';
   if (!r || !state.results.includes(r)) return;
-  const el = (tag, props = {}, ...children) => { const e = Object.assign(document.createElement(tag), props); e.append(...children); return e; };
+  const el = (tag, props = {}, ...children) => {
+    const {tip, ...rest} = props, e = Object.assign(document.createElement(tag), rest);
+    if (tip) e.dataset.tip = tip;
+    e.append(...children); return e;
+  };
   const check = (label, value, change, tip) => {
     const input = el('input', {type: 'checkbox', checked: value});
     input.onchange = () => change(input.checked);
-    return el('label', {className: 'check', title: tip || ''}, input, ' ' + label);
+    return el('label', {className: 'check', tip}, input, ' ' + label);
   };
-  box.append(el('h3', {textContent: r.name}));
-  box.append(check('straight line', r.straight, v => { r.straight = v; draw(); }, 'The path with no gravity, dashed: its start carried on at its first velocity'));
-  if (endPairs(r).length) box.append(check('end arrows', r.ends, v => { r.ends = v; draw(); }, 'An arrow at the end of each stretch of the path for each velocity-like pair (x / y only)'));
-  if (r.orbits.length) {
-    const whole = r.orbits.filter(o => o.full).length;
-    const row = el('div', {className: 'buttons'}, el('span', {className: 'note', textContent: whole + ' orbits'}));
-    const all = el('button', {textContent: 'All', title: 'Show every orbit'}), none = el('button', {textContent: 'None', title: 'Hide every orbit'});
-    all.onclick = () => { r.orbits.forEach(o => { o.visible = true; }); orbitsChanged(r); };
-    none.onclick = () => { r.orbits.forEach(o => { o.visible = false; }); orbitsChanged(r); };
-    row.append(all, none);
-    box.append(row);
-    box.append(check('periapsis', r.peri, v => { r.peri = v; draw(); }, 'An open square at each shown whole orbit\'s closest point'));
-    box.append(check('apoapsis', r.apo, v => { r.apo = v; draw(); }, 'An open diamond at each shown whole orbit\'s farthest point'));
+  const styleSelect = (value, change, tip) => {
+    const select = el('select', {tip});
+    for (const s of Object.keys(DASHES)) select.add(new Option(s, s));
+    select.value = value; select.onchange = () => change(select.value);
+    return select;
+  };
+  box.append(el('h3', {textContent: r.name, tip: 'The selected result: pick another in the list above'}));
+  const tabs = el('div', {className: 'subtabs', role: 'tablist'});
+  for (const [name, label, tip] of [['appearance', 'Appearance', 'How the selected result is drawn: colours, lines, its tangent and end arrows'],
+                                    ['details', 'Details', 'A summary of the selected result, and its log'],
+                                    ['paths', 'Choose paths', 'Which of the result\'s csv columns are drawn as paths']]) {
+    const b = el('button', {textContent: label, tip, role: 'tab'});
+    b.setAttribute('aria-selected', String(detailTab === name));
+    b.onclick = () => { detailTab = name; remember('detailTab', name); showDetails(); };
+    tabs.append(b);
   }
-  for (const p of r.paths) {
+  box.append(tabs);
+  if (detailTab === 'details') { showSummary(r, box, el); return; }
+  if (detailTab === 'paths') { showChoosePaths(r, box, el); return; }
+
+  //each path: its colour (one, a transition from the first orbit to the last, or earlier orbits shaded) and line
+  const orbits = r.paths.map(p => pathOrbits(r, p));
+  for (const [k, p] of r.paths.entries()) {
+    const block = el('div', {className: 'pathBlock'});
     const row = el('div', {className: 'pathRow'});
-    const first = el('input', {type: 'color', value: p.color || r.color, title: r.orbits.length ? 'First orbit\'s colour' : 'Line colour'});
+    const first = el('input', {type: 'color', value: p.color || r.color, tip: p.mode === 'transition' ? 'The first orbit\'s colour (click to change)' : 'The line\'s colour (click to change)'});
     first.oninput = () => { p.color = first.value; showResults(); draw(); };
     row.append(first);
-    if (r.orbits.length) {
-      const second = el('input', {type: 'color', value: p.color2 || p.color || r.color, title: 'Last orbit\'s colour; the orbits between are a mix of the two'});
+    if (p.mode === 'transition') {
+      const second = el('input', {type: 'color', value: secondColour(r, p), tip: 'The last orbit\'s colour (click to change); the orbits between are a mix of the two'});
       second.oninput = () => { p.color2 = second.value; showResults(); draw(); };
       row.append('→', second);
     }
-    const style = el('select', {title: 'Line style'});
-    for (const s of Object.keys(DASHES)) style.add(new Option(s, s));
-    style.value = p.style;
-    style.onchange = () => { p.style = style.value; draw(); };
-    row.append(style, el('span', {textContent: p.name}));
-    box.append(row);
+    row.append(styleSelect(p.style, v => { p.style = v; draw(); }, 'The line\'s style: solid, dashed or dotted'), el('span', {textContent: p.name}));
+    block.append(row);
+    const modes = el('div', {className: 'modes'});
+    for (const [mode, label, tip] of [['single', 'single colour', 'The whole path in one colour'],
+                                      ['transition', 'transition', 'The colour goes from a first to a last through the orbits'],
+                                      ['shade', 'shade', 'The current orbit (at the replay\'s time, or the last) in full colour, each earlier one fainter']]) {
+      const radio = el('input', {type: 'radio', name: 'mode' + k, checked: p.mode === mode, disabled: mode !== 'single' && !orbits[k]});
+      radio.onchange = () => { p.mode = mode; showResults(); showDetails(); draw(); };
+      modes.append(el('label', {tip: mode !== 'single' && !orbits[k] ? 'Not available: this path doesn\'t go round its body' : tip}, radio, label));
+    }
+    block.append(modes);
+    box.append(block);
   }
-  //which column pairs it plots, and one path per value of a column
-  const choose = el('details');
-  choose.append(el('summary', {textContent: 'Choose paths…'}));
+  //the tangent: where the path would go with no gravity from a moment chosen along it
+  const tg = r.tangent, times = tangentTimes(r);
+  box.append(check('tangent', tg.on, v => { tg.on = v; showDetails(); draw(); },
+                   'A straight line along the path at a chosen moment: where it would go (and have come from) with no gravity'));
+  if (tg.on) {
+    const panel = el('div', {className: 'tangent'});
+    const colour = el('input', {type: 'color', value: tg.color || (r.paths[0] && r.paths[0].color) || r.color, tip: 'The tangent\'s colour (click to change)'});
+    colour.oninput = () => { tg.color = colour.value; draw(); };
+    panel.append(el('div', {className: 'pathRow'}, colour, styleSelect(tg.style, v => { tg.style = v; draw(); }, 'The tangent\'s line style')));
+    const T = tangentAt(r), span = times.hi - times.lo || 1;
+    const slider = el('input', {type: 'range', min: 0, max: 1000, step: 1, value: Math.round((T - times.lo) / span * 1000),
+                                tip: 'Drag to the moment the tangent is drawn at'});
+    const entry = el('input', {value: fmt(T), size: 10, tip: 'The moment the tangent is drawn at, ' + (times.rows ? 'as a row number (this result has no t column)' : 'in seconds of t') + ': type one in'});
+    slider.oninput = () => { tg.t = times.lo + slider.value / 1000 * span; entry.value = fmt(tg.t); draw(); };
+    entry.onchange = () => { const v = +entry.value; if (isFinite(v)) { tg.t = v; slider.value = Math.round((tangentAt(r) - times.lo) / span * 1000); entry.value = fmt(tangentAt(r)); draw(); } };
+    panel.append(slider, el('label', {className: 'row', tip: 'From ' + fmt(times.lo) + ' to ' + fmt(times.hi) + (times.rows ? ' (rows)' : ' s')}, (times.rows ? 'row ' : 't = '), entry, times.rows ? '' : ' s'));
+    box.append(panel);
+  }
+  if (endPairs(r).length) box.append(check('end arrows', r.ends, v => { r.ends = v; draw(); }, 'An arrow at the end of each stretch of the path for each velocity-like pair (x / y only)'));
+  if (r.orbits.length) {
+    const whole = r.orbits.filter(o => o.full).length, shown = r.orbits.filter(o => o.full && o.visible).length;
+    const row = el('div', {className: 'buttons'}, el('span', {className: 'note', textContent: 'Orbits: ' + shown + ' of ' + whole + ' shown'}));
+    const all = el('button', {textContent: 'All', tip: 'Show every orbit'}), none = el('button', {textContent: 'None', tip: 'Hide every orbit'});
+    all.onclick = () => { r.orbitEvery = 1; r.orbits.forEach(o => { o.visible = true; }); orbitsChanged(r); };
+    none.onclick = () => { r.orbits.forEach(o => { o.visible = false; }); orbitsChanged(r); };
+    row.append(all, none);
+    box.append(row);
+    //every Nth whole orbit shown (the first, then every N on), the rest hidden; the parts before the first and after the
+    //last stay as they are
+    const every = el('input', {type: 'number', min: 1, step: 1, value: r.orbitEvery || 1, id: 'orbitEvery'});
+    every.onchange = () => {
+      const n = Math.max(1, Math.round(+every.value) || 1);
+      r.orbitEvery = n;
+      let number = 0;
+      for (const o of r.orbits) if (o.full) { number++; o.visible = (number - 1) % n === 0; }
+      orbitsChanged(r);
+    };
+    box.append(el('label', {className: 'row', tip: 'Show only every Nth orbit (the first, then every N on) and hide the rest: 1 shows them all'}, 'show every ', every, ' orbits'));
+  }
+  box.append($('markersBlock'));   //the markers (for every result) belong with how things are drawn
+}
+
+/* Details: the summary, and the log */
+function showSummary(r, box, el) {
+  const table = el('table', {tip: 'A summary of the run, from its data and log'});
+  for (const [label, value] of summaryRows(r)) table.append(el('tr', {}, el('td', {textContent: label}), el('td', {textContent: value})));
+  box.append(table, el('div', {className: 'file', textContent: r.file}));
+  const log = el('details');
+  log.append(el('summary', {textContent: 'Log', tip: 'The run\'s log: its setup, bodies, calculator and results'}), el('pre', {textContent: r.log.text || '(no log)'}));
+  box.append(log);
+}
+
+/* Choose paths: which column pairs are drawn, any two columns as a pair, and one path per value of a column */
+function showChoosePaths(r, box, el) {
   const found = pairs(r.data.names).map(p => [p[1], p[2]]);
   const options = [...found, ...r.selection.filter(s => !found.some(f => f[0] === s[0] && f[1] === s[1]))];
+  box.append(el('p', {className: 'note', textContent: 'The column pairs found in the csv:'}));
   const picks = options.map(([x, y]) => {
     const input = el('input', {type: 'checkbox', checked: r.selection.some(s => s[0] === x && s[1] === y)});
-    choose.append(el('label', {className: 'check'}, input, ' ' + y + '  vs  ' + x));
+    box.append(el('label', {className: 'check', tip: 'Draw ' + y + ' against ' + x}, input, ' ' + y + '  vs  ' + x));
     return [[x, y], input];
   });
   const numeric = r.data.names.filter(n => Array.from(r.data.columns[n]).some(isFinite));
-  const xs = el('select'), ys = el('select');
+  const xs = el('select', {tip: 'The column across'}), ys = el('select', {tip: 'The column up'});
   for (const n of numeric) { xs.add(new Option(n, n)); ys.add(new Option(n, n)); }
   if (numeric.length > 1) ys.selectedIndex = 1;
-  const add = el('button', {textContent: 'Add pair'});
-  const group = el('select');
+  const add = el('button', {textContent: 'Add pair', tip: 'Draw the chosen y column against the chosen x column as another path'});
+  const group = el('select', {tip: 'Split the rows into one path for each value of this column (a column naming each object, say)'});
   group.add(new Option('(none)', ''));
   for (const n of r.data.names) group.add(new Option(n, n));
   group.value = r.group || '';
-  const apply = el('button', {textContent: 'Apply'});
+  const apply = el('button', {textContent: 'Apply', tip: 'Draw the ticked pairs, split by the chosen column'});
+  const chosen = () => picks.filter(([, i]) => i.checked).map(([s]) => s);
   add.onclick = () => {
-    const selection = picks.filter(([, i]) => i.checked).map(([s]) => s);
+    const selection = chosen();
     if (!selection.some(s => s[0] === xs.value && s[1] === ys.value)) selection.push([xs.value, ys.value]);
     rebuildPaths(r, selection, group.value || null);
   };
   apply.onclick = () => {
-    const selection = picks.filter(([, i]) => i.checked).map(([s]) => s);
+    const selection = chosen();
     if (!selection.length) { message('choose at least one pair'); return; }
     rebuildPaths(r, selection, group.value || null);
   };
-  choose.append(el('label', {className: 'row'}, 'x ', xs, ' y ', ys, add));
-  choose.append(el('label', {className: 'row'}, 'one path per value of ', group));
-  choose.append(apply);
-  box.append(choose);
-  //the summary, and the log
-  const table = el('table');
-  for (const [label, value] of summaryRows(r)) table.append(el('tr', {}, el('td', {textContent: label}), el('td', {textContent: value})));
-  box.append(table, el('div', {className: 'file', textContent: r.file}));
-  const log = el('details');
-  log.append(el('summary', {textContent: 'Log'}), el('pre', {textContent: r.log.text || '(no log)'}));
-  box.append(log);
+  box.append(el('label', {className: 'row', tip: 'Any two columns as a new pair: x across, y up'}, 'x ', xs, ' y ', ys, add));
+  box.append(el('label', {className: 'row', tip: 'Split the rows into one path for each value of this column'}, 'one path per value of ', group));
+  box.append(apply);
 }
 
 /* a result's paths built again from a selection of column pairs (and a column to split them by), keeping styles */
@@ -2596,6 +2740,8 @@ function setup() {
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
   SPEEDS.forEach(s => { $('speed').add(new Option(speedName(s), s)); $('pSpeed').add(new Option(speedName(s), s)); });
   setupPlayer();
+  if (!PLAYER) { setupTabs(); setupSplitter(); setupTreeSplit(); setupHelp(); }
+  if (['appearance', 'details', 'paths'].includes(recall('detailTab'))) detailTab = recall('detailTab');
   for (const id of OPTION_BOXES)
     $(id).onchange = () => { state.prefs[id] = $(id).checked; if (id === 'showTimeMarks' || id === 'showMarkNote') markState.key = null; draw(); };
   for (const id of ['logX', 'logY', 'ctTime'])
@@ -2620,6 +2766,7 @@ function setup() {
   };
   $('timeColumn').onchange = () => { state.prefs.timeColumn = $('timeColumn').value; state.timeInterval = ''; if (timeMode()) plotChanged(); else { markState.key = null; syncControls(); draw(); } };
   $('timeInterval').onchange = () => { state.timeInterval = $('timeInterval').value.trim(); markState.key = null; draw(); };
+  $('apsisEvery').onchange = () => { state.prefs.apsisEvery = Math.max(1, Math.round(+$('apsisEvery').value) || 1); $('apsisEvery').value = state.prefs.apsisEvery; draw(); };
   $('timeAuto').onclick = () => { state.timeInterval = ''; $('timeInterval').value = ''; markState.key = null; draw(); };
   $('speed').onchange = () => { state.prefs.replaySpeed = $('speed').value; };
   $('background').onchange = () => { state.background = $('background').value; showDescription(); showResults(); draw(); };
@@ -2646,8 +2793,6 @@ function setup() {
   $('showNone').onclick = () => { state.results.forEach(r => { r.visible = false; }); resultsChanged(); };
   $('showOnly').onclick = () => { state.results.forEach(r => { r.visible = r === state.selected; }); resultsChanged(); };
   $('closeResult').onclick = closeSelected;
-  $('clearTrails').onclick = () => { if (state.replay.state !== 'stopped') { state.trailStart = state.replay.t; draw(); } else message('play the run first: Clear trails keeps what is drawn from the replay\'s time on'); };
-  $('restoreTrails').onclick = () => { state.trailStart = null; draw(); };
   $('play').onclick = () => play('together');
   $('playInTurn').onclick = () => play('sequence');
   $('loop').onchange = () => { state.prefs.replayLoop = $('loop').checked; };
@@ -2736,6 +2881,85 @@ function setup() {
   } else {
     syncControls(); draw();
   }
+}
+
+/* remembered between visits, in this browser only (and not at all where storage is blocked) */
+const remember = (key, value) => { try { localStorage.setItem('flowViewer.' + key, value); } catch (e) { /* not kept */ } };
+const recall = key => { try { return localStorage.getItem('flowViewer.' + key); } catch (e) { return null; } };
+
+/* the split between the results list and the selected result, dragged (kept between visits); a double-click puts it
+   back */
+function setupTreeSplit() {
+  const edge = $('treeSplit'), list = $('results'), section = list.parentElement;
+  const set = h => {
+    h = Math.max(40, Math.min(Math.round(h), section.clientHeight - 140));
+    section.style.setProperty('--tree', h + 'px');
+  };
+  const kept = +recall('treeHeight');
+  if (kept) set(kept);
+  let drag = null;
+  edge.onpointerdown = e => { drag = {y: e.clientY, h: list.offsetHeight}; try { edge.setPointerCapture(e.pointerId); } catch (x) { /* a synthetic pointer */ } edge.classList.add('dragging'); hideTip(); };
+  edge.onpointermove = e => { if (drag) set(drag.h + e.clientY - drag.y); };
+  edge.onpointerup = () => { if (!drag) return; drag = null; edge.classList.remove('dragging'); remember('treeHeight', list.offsetHeight); };
+  edge.ondblclick = () => { section.style.removeProperty('--tree'); remember('treeHeight', ''); };
+}
+
+/* the panel's tabs: Results, View and Background */
+function setupTabs() {
+  const show = name => {
+    for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
+    for (const p of document.querySelectorAll('aside section[data-panel]')) p.hidden = p.dataset.panel !== name;
+    remember('tab', name);
+  };
+  for (const b of document.querySelectorAll('#tabs button')) b.onclick = () => show(b.dataset.tab);
+  show(['results', 'view', 'background'].includes(recall('tab')) ? recall('tab') : 'results');
+}
+
+/* the panel's edge, dragged to set its width (kept between visits); a double-click puts it back */
+const PANEL_WIDTH = 320;
+function setupSplitter() {
+  const app = $('app'), edge = $('splitter');
+  const set = w => {
+    w = Math.max(220, Math.min(Math.round(w), Math.max(260, innerWidth - 360)));
+    app.style.setProperty('--panel', w + 'px');
+    return w;
+  };
+  const kept = +recall('panelWidth');
+  if (kept) set(kept);
+  let drag = null;
+  edge.onpointerdown = e => { drag = {x: e.clientX, w: $('app').querySelector('aside').offsetWidth}; try { edge.setPointerCapture(e.pointerId); } catch (x) { /* a synthetic pointer */ } edge.classList.add('dragging'); hideTip(); };
+  edge.onpointermove = e => {
+    if (!drag) return;
+    set(drag.w + drag.x - e.clientX);
+    equalise(); draw();
+  };
+  edge.onpointerup = () => {
+    if (!drag) return;
+    drag = null; edge.classList.remove('dragging');
+    remember('panelWidth', $('app').querySelector('aside').offsetWidth);
+  };
+  edge.ondblclick = () => { app.style.removeProperty('--panel'); remember('panelWidth', ''); equalise(); draw(); };
+}
+
+/* hover help for everything in the header and the panel with a data-tip: shown after a moment, beside the pointer's
+   control, and gone when the pointer leaves it */
+function setupHelp() {
+  let timer = null, over = null;
+  const leave = () => { clearTimeout(timer); timer = null; if (over) { over = null; hideTip(); } };
+  for (const area of [document.querySelector('header'), document.querySelector('aside'), $('splitter')]) {
+    area.addEventListener('pointerover', e => {
+      const el = e.target.closest('[data-tip]');
+      if (!el || el === over || !area.contains(el)) return;
+      leave();
+      over = el;
+      timer = setTimeout(() => { if (over === el && el.dataset.tip) showTip(el); }, 450);
+    });
+    area.addEventListener('pointerleave', leave);
+    area.addEventListener('pointerdown', leave);
+  }
+  document.querySelector('aside').addEventListener('pointerout', e => {
+    if (over && !over.contains(e.relatedTarget)) leave();
+  });
 }
 
 /* the player: icons for the replay, like a music player's, and a button to open the run in the full viewer */

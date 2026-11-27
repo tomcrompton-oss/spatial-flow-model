@@ -17,13 +17,32 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.4 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
-  #app { display: grid; grid-template-columns: 1fr 300px; grid-template-rows: auto 1fr auto; height: 100vh; }
-  header { grid-column: 1 / 3; display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
+  #app { --panel: 320px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--panel); grid-template-rows: auto 1fr auto; height: 100vh; }
+  header { grid-column: 1 / 4; display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
   header h1 { font-size: 15px; margin: 0 8px 0 0; }
   #plotWrap { position: relative; min-height: 0; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   #spinLayer { position: absolute; inset: 0; pointer-events: none; }
-  aside { border-left: 1px solid var(--grid); padding: 10px 12px; overflow: auto; }
+  #plotWrap { grid-column: 1; grid-row: 2; }
+  /* the panel's edge: drag it to make the panel wider or narrower */
+  #splitter { grid-column: 2; grid-row: 2 / 4; cursor: col-resize; background: var(--page); border-left: 1px solid var(--grid); touch-action: none; }
+  #splitter:hover, #splitter.dragging { background: color-mix(in srgb, var(--accent) 25%, var(--page)); }
+  aside { grid-column: 3; grid-row: 2 / 4; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  #tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--grid); flex: none; }
+  #tabs button { border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0; background: transparent; color: var(--ink2); padding: 5px 12px; margin-bottom: -1px; }
+  #tabs button[aria-selected="true"] { background: var(--page); color: var(--ink); border-color: var(--grid); font-weight: 600; }
+  #tabs button:hover { color: var(--ink); }
+  aside .panels { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  aside section { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; }
+  aside section[hidden] { display: none !important; }
+  /* the Results tab: the list and the selected result each scroll on their own, the split between them dragged */
+  aside section[data-panel="results"] { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+  aside section[data-panel="results"] > .buttons { flex: none; }
+  #results { flex: none; height: var(--tree, 220px); min-height: 40px; overflow: auto; }
+  #treeSplit { flex: none; height: 9px; margin: 2px -12px; cursor: row-resize; touch-action: none; position: relative; }
+  #treeSplit::after { content: ''; position: absolute; left: 12px; right: 12px; top: 4px; height: 1px; background: var(--grid); }
+  #treeSplit:hover::after, #treeSplit.dragging::after { height: 3px; top: 3px; background: color-mix(in srgb, var(--accent) 45%, var(--grid)); }
+  #details { flex: 1; min-height: 60px; overflow: auto; padding-bottom: 10px; }
   aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink2); margin: 14px 0 6px; }
   aside h2:first-child { margin-top: 0; }
   #replay { grid-column: 1 / 2; display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--grid); }
@@ -57,8 +76,7 @@
   .result .fold { width: 12px; flex: none; color: var(--ink2); cursor: pointer; user-select: none; }
   .orbit { padding-left: 26px; font-size: 12px; }
   .envHead { font-size: 11px; color: var(--ink2); margin: 6px 0 2px; }
-  #details { margin-top: 8px; border-top: 1px solid var(--grid); padding-top: 6px; }
-  #details:empty { display: none; }
+  #details:empty::before { content: 'Select a result in the list to see how it is drawn, its details and its paths.'; color: var(--muted); font-size: 12px; }
   #details h3 { font-size: 13px; margin: 0 0 4px; }
   #details .pathRow { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
   #details input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--axis); border-radius: 3px; background: none; }
@@ -69,10 +87,33 @@
   #details .file { color: var(--muted); font-size: 11px; word-break: break-all; }
   #paths .pair { display: block; }
   canvas:focus { outline: none; }
+  /* the results tree: environment, result, orbits, each folding */
+  .tree .node { display: flex; gap: 5px; align-items: center; padding: 2px 4px; border-radius: 4px; cursor: pointer; min-width: 0; }
+  .tree .node span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tree .node.selected { background: var(--grid); }
+  .tree .env { font-size: 12px; color: var(--ink2); margin-top: 4px; }
+  .tree .env .mark { color: var(--accent); flex: none; }
+  .tree .res { padding-left: 20px; }
+  .tree .orb { padding-left: 46px; font-size: 12px; }
+  .tree .fold { width: 20px; height: 20px; flex: none; color: var(--ink2); user-select: none; text-align: center; font-size: 15px; line-height: 20px; border-radius: 4px; }
+  .tree .fold:not(:empty):hover { background: var(--grid); color: var(--ink); }
+  #details summary { cursor: pointer; font-size: 13px; padding: 2px 0; }
+  #details summary::marker { font-size: 15px; }
+  /* the selected result's own tabs */
+  .subtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grid); margin: 8px 0 6px; }
+  .subtabs button { border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; background: transparent; color: var(--ink2); padding: 3px 9px; margin-bottom: -1px; font-size: 12px; }
+  .subtabs button[aria-selected="true"] { background: var(--page); color: var(--ink); border-color: var(--grid); font-weight: 600; }
+  #details .modes { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 2px 2px; font-size: 12px; }
+  #details .modes label { display: flex; gap: 3px; align-items: center; }
+  #details .tangent { margin: 2px 0 6px 22px; }
+  #details .tangent input[type=range] { width: 100%; }
+  #details .pathBlock { border-top: 1px solid var(--grid); padding-top: 4px; margin-top: 4px; }
+  #details #orbitEvery { width: 4em; }
+  #apsisEvery { width: 4em; }
   /* the player (?player in the address): the plot and a music-player bar only, for pages that embed a run */
   /* the play controls: one line under the plot, in the full viewer and the player alike */
   #replay { display: none; }
-  #player { grid-column: 1 / 2; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-top: 1px solid var(--grid); }
+  #player { grid-column: 1; grid-row: 3; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-top: 1px solid var(--grid); }
   #player { flex-wrap: wrap; row-gap: 6px; }
   #player .progress { flex: 1 1 260px; min-width: 0; }   /* on one line while there is room, else below the buttons */
   body.player header, body.player aside, body.player #replayLabel { display: none; }
@@ -81,6 +122,9 @@
   body.player #pTime { display: block; flex: none; color: var(--ink2); font-size: 12px; font-variant-numeric: tabular-nums;
                        white-space: nowrap; text-align: right; }
   body.player #app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100vh; }
+  body.player #splitter { display: none; }
+  body.player #plotWrap { grid-row: 1; }
+  body.player #player { grid-row: 2; }
   body.player canvas { touch-action: auto; }
   body.player #player { padding: 8px 12px; }
   @media (max-width: 560px) {
@@ -109,10 +153,12 @@
   #pTrack .line { position: absolute; left: 7px; right: 7px; top: 9px; height: 2px; border-radius: 1px; background: var(--axis); }
   #pTrack .marker { position: absolute; top: 3px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
                     border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--axis); }
-  @media (max-width: 1000px) { #app { grid-template-columns: 1fr 220px; } }   /* embedded in a page: keep the panel beside the plot */
+  @media (max-width: 1000px) { #app { --panel: 240px; } }   /* embedded in a page: keep the panel beside the plot */
   @media (max-width: 560px) {
     #app { grid-template-columns: 1fr; grid-template-rows: auto 60vh auto auto; height: auto; }
-    header, #replay, #player { grid-column: 1; }
+    header, #replay, #player, #plotWrap, aside { grid-column: 1; }
+    #plotWrap { grid-row: 2; } #player { grid-row: 3; } aside { grid-row: 4; }
+    #splitter { display: none; }
     #player { flex-wrap: wrap; }
     aside { border-left: 0; border-top: 1px solid var(--grid); }
   }
@@ -122,9 +168,9 @@
 <div id="app">
   <header>
     <h1>Flow Viewer</h1>
-    <button id="openFolder" title="Open a run folder (logs/&lt;study&gt;/&lt;run&gt;) in place of what is open">Open run folder…</button>
-    <button id="addFolder" title="Add a run folder's results to what is open, to compare them">Add…</button>
-    <button id="reload" title="Read everything open again, keeping each result's settings">Reload</button>
+    <button id="openFolder" data-tip="Open a run folder (logs/&lt;study&gt;/&lt;run&gt;) in place of what is open; or drop one on the plot">Open run folder…</button>
+    <button id="addFolder" data-tip="Add a run folder's results to what is open, to compare them (or shift-drop one on the plot)">Add…</button>
+    <button id="reload" data-tip="Read everything open again from its files, keeping each result's settings">Reload</button>
     <input id="folderInput" type="file" webkitdirectory multiple hidden>
     <input id="addInput" type="file" webkitdirectory multiple hidden>
     <span id="message"></span>
@@ -136,75 +182,83 @@
     <div id="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
     <div id="drop">Drop a run folder</div>
   </div>
+  <div id="splitter" data-tip="Drag to make the panel wider or narrower; double-click for its usual width"></div>
   <aside>
-    <h2>Results</h2>
-    <div class="buttons">
-      <button id="showAll" title="Show every result">All</button>
-      <button id="showNone" title="Hide every result">None</button>
-      <button id="showOnly" title="Show only the selected result">Only selected</button>
-      <button id="closeResult" title="Take the selected result out">Close</button>
-    </div>
-    <div id="results"></div>
-    <div id="details"></div>
-
-    <h2>View</h2>
-    <label class="row">Plot <select id="mode"><option value="xy">X / Y path</option><option value="time">Distance / time</option></select></label>
-    <label class="row">Units <select id="unit"></select></label>
-    <label class="check xyOnly" title="A metre as long across as up"><input type="checkbox" id="equalAspect"> equal aspect</label>
-    <label class="check timeOnly" title="Time as ct, in the distance unit, on a 1:1 scale: light with no gravity is at 45°"><input type="checkbox" id="ctTime"> time as ct (light at 45°)</label>
-    <label class="check timeOnly" title="Distance runs right to left, 0 on the right"><input type="checkbox" id="reverseX"> reverse distance (0 on the right)</label>
-    <label class="check"><input type="checkbox" id="logX"> log x</label>
-    <label class="check"><input type="checkbox" id="logY"> log y</label>
-    <label class="check"><input type="checkbox" id="showGrid"> grid</label>
-    <label class="check" title="The current orbit in full colour, each earlier one fainter"><input type="checkbox" id="graduateOrbits"> shade earlier orbits</label>
-    <div class="buttons">
-      <button id="zoomIn" title="Zoom in (+)">Zoom in</button>
-      <button id="zoomOut" title="Zoom out (−)">Zoom out</button>
-      <button id="fit" title="Fit to the paths (0, or double click)">Fit</button>
-      <button id="rangeButton" title="Type in the range of each axis">Range…</button>
-    </div>
-    <div id="range" hidden>
-      <label class="row">x from <input id="rangeX0" size="9"> to <input id="rangeX1" size="9"></label>
-      <label class="row">y from <input id="rangeY0" size="9"> to <input id="rangeY1" size="9"></label>
-      <button id="rangeApply">Apply</button> <span class="note">in the axes' units</span>
-    </div>
-    <p class="note">Drag to pan, scroll to zoom, shift-drag to zoom to a box, double-click to fit; arrow keys pan, + and − zoom.</p>
-
-    <h2>Markers</h2>
-    <label class="check" title="An open circle where each path starts, a filled one where it ends"><input type="checkbox" id="showMarkers"> start / end markers</label>
-    <label class="check" title="Dots along each path at every interval of a time column"><input type="checkbox" id="showTimeMarks"> time markers</label>
-    <label class="row"><span id="timeColumnLabel">Markers use</span> <select id="timeColumn"></select></label>
-    <label class="row">every <input id="timeInterval" size="8" placeholder="auto"> <button id="timeAuto" title="A round interval giving about ten markers">Auto</button></label>
-
-    <h2>Background</h2>
-    <select id="background"></select>
-    <p id="bgDescription" class="note"></p>
-    <label class="check"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
-    <label class="check"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
-    <label class="check"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
-    <label class="check"><input type="checkbox" id="showTwist"> twist arcs (how fast space turns things, round a spinning hole)</label>
-    <label class="check"><input type="checkbox" id="showSeam"> lines (the seam, where the bodies' regions of flow meet)</label>
-    <label class="check"><input type="checkbox" id="showContours"> lines of equal |u|</label>
-    <label class="check"><input type="checkbox" id="showFlowLines"> flow lines (the paths of space)</label>
-    <label class="check"><input type="checkbox" id="showSpecialOrbits"> photon orbits and ISCO (one hole)</label>
-    <label class="check"><input type="checkbox" id="showCones"> light cones (distance / time)</label>
-    <label class="check"><input type="checkbox" id="showBodies"> bodies</label>
-    <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons (and a spinning hole's ergosphere and ring)</label>
-    <label class="check"><input type="checkbox" id="showSpin"> spinning bodies (turning the way they spin, not at their real speed)</label>
-    <p class="note">Arrows, colour maps and seams come from a run's backgrounds; equal-|u| lines and flow lines from its u, or the bodies' escape speed. Options greyed out have no data for the background shown.</p>
-
-    <h2>Legends</h2>
-    <label class="check"><input type="checkbox" id="showPathLegend"> path legend</label>
-    <label class="check"><input type="checkbox" id="showFieldKey"> background key</label>
-    <label class="check"><input type="checkbox" id="showMarkNote"> marker interval</label>
-    <label class="check"><input type="checkbox" id="showMarkLabels"> marker times</label>
-    <label class="check"><input type="checkbox" id="showBodyLabels"> body labels</label>
-    <div class="buttons"><button id="legendsAll">All</button><button id="legendsNone">None</button></div>
-
-    <h2>Replay</h2>
-    <div class="buttons">
-      <button id="clearTrails" title="Draw the paths only from here on">Clear trails</button>
-      <button id="restoreTrails" title="Draw the paths from the start again">Restore trails</button>
+    <nav id="tabs" role="tablist">
+      <button role="tab" data-tab="results" data-tip="The results: which are shown, how each is drawn, its markers, summary and log">Results</button>
+      <button role="tab" data-tab="view" data-tip="How the plot is framed: what is plotted, units, axes, zoom and legends">View</button>
+      <button role="tab" data-tab="background" data-tip="What is drawn behind the paths: the background, the flow, bodies and horizons">Background</button>
+    </nav>
+    <div class="panels">
+    <section data-panel="results">
+      <div class="buttons">
+        <button id="showAll" data-tip="Show every result">All</button>
+        <button id="showNone" data-tip="Hide every result">None</button>
+        <button id="showOnly" data-tip="Show only the selected result (or double-click a result)">Only selected</button>
+        <button id="closeResult" data-tip="Take the selected result out of the viewer (Reload brings it back)">Close</button>
+      </div>
+      <div id="results" class="tree"></div>
+      <div id="treeSplit" data-tip="Drag to give the list or the selected result more room; double-click for the usual split"></div>
+      <div id="details"></div>
+      <div id="markersHolder" hidden><div id="markersBlock">
+      <h2>Markers</h2>
+      <label class="check" data-tip="An open circle where each path starts, a filled one where it ends"><input type="checkbox" id="showMarkers"> start / end markers</label>
+      <label class="check" data-tip="Dots along each path at every interval of a time column, labelled where there is room"><input type="checkbox" id="showTimeMarks"> time markers</label>
+      <label class="row" data-tip="The time column the markers follow; in distance / time mode the one on the time axis (the markers then use the other)"><span id="timeColumnLabel">Markers use</span> <select id="timeColumn"></select></label>
+      <label class="row" data-tip="A marker every this much of the time column; leave it empty for a round interval giving about ten">every <input id="timeInterval" size="8" placeholder="auto"> <button id="timeAuto" data-tip="Back to a round interval giving about ten markers">Auto</button></label>
+      <label class="check" data-tip="An open square at the closest point of each whole orbit, where a run's log says where its orbits end"><input type="checkbox" id="showPeri"> periapsis</label>
+      <label class="check" data-tip="An open diamond at the farthest point of each whole orbit"><input type="checkbox" id="showApo"> apoapsis</label>
+      <label class="row" data-tip="Mark the periapsis and apoapsis of every Nth orbit only (the first, then every N on): 1 marks them all">on every <input id="apsisEvery" type="number" min="1" step="1" value="1"> orbits</label>
+      </div></div>
+    </section>
+    <section data-panel="view">
+      <label class="row" data-tip="X / Y path: each path in the plane. Distance / time: each path's distance from the origin against a time column"><span>Plot</span> <select id="mode"><option value="xy">X / Y path</option><option value="time">Distance / time</option></select></label>
+      <label class="row" data-tip="The unit distances are shown in"><span>Units</span> <select id="unit"></select></label>
+      <label class="check xyOnly" data-tip="A metre as long across as up, so circles look round"><input type="checkbox" id="equalAspect"> equal aspect</label>
+      <label class="check timeOnly" data-tip="Time as ct, in the distance unit, on a 1:1 scale: light with no gravity goes at 45°"><input type="checkbox" id="ctTime"> time as ct (light at 45°)</label>
+      <label class="check timeOnly" data-tip="Distance runs right to left, 0 on the right"><input type="checkbox" id="reverseX"> reverse distance (0 on the right)</label>
+      <label class="check" data-tip="A logarithmic x axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logX"> log x</label>
+      <label class="check" data-tip="A logarithmic y axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logY"> log y</label>
+      <label class="check" data-tip="Grid lines at the axes' ticks"><input type="checkbox" id="showGrid"> grid</label>
+      <div class="buttons">
+        <button id="zoomIn" data-tip="Zoom in on the middle of the plot (+)">Zoom in</button>
+        <button id="zoomOut" data-tip="Zoom out (−)">Zoom out</button>
+        <button id="fit" data-tip="Fit the plot to the shown paths (0, or double-click the plot)">Fit</button>
+        <button id="rangeButton" data-tip="Type in the range of each axis">Range…</button>
+      </div>
+      <div id="range" hidden>
+        <label class="row" data-tip="The x axis's range, in its unit">x from <input id="rangeX0" size="9"> to <input id="rangeX1" size="9"></label>
+        <label class="row" data-tip="The y axis's range, in its unit">y from <input id="rangeY0" size="9"> to <input id="rangeY1" size="9"></label>
+        <button id="rangeApply" data-tip="Show this range">Apply</button> <span class="note">in the axes' units</span>
+      </div>
+      <p class="note">Drag to pan, scroll to zoom, shift-drag to zoom to a box, double-click to fit; arrow keys pan, + and − zoom.</p>
+      <h2>Legends</h2>
+      <label class="check" data-tip="The paths' names and colours, top right"><input type="checkbox" id="showPathLegend"> path legend</label>
+      <label class="check" data-tip="What the background's arrows, lines and colours mean, bottom left"><input type="checkbox" id="showFieldKey"> background key</label>
+      <label class="check" data-tip="The time markers' interval, above the plot"><input type="checkbox" id="showMarkNote"> marker interval</label>
+      <label class="check" data-tip="The time beside each time marker"><input type="checkbox" id="showMarkLabels"> marker times</label>
+      <label class="check" data-tip="Each body's mass (and spin) under it"><input type="checkbox" id="showBodyLabels"> body labels</label>
+      <div class="buttons"><button id="legendsAll" data-tip="Show every legend and label">All</button><button id="legendsNone" data-tip="Hide every legend and label">None</button></div>
+    </section>
+    <section data-panel="background">
+      <label class="row" data-tip="The background drawn behind the paths: one from the run's backgrounds file, or the bodies of a result's environment"><span>Background</span> <select id="background"></select></label>
+      <p id="bgDescription" class="note"></p>
+      <h2>The flow</h2>
+      <label class="check" data-tip="Arrows of the flow of space, u, scaled from what is on screen"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
+      <label class="check" data-tip="Arrows of the acceleration of space, g: how fast the flow speeds up"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
+      <label class="check" data-tip="A field drawn as colour, red where it is positive and blue where negative (a wave's strain, say)"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
+      <label class="check" data-tip="Arcs showing how fast space turns things round a spinning hole, and which way"><input type="checkbox" id="showTwist"> twist arcs (round a spinning hole)</label>
+      <label class="check" data-tip="Lines the background carries, such as the seam where the bodies' regions of flow meet"><input type="checkbox" id="showSeam"> lines (the seam)</label>
+      <label class="check" data-tip="Lines where space flows at the same speed, labelled in km/s: from the background's u, else the bodies' escape speed"><input type="checkbox" id="showContours"> lines of equal |u|</label>
+      <label class="check" data-tip="The paths space itself takes, out of each body against the flow. In distance / time, the flow line repeated up the time axis"><input type="checkbox" id="showFlowLines"> flow lines (the paths of space)</label>
+      <label class="check" data-tip="Distance / time only: light's speed outwards and inwards at each point, u ± c, as a cone"><input type="checkbox" id="showCones"> light cones (distance / time)</label>
+      <h2>Bodies</h2>
+      <label class="check" data-tip="Each body: black for a black hole, white otherwise"><input type="checkbox" id="showBodies"> bodies</label>
+      <label class="check" data-tip="Each body's horizon, 2GM/c² (Kerr's r+ for a spinning hole), and a spinning hole's ergosphere and ring singularity"><input type="checkbox" id="showSchwarzschild"> horizons</label>
+      <label class="check" data-tip="One hole's circular photon orbits and innermost stable circular orbits, with its spin and against it"><input type="checkbox" id="showSpecialOrbits"> photon orbits and ISCO (one hole)</label>
+      <label class="check" data-tip="Spinning bodies turning the way they spin (not at their real speed)"><input type="checkbox" id="showSpin"> spinning bodies</label>
+      <p class="note">Options greyed out have no data for the background shown: hover on one to see why.</p>
+    </section>
     </div>
   </aside>
   <div id="replay">

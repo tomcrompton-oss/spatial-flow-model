@@ -54,16 +54,33 @@ when it is built.
 - To open runs straight from `logs/`, serve the project folder (`python3 -m http.server` from it), then open
   `http://localhost:8000/web/index.html?run=../logs/<study>/<run>/<view>.full.json`.
 
+### The panel
+
+The panel beside the plot has three tabs: **Results** (which results are shown, how each is drawn, and the
+markers), **View** (what is plotted, units, axes, zoom and legends) and **Background** (the background and
+the flow, bodies and horizons). Drag its edge to make it wider or narrower; a double-click puts it back. Every control
+has hover help, and one greyed out says why it isn't available.
+
+The Results tab lists the results as a tree: each environment (the bodies results share), its results, and each
+result's orbits, every level folding open and shut, with a box to show or hide all of it. Under the tree, the selected
+result has three tabs of its own: **Appearance** (with the markers), **Details** (its summary and log) and
+**Choose paths**. The list and the selected result scroll separately, and the line between them can be dragged to
+give either more room.
+
 ### What it shows
 
 - **Paths**, in the run's own colours and line styles, with a legend. Each result can be shown or hidden, and has
-  its own options in the results panel:
-    - **straight line**: the path with no gravity, dashed, its start carried on at its first velocity;
+  its own options:
+    - each path's **colour**, one of three ways: a **single colour**; a **transition** from a first colour to a last
+      through its orbits; or **shade**, the current orbit in full colour and each earlier one fainter. And its
+      **line style**;
+    - a **tangent**: the straight line along the path at a chosen moment (dragged to, or typed in), where it would go
+      with no gravity from then, in its own colour and style;
     - **end arrows**: each velocity-like pair (v, u, a) as an arrow where a path ends;
     - **orbits**: a run that goes round is split into orbits where its log says each ended. Each can be shown or
-      hidden, its periapsis and apoapsis marked, and the path coloured from a first colour to a last through them;
-    - each path's **colour and line style**, and **Choose paths…**: which column pairs are plotted, and one path per
-      value of a column;
+      hidden, or every Nth shown;
+    - **Choose paths**: which column pairs are plotted, any two columns as a pair, and one path per value of a
+      column;
     - a **summary** of the run (calculator, step, orbits, distances, speeds) and its **log**.
 - **Two views**: x / y, or **distance / time**, each path's distance from the origin against t or pt (as ct, with
   light at 45°, if wanted; distance can run right to left). Either axis can be **logarithmic**.
@@ -81,12 +98,12 @@ when it is built.
   use the background's $u$, or the bodies' escape speed where a run has none.
 - **One hole's circular photon orbits and innermost stable circular orbits**, with the spin and against it.
 - **A background key** for the arrows' and colours' scale. Arrows are scaled from what is on screen.
-- **Markers**: where each path starts and ends, and **time markers**, dots at every interval of t or pt (a round
-  interval, or one typed in), labelled where there is room.
+- **Markers**: where each path starts and ends; **time markers**, dots at every interval of t or pt (a round
+  interval, or one typed in), labelled where there is room; and each whole orbit's **periapsis** and **apoapsis**,
+  on every orbit or every Nth.
 - **Legends**: the paths' legend, the background key, the markers' interval and times, and body labels, each of
   which can be turned off.
 - **Units**: metres, kilometres, astronomical units or light-seconds, with equal aspect and a grid if wanted.
-- **Orbits shaded**: the current orbit in full colour, each earlier one fainter.
 
 Drag to pan, scroll to zoom at the pointer, shift-drag to zoom to a box, and double-click to fit; the arrow keys pan
 and + and − zoom. **Range…** takes each axis's range typed in, and the status line gives the point under the pointer.
@@ -99,7 +116,7 @@ keeping each result's settings.
 
 A run replays over 20 seconds at ×1, at speeds from ×0.1 to ×10. **Play** runs the shown results together; **play in
 turn** runs them one after another, each drawn over the last. The replay can pause, restart, loop, and be dragged to
-any moment. **Clear trails** draws the paths only from the replay's time on; **Restore trails** draws them whole again.
+any moment.
 
 ### The player
 
@@ -112,7 +129,7 @@ button to open the run full screen. It stays fitted to the run and doesn't pan o
 ```
 
 A run's `.prefs.json` sets how the player starts: which backgrounds are drawn, whether the legend shows, the view
-(x / y or distance / time, log axes), markers, and so on; its config sets each result's options (straight line, end
+(x / y or distance / time, log axes), markers, and so on; its config sets each result's options (tangent, end
 arrows, apsides, hidden orbits, colours). The player shows only what these ask for: the desktop viewer's markers and
 time markers, on there by default, are off here unless a run's preferences turn them on.
 
