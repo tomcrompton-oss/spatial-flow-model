@@ -57,8 +57,7 @@ when it is built.
 ### The panel
 
 The panel beside the plot has three tabs: **Results** (which results are shown, how each is drawn, and the
-markers), **View** (what is plotted, units, axes, zoom and legends) and **Background** (the background and
-the flow, bodies and horizons). Drag its edge to make it wider or narrower; a double-click puts it back. Every control
+markers), **View** and **Background** (the background and the flow, bodies and horizons). Drag its edge to make it wider or narrower; a double-click puts it back. Every control
 has hover help, and one greyed out says why it isn't available.
 
 The Results tab lists the results as a tree: each environment (the bodies results share), its results, and each
@@ -66,6 +65,16 @@ result's orbits, every level folding open and shut, with a box to show or hide a
 result has three tabs of its own: **Appearance** (with the markers), **Details** (its summary and log) and
 **Choose paths**. The list and the selected result scroll separately, and the line between them can be dragged to
 give either more room.
+
+The View tab has five parts:
+
+- **Plot**: x / y or distance / time, the units, equal aspect (or time as ct), and the grid.
+- **X axis** and **Y axis**: what each axis shows, whether it is logarithmic, and its range, which can be typed in.
+  Distance can also run right to left.
+- **Range**: a zoom slider, from a tenth of the fitted view to 10,000 times closer, and a joystick that moves the view.
+  Dragging the stick moves the view fast, and faster the further it is pushed. The buttons round it move the view a
+  small, precise step, and keep going while held. **Fit** fits the view to the paths again.
+- **Legends**: which legends and labels are shown.
 
 ### What it shows
 
@@ -109,7 +118,7 @@ give either more room.
 - **Units**: metres, kilometres, astronomical units or light-seconds, with equal aspect and a grid if wanted.
 
 Drag to pan, scroll to zoom at the pointer, shift-drag to zoom to a box, and double-click to fit; the arrow keys pan
-and + and − zoom. **Range…** takes each axis's range typed in, and the status line gives the point under the pointer.
+and + and − zoom. The status line gives the point under the pointer.
 Hovering on a path shows the nearest row's values.
 
 **Add…** adds another run folder's results to those open, to compare them, and **Reload** reads everything again,

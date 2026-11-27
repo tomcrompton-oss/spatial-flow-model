@@ -70,6 +70,19 @@
   aside .buttons button { padding: 2px 7px; }
   label.row { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
   label.row input { font: inherit; width: 7em; padding: 2px 4px; border: 1px solid var(--axis); border-radius: 4px; background: var(--surface); color: var(--ink); }
+  .axisName { margin: 0 0 4px; }
+  .zoomRow input[type=range] { flex: 1; min-width: 80px; width: auto; }
+  .zoomRow output { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; }
+  .joystickRow { display: flex; gap: 14px; align-items: center; margin: 6px 0; }
+  .buttons.stacked { display: flex; flex-direction: column; gap: 6px; }
+  #joystick { display: grid; grid-template-columns: 26px 92px 26px; grid-template-rows: 26px 92px 26px; gap: 2px; flex: none; }
+  #joystick .nudge { padding: 0; font-size: 11px; line-height: 1; border-radius: 6px; touch-action: none; }
+  #joystick .up { grid-area: 1 / 2; } #joystick .left { grid-area: 2 / 1; } #joystick .right { grid-area: 2 / 3; } #joystick .down { grid-area: 3 / 2; }
+  #stickPad { grid-area: 2 / 2; position: relative; border-radius: 50%; border: 1px solid var(--axis); background: var(--surface); touch-action: none; cursor: grab; }
+  #stickPad::before, #stickPad::after { content: ""; position: absolute; background: var(--grid); }
+  #stickPad::before { left: 50%; top: 10%; bottom: 10%; width: 1px; } #stickPad::after { top: 50%; left: 10%; right: 10%; height: 1px; }
+  #stickKnob { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--ink2); opacity: .85; z-index: 1; pointer-events: none; transition: transform .12s ease-out; }
+  #stickPad.held { cursor: grabbing; } #stickPad.held #stickKnob { transition: none; }
   body:not(.time) .timeOnly, body.time .xyOnly { display: none; }
   #status { margin-left: auto; color: var(--ink2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .result .count { margin-left: auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; flex: none; }
@@ -232,24 +245,35 @@
       </div></div>
     </section>
     <section data-panel="view">
+      <h2>Plot</h2>
       <label class="row" data-tip="X / Y path: each path in the plane. Distance / time: each path's distance from the origin against a time column"><span>Plot</span> <select id="mode"><option value="xy">X / Y path</option><option value="time">Distance / time</option></select></label>
       <label class="row" data-tip="The unit distances are shown in"><span>Units</span> <select id="unit"></select></label>
       <label class="check xyOnly" data-tip="A metre as long across as up, so circles look round"><input type="checkbox" id="equalAspect"> equal aspect</label>
       <label class="check timeOnly" data-tip="Time as ct, in the distance unit, on a 1:1 scale: light with no gravity goes at 45°"><input type="checkbox" id="ctTime"> time as ct (light at 45°)</label>
-      <label class="check timeOnly" data-tip="Distance runs right to left, 0 on the right"><input type="checkbox" id="reverseX"> reverse distance (0 on the right)</label>
-      <label class="check" data-tip="A logarithmic x axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logX"> log x</label>
-      <label class="check" data-tip="A logarithmic y axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logY"> log y</label>
       <label class="check" data-tip="Grid lines at the axes' ticks"><input type="checkbox" id="showGrid"> grid</label>
-      <div class="buttons">
-        <button id="zoomIn" data-tip="Zoom in on the middle of the plot (+)">Zoom in</button>
-        <button id="zoomOut" data-tip="Zoom out (−)">Zoom out</button>
-        <button id="fit" data-tip="Fit the plot to the shown paths (0, or double-click the plot)">Fit</button>
-        <button id="rangeButton" data-tip="Type in the range of each axis">Range…</button>
-      </div>
-      <div id="range" hidden>
-        <label class="row" data-tip="The x axis's range, in its unit">x from <input id="rangeX0" size="9"> to <input id="rangeX1" size="9"></label>
-        <label class="row" data-tip="The y axis's range, in its unit">y from <input id="rangeY0" size="9"> to <input id="rangeY1" size="9"></label>
-        <button id="rangeApply" data-tip="Show this range">Apply</button> <span class="note">in the axes' units</span>
+      <h2>X axis</h2>
+      <p class="note axisName" id="xAxisName" data-tip="What the x axis shows, and its unit"></p>
+      <label class="check" data-tip="A logarithmic x axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logX"> logarithmic</label>
+      <label class="check timeOnly" data-tip="Distance runs right to left, 0 on the right"><input type="checkbox" id="reverseX"> reversed (0 on the right)</label>
+      <label class="row" data-tip="The x axis's range, in its unit: type it in and press Return, or Apply below">from <input id="rangeX0" size="9"> to <input id="rangeX1" size="9"></label>
+      <h2>Y axis</h2>
+      <p class="note axisName" id="yAxisName" data-tip="What the y axis shows, and its unit"></p>
+      <label class="check" data-tip="A logarithmic y axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logY"> logarithmic</label>
+      <label class="row" data-tip="The y axis's range, in its unit: type it in and press Return, or Apply below">from <input id="rangeY0" size="9"> to <input id="rangeY1" size="9"></label>
+      <h2>Range</h2>
+      <label class="row zoomRow" data-tip="How far in the plot is zoomed, against the fitted view (×1). Drag to zoom about the middle of the plot"><span>Zoom</span> <input type="range" id="zoomSlider" min="-1" max="4" step="0.01" value="0"> <output id="zoomValue">×1</output></label>
+      <div class="joystickRow">
+        <div id="joystick" data-tip="Moves the view. Drag the stick for fast moves: the further from the middle, the faster. Click a button at the edge for a small, precise step; hold it to keep going">
+          <button class="nudge up" data-dir="0,1" data-tip="Move the view up a little (hold to keep going)" aria-label="Move up">▲</button>
+          <button class="nudge left" data-dir="-1,0" data-tip="Move the view left a little (hold to keep going)" aria-label="Move left">◀</button>
+          <div id="stickPad" data-tip="Drag the stick to move the view: the further from the middle, the faster"><div id="stickKnob"></div></div>
+          <button class="nudge right" data-dir="1,0" data-tip="Move the view right a little (hold to keep going)" aria-label="Move right">▶</button>
+          <button class="nudge down" data-dir="0,-1" data-tip="Move the view down a little (hold to keep going)" aria-label="Move down">▼</button>
+        </div>
+        <div class="buttons stacked">
+          <button id="fit" data-tip="Fit the plot to the shown paths (0, or double-click the plot)">Fit</button>
+          <button id="rangeApply" data-tip="Show the x and y ranges typed in above">Apply ranges</button>
+        </div>
       </div>
       <p class="note">Drag to pan, scroll to zoom, shift-drag to zoom to a box, double-click to fit; arrow keys pan, + and − zoom.</p>
       <h2>Legends</h2>

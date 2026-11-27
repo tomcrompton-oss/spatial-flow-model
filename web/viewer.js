@@ -648,6 +648,7 @@ function fit() {
   const padX = (x1 - x0 || Math.abs(x0) || 1) * 0.08, padY = (y1 - y0 || Math.abs(y0) || 1) * 0.08;
   state.view = [x0 - padX, x1 + padX, y0 - padY, y1 + padY];
   equalise();
+  state.fitSpan = state.view[1] - state.view[0];
   draw();
 }
 
@@ -679,6 +680,75 @@ function pan(fx, fy) {
   const v = state.view, dx = (v[1] - v[0]) * fx * (flipX() ? -1 : 1), dy = (v[3] - v[2]) * fy;
   state.view = [v[0] + dx, v[1] + dx, v[2] + dy, v[3] + dy];
   draw();
+}
+
+/* the View tab's Range: the zoom slider (log10 of the zoom against the fitted view) and each axis's typed range,
+   kept up to date as the view moves (but not a box being typed in) */
+const RANGE_INPUTS = ['rangeX0', 'rangeX1', 'rangeY0', 'rangeY1'];
+function syncRange() {
+  const v = state.view, [ax, ay] = axes();
+  $('xAxisName').textContent = ax.label; $('yAxisName').textContent = ay.label;
+  if (state.fitSpan) {
+    const level = state.fitSpan / (v[1] - v[0]);
+    if (document.activeElement !== $('zoomSlider')) $('zoomSlider').value = Math.log10(level);
+    $('zoomValue').textContent = '×' + (level >= 100 ? Math.round(level) : level >= 10 ? level.toFixed(1) : level.toPrecision(2));
+  }
+  const show = (x, a) => a.log ? fmt(Math.pow(10, x)) : fmt(x / a.scale);
+  const values = [show(v[0], ax), show(v[1], ax), show(v[2], ay), show(v[3], ay)];
+  RANGE_INPUTS.forEach((id, i) => { if (document.activeElement !== $(id)) $(id).value = values[i]; });
+}
+
+function applyRange() {
+  const [ax, ay] = axes(), read = (id, a) => { const v = +$(id).value; return a.log ? (v > 0 ? Math.log10(v) : NaN) : v * a.scale; };
+  const v = RANGE_INPUTS.map((id, i) => read(id, i < 2 ? ax : ay));
+  if (v.some(x => !isFinite(x)) || v[1] <= v[0] || v[3] <= v[2]) { message('each range needs two numbers, the second larger (above 0 on a log axis)'); return; }
+  state.view = v; draw();
+}
+
+/* the joystick: dragging the stick moves the view continuously, faster the further it is pushed (up to
+   JOYSTICK_SPEED views a second); the buttons round it each move it by NUDGE_STEP of the view, repeating while held */
+const JOYSTICK_SPEED = 1.5, NUDGE_STEP = 0.02;
+function setupJoystick() {
+  const pad = $('stickPad'), knob = $('stickKnob');
+  let push = null, last = 0, frame = 0;
+  const move = now => {
+    if (!push) { frame = 0; return; }
+    const dt = Math.min((now - last) / 1000, 0.1), [px, py] = push, d = Math.hypot(px, py);
+    last = now;
+    //pushed d of the way out, the view moves at JOYSTICK_SPEED d² views a second
+    if (d > 0.08) { const speed = JOYSTICK_SPEED * d; pan(px * speed * dt, py * speed * dt); }
+    frame = requestAnimationFrame(move);
+  };
+  const aim = e => {
+    const r = pad.getBoundingClientRect(), half = r.width / 2;
+    let x = (e.clientX - r.left - half) / half, y = (e.clientY - r.top - half) / half;
+    const d = Math.hypot(x, y); if (d > 1) { x /= d; y /= d; }
+    push = [x, -y];
+    knob.style.transform = `translate(${x * half * 0.7}px, ${y * half * 0.7}px)`;
+  };
+  pad.onpointerdown = e => {
+    if (!state.view) return;
+    try { pad.setPointerCapture(e.pointerId); } catch (err) {}
+    pad.classList.add('held'); aim(e);
+    if (!frame) { last = performance.now(); frame = requestAnimationFrame(move); }
+  };
+  pad.onpointermove = e => { if (push) aim(e); };
+  pad.onpointerup = pad.onpointercancel = pad.onlostpointercapture = () => {
+    push = null; pad.classList.remove('held'); knob.style.transform = '';
+  };
+  for (const button of document.querySelectorAll('#joystick .nudge')) {
+    const [dx, dy] = button.dataset.dir.split(',').map(Number);
+    let timer = null;
+    const stop = () => { clearTimeout(timer); clearInterval(timer); timer = null; };
+    button.onpointerdown = e => {
+      if (!state.view) return;
+      e.preventDefault(); stop();
+      pan(dx * NUDGE_STEP, dy * NUDGE_STEP);
+      timer = setTimeout(() => { timer = setInterval(() => pan(dx * NUDGE_STEP, dy * NUDGE_STEP), 60); }, 400);
+    };
+    button.onpointerup = button.onpointerleave = button.onpointercancel = stop;
+    button.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pan(dx * NUDGE_STEP, dy * NUDGE_STEP); } };
+  }
 }
 
 function niceStep(span, count) {
@@ -733,6 +803,7 @@ function draw() {
   syncAvailable();
   $('empty').style.display = state.results.length ? 'none' : 'flex';
   if (!state.view) return;
+  if (!PLAYER) syncRange();
   const {l, t, r, b} = plotRect();
   ctx.fillStyle = css('--surface'); ctx.fillRect(l, t, r - l, b - t);
   ctx.save();
@@ -2803,22 +2874,14 @@ function setup() {
   $('speed').onchange = () => { state.prefs.replaySpeed = $('speed').value; };
   $('background').onchange = () => { state.background = $('background').value; showDescription(); showResults(); draw(); };
   $('fit').onclick = fit;
-  $('zoomIn').onclick = () => zoom(1 / ZOOM_STEP);
-  $('zoomOut').onclick = () => zoom(ZOOM_STEP);
-  $('rangeButton').onclick = () => {
-    const form = $('range');
-    form.hidden = !form.hidden;
-    if (!form.hidden && state.view) {
-      const [ax, ay] = axes(), show = (v, a) => a.log ? fmt(Math.pow(10, v)) : fmt(v / a.scale);
-      [$('rangeX0').value, $('rangeX1').value, $('rangeY0').value, $('rangeY1').value] = [show(state.view[0], ax), show(state.view[1], ax), show(state.view[2], ay), show(state.view[3], ay)];
-    }
+  $('zoomSlider').oninput = () => {
+    if (!state.view || !state.fitSpan) return;
+    const now = state.fitSpan / (state.view[1] - state.view[0]), want = Math.pow(10, +$('zoomSlider').value);
+    zoom(now / want);
   };
-  $('rangeApply').onclick = () => {
-    const [ax, ay] = axes(), read = (id, a) => { const v = +$(id).value; return a.log ? (v > 0 ? Math.log10(v) : NaN) : v * a.scale; };
-    const v = [read('rangeX0', ax), read('rangeX1', ax), read('rangeY0', ay), read('rangeY1', ay)];
-    if (v.some(x => !isFinite(x)) || v[1] <= v[0] || v[3] <= v[2]) { message('each range needs two numbers, the second larger (above 0 on a log axis)'); return; }
-    state.view = v; draw();
-  };
+  $('rangeApply').onclick = applyRange;
+  for (const id of RANGE_INPUTS) $(id).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); applyRange(); $(id).blur(); } };
+  setupJoystick();
   $('legendsAll').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = true; markState.key = null; syncControls(); draw(); };
   $('legendsNone').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = false; markState.key = null; syncControls(); draw(); };
   $('showAll').onclick = () => { state.results.forEach(r => { r.visible = true; }); resultsChanged(); };
