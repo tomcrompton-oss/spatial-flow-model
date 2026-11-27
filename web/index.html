@@ -95,10 +95,19 @@
   .tree .env .mark { color: var(--accent); flex: none; }
   .tree .res { padding-left: 20px; }
   .tree .orb { padding-left: 46px; font-size: 12px; }
-  .tree .fold { width: 20px; height: 20px; flex: none; color: var(--ink2); user-select: none; text-align: center; font-size: 15px; line-height: 20px; border-radius: 4px; }
-  .tree .fold:not(:empty):hover { background: var(--grid); color: var(--ink); }
-  #details summary { cursor: pointer; font-size: 13px; padding: 2px 0; }
-  #details summary::marker { font-size: 15px; }
+  /* fold triangles drawn as shapes, the same size in every browser (a font's triangle is tiny in Safari) */
+  .fold { width: 20px; height: 20px; flex: none; color: var(--ink2); user-select: none; border-radius: 4px; position: relative; }
+  .fold.open, .fold.shut { cursor: pointer; }
+  .fold.open:hover, .fold.shut:hover { background: var(--grid); color: var(--ink); }
+  .fold.shut::before, .fold.open::before, #details summary::before {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-style: solid; }
+  .fold.shut::before, #details details:not([open]) > summary::before {
+    border-width: 6px 0 6px 9px; border-color: transparent transparent transparent currentColor; transform: translate(-35%, -50%); }
+  .fold.open::before, #details details[open] > summary::before {
+    border-width: 9px 6px 0 6px; border-color: currentColor transparent transparent transparent; transform: translate(-50%, -35%); }
+  #details summary { cursor: pointer; font-size: 13px; padding: 3px 0 3px 22px; position: relative; list-style: none; color: var(--ink); }
+  #details summary::-webkit-details-marker { display: none; }
+  #details summary::before { left: 9px; color: var(--ink2); }
   /* the selected result's own tabs */
   .subtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grid); margin: 8px 0 6px; }
   .subtabs button { border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; background: transparent; color: var(--ink2); padding: 3px 9px; margin-bottom: -1px; font-size: 12px; }
@@ -110,6 +119,17 @@
   #details .pathBlock { border-top: 1px solid var(--grid); padding-top: 4px; margin-top: 4px; }
   #details #orbitEvery { width: 4em; }
   #apsisEvery { width: 4em; }
+  /* a background layer: its checkbox with a fold for its settings, which open under it */
+  .layerRow { display: flex; align-items: center; gap: 2px; margin-left: -4px; }
+  .layerRow label.check { flex: 1; margin: 2px 0; }
+  .layerSettings { margin: 2px 0 8px 22px; padding: 6px 8px; background: var(--surface); border: 1px solid var(--grid); border-radius: 6px; font-size: 12px; }
+  .layerSettings .colours { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .layerSettings .colours label { display: flex; gap: 4px; align-items: center; }
+  .layerSettings input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--axis); border-radius: 3px; background: none; }
+  .layerSettings .slider { display: grid; grid-template-columns: 5.2em 1fr 3.4em; gap: 6px; align-items: center; margin: 2px 0; }
+  .layerSettings .slider input { width: 100%; }
+  .layerSettings .slider span:last-child { text-align: right; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .layerSettings button { margin-top: 4px; padding: 1px 8px; font-size: 12px; }
   /* the player (?player in the address): the plot and a music-player bar only, for pages that embed a run */
   /* the play controls: one line under the plot, in the full viewer and the player alike */
   #replay { display: none; }

@@ -96,6 +96,9 @@ give either more room.
 - **Drawn from the flow**: lines of equal $|u|$, and flow lines, the paths of space out of each body. Against time,
   the flow line repeated up the time axis, and **light cones**, light's speed $u \pm c$ outwards and inwards. They
   use the background's $u$, or the bodies' escape speed where a run has none.
+- **Each layer's look**: the triangle beside a background layer opens its settings: its colour (a colour map's two),
+  and sliders for its density (arrows, arcs and cones closer together, more flow lines, more levels of $|u|$, finer
+  colour-map cells), size and line width. They are kept in the browser, not in the run's files.
 - **One hole's circular photon orbits and innermost stable circular orbits**, with the spin and against it.
 - **A background key** for the arrows' and colours' scale. Arrows are scaled from what is on screen.
 - **Markers**: where each path starts and ends; **time markers**, dots at every interval of t or pt (a round

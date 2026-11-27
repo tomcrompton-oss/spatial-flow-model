@@ -39,6 +39,28 @@ const CONE = '#8a7fd0', FLOW_LINE = '#c4a46e', ISCO_COLOUR = '#a16207';         
 const WITH_DASH = [8, 4], AGAINST_DASH = [3, 3];   //circular orbits going round with a hole's spin, and against it
 const FLOW_LINES = 20, CONTOUR_SPACING = 10, CONE_SIZE = 12;
 
+/* each background layer's look, adjustable in the Background tab: its colour (a page colour by name, '--muted', or a
+   hex), and density, size and line width as factors of the usual (density: arrows, arcs and cones closer together,
+   more flow lines, more levels of |u|, finer colour-map cells). kept in this browser, not in the run's files */
+const LAYERS = {
+  u: {box: 'showFlow', name: 'u arrows', defaults: {colour: '--muted', density: 1, size: 1, width: 1}},
+  g: {box: 'showGravity', name: 'g arrows', defaults: {colour: '--g-arrow', density: 1, size: 1, width: 1}},
+  scalar: {box: 'showScalar', name: 'colour map', defaults: {plus: '#d6452a', minus: '#2a6fd6', density: 1, strength: 1}},
+  twist: {box: 'showTwist', name: 'twist arcs', defaults: {colour: '#0f766e', density: 1, size: 1, width: 1}},
+  seam: {box: 'showSeam', name: 'lines', defaults: {colour: '--ink', width: 1.5}},
+  contours: {box: 'showContours', name: 'lines of equal |u|', defaults: {colour: '--axis', density: 1, width: 1.5}},
+  flowLines: {box: 'showFlowLines', name: 'flow lines', defaults: {colour: '#c4a46e', density: 1, width: 1}},
+  cones: {box: 'showCones', name: 'light cones', defaults: {colour: '#8a7fd0', density: 1, size: 1, width: 1}},
+};
+const layerColour = c => c && c.startsWith('--') ? css(c) : c;
+/* a layer's settings: its defaults, with what has been changed */
+const layerLook = name => layer(name);
+function layer(name) {
+  const out = {...LAYERS[name].defaults, ...(state.layers[name] || {})};
+  for (const k of ['colour', 'plus', 'minus']) if (out[k]) out[k] = layerColour(out[k]);
+  return out;
+}
+
 const state = {
   results: [],         //{name, file, data, paths, log, env, visible, color}
   environments: [],    //{key, name, bodies, frames}
@@ -50,6 +72,7 @@ const state = {
   trailStart: null,    //replay: paths drawn from this time, or from the start (null); nothing sets it at present (Clear trails was taken out)
   timeInterval: '',    //time markers: every this much of the marker column ('' = a round interval, about 10)
   sources: [],         //what is open: [{source, fullName}], for Reload
+  layers: {},          //each background layer's changed settings (LAYERS), by layer
 };
 
 const $ = id => document.getElementById(id);
@@ -477,7 +500,8 @@ function environmentFor(log, frameCache) {
 
 function describe(log, frames, files) {
   let name = log.bodies.length ? log.bodies.length + (log.bodies.length === 1 ? ' body: ' : ' bodies: ') + log.bodies.map(b =>
-    (+(b.mass / MS).toPrecision(4)) + ' MS ' + (b.black ? 'black' : 'white') + ' at (' + fmt(b.x / AU) + ', ' + fmt(b.y / AU) + ') AU').join(', ')
+    (+(b.mass / MS).toPrecision(4)) + ' MS ' + (b.black ? 'black' : 'white') + (b.spin ? ', spin ' + (+b.spin.toPrecision(3)) : '') +
+    ' at (' + fmt(b.x / AU) + ', ' + fmt(b.y / AU) + ') AU').join(', ')
     : 'No bodies';
   if (log.direction && log.direction.startsWith('down zero-energy paths'))
     name += log.direction.includes('exact two-body solution') ? ', eikonal flow (exact)' : ', eikonal flow';
@@ -1305,13 +1329,14 @@ function drawField(env) {
   if (frames.layer.s && state.prefs.showScalar) {
     drawScalar((x, y) => frameSample(frames.layer.s, 's', x, y, t), frames.reference.s);
     const moment = when(frames.layer.s);
-    keys.push([SCALAR_PLUS, env.scalar + ': red +' + fmt(frames.reference.s) + ', blue \u2212' + fmt(frames.reference.s) + moment + named]);
+    keys.push([layer('scalar').plus, env.scalar + ': red +' + fmt(frames.reference.s) + ', blue \u2212' + fmt(frames.reference.s) + moment + named]);
   }
-  for (const [show, field, colour, label, offset] of [
-      [state.prefs.showFlow, 'u', css('--muted'), 'u', 0],
-      [state.prefs.showGravity, 'a', css('--g-arrow'), 'g, the acceleration of space', 0.5]]) {
+  for (const [show, field, look, label, offset] of [
+      [state.prefs.showFlow, 'u', layer('u'), 'u', 0],
+      [state.prefs.showGravity, 'a', layer('g'), 'g, the acceleration of space', 0.5]]) {
     if (!show || !frames.layer[field]) continue;
-    drawArrows((x, y) => frameSample(frames.layer[field], field, x, y, t), colour, frames.reference[field], offset);
+    const colour = look.colour;
+    drawArrows((x, y) => frameSample(frames.layer[field], field, x, y, t), look, frames.reference[field], offset);
     const ref = frames.reference[field];
     const moment = when(frames.layer[field]);
     keys.push([colour, label + '  ' + (field === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment + named, null, null, 'arrow']);
@@ -1387,7 +1412,7 @@ function specialOrbits() {
    (the plane's), and the horizons' key; returns key entries */
 function drawOverlaysUnder() {
   const keys = [], env = overlayEnv(), t = fieldTime() ?? 0;
-  if (state.prefs.showContours && drawContours(t)) keys.push([css('--axis'), 'lines of equal |u|, km/s (' + flowSource() + ')']);
+  if (state.prefs.showContours && drawContours(t)) keys.push([layer('contours').colour, 'lines of equal |u|, km/s (' + flowSource() + ')']);
   if (state.prefs.showSpecialOrbits) {
     const orbits = specialOrbits();
     for (const [kind, sense, R] of orbits) {
@@ -1403,8 +1428,8 @@ function drawOverlaysUnder() {
   }
   if (planeView() && state.prefs.showFlowLines && drawFlowLines(t)) {
     const one = env && env.bodies.length === 1;
-    keys.push([FLOW_LINE, one ? 'flow lines: the paths of space, straight ' + (env.bodies[0].black ? 'in to the hole' : 'out of the body')
-                              : 'flow lines: ' + FLOW_LINES + ' per body, out against the flow (' + flowSource() + ')']);
+    keys.push([layer('flowLines').colour, one ? 'flow lines: the paths of space, straight ' + (env.bodies[0].black ? 'in to the hole' : 'out of the body')
+                              : 'flow lines: ' + flowLineCount() + ' per body, out against the flow (' + flowSource() + ')']);
   }
   if (!PLAYER && state.prefs.showSchwarzschild && env && env.bodies.length) {
     const radii = [...new Set(env.bodies.map(b => bodyCircles(b)[0][0]))].sort((a, b) => a - b);
@@ -1469,8 +1494,8 @@ function drawContours(t) {
   if (finite.length < 4) return false;
   const lo = finite[Math.floor(0.02 * finite.length)], hi = finite[Math.floor(0.98 * finite.length)];
   if (!(hi > lo)) return false;
-  const step = niceStep(hi - lo, 8), labelled = [];
-  ctx.lineWidth = 1.5; ctx.strokeStyle = css('--axis');
+  const look = layer('contours'), step = niceStep(hi - lo, 8 * look.density), labelled = [];
+  ctx.lineWidth = look.width; ctx.strokeStyle = look.colour;
   let drawn = false;
   for (let level = Math.ceil(lo / step) * step; level < hi; level += step) {
     const segments = [];
@@ -1511,25 +1536,26 @@ function drawContours(t) {
    several, each body's lines followed out against the flow (with it, from a white body), until they leave the view,
    meet the flow coming the other way (a seam), or the flow has no value; worked out once for each view */
 let flowLineCache = {key: null, lines: []};
+const flowLineCount = () => Math.max(2, Math.round(FLOW_LINES * layer('flowLines').density));
 function drawFlowLines(t) {
   const env = overlayEnv();
   if (!env || !env.bodies.length) return false;
   const v = state.view, {l, r} = plotRect(), perPixel = (v[1] - v[0]) / (r - l);
-  const key = [env.key, v.join(), r - l, currentBackground() && currentBackground().name, t].join('|');
+  const count = flowLineCount(), key = [env.key, v.join(), r - l, currentBackground() && currentBackground().name, t, count].join('|');
   if (flowLineCache.key !== key) {
     const lines = [], span = Math.max(v[1] - v[0], v[3] - v[2]);
     const inReach = (x, y) => x > v[0] - span && x < v[1] + span && y > v[2] - span && y < v[3] + span;
     if (env.bodies.length === 1) {
       const body = env.bodies[0], start = Math.abs((body.spin || 0) * G * body.mass / C / C);
       const reach = Math.max(...[[v[0], v[2]], [v[0], v[3]], [v[1], v[2]], [v[1], v[3]]].map(([x, y]) => Math.hypot(x - body.x, y - body.y)));
-      for (let n = 0; n < FLOW_LINES; n++) {
-        const a = 2 * Math.PI * n / FLOW_LINES, c = Math.cos(a), s = Math.sin(a);
+      for (let n = 0; n < count; n++) {
+        const a = 2 * Math.PI * n / count, c = Math.cos(a), s = Math.sin(a);
         lines.push([[body.x + start * c, body.y + start * s], [body.x + reach * c, body.y + reach * s]]);
       }
     } else for (const body of env.bodies) {
       const sense = body.black ? -1 : 1;
-      for (let n = 0; n < FLOW_LINES; n++) {
-        const a = 2 * Math.PI * n / FLOW_LINES;
+      for (let n = 0; n < count; n++) {
+        const a = 2 * Math.PI * n / count;
         let x = body.x + 4 * perPixel * Math.cos(a), y = body.y + 4 * perPixel * Math.sin(a), last = null;
         const points = [[x, y]];
         for (let k = 0; k < 4000; k++) {
@@ -1550,7 +1576,8 @@ function drawFlowLines(t) {
     }
     flowLineCache = {key, lines};
   }
-  ctx.strokeStyle = FLOW_LINE; ctx.lineWidth = 1;
+  const look = layer('flowLines');
+  ctx.strokeStyle = look.colour; ctx.lineWidth = look.width;
   for (const points of flowLineCache.lines) {
     ctx.beginPath();
     points.forEach(([x, y], i) => { const [sx, sy] = toScreen(x, y); if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
@@ -1571,9 +1598,9 @@ function drawTimeBackground() {
   }
   if (state.prefs.showFlowLines) {
     const every = drawFlowLinesTime(t);
-    if (every) keys.push([FLOW_LINE, 'flow line: space moving at u (dd/dt = u), repeated every ' + fmt(every) + ' s']);
+    if (every) keys.push([layer('flowLines').colour, 'flow line: space moving at u (dd/dt = u), repeated every ' + fmt(every) + ' s']);
   }
-  if (state.prefs.showCones && drawCones(t)) keys.push([CONE, 'light cones: the local speed of light outwards and inwards, u \u00b1 c', null, null, 'cone']);
+  if (state.prefs.showCones && drawCones(t)) keys.push([layer('cones').colour, 'light cones: the local speed of light outwards and inwards, u \u00b1 c', null, null, 'cone']);
   return keys;
 }
 
@@ -1601,8 +1628,8 @@ function drawFlowLinesTime(t) {
       start = i;
     }
   if (!runs.length) return null;
-  const y0 = v[2] / tf, y1 = v[3] / tf, every = niceStep(y1 - y0, 8);
-  ctx.strokeStyle = FLOW_LINE; ctx.lineWidth = 1;
+  const look = layer('flowLines'), y0 = v[2] / tf, y1 = v[3] / tf, every = niceStep(y1 - y0, 8 * look.density);
+  ctx.strokeStyle = look.colour; ctx.lineWidth = look.width;
   let drawn = false;
   for (const [xs, ts] of runs) {
     const lo = Math.min(...ts), hi = Math.max(...ts);
@@ -1630,11 +1657,11 @@ function drawFlowLinesTime(t) {
 function drawCones(t) {
   const {l, t: top, r, b} = plotRect(), v = state.view, tf = state.prefs.ctTime ? C : 1;
   const kd = (flipX() ? -1 : 1) * (r - l) / (v[1] - v[0]), kt = (b - top) * tf / (v[3] - v[2]);   //pixels per metre, per second
-  const side = 2.2 * CONE_SIZE, shift = ARROW_SPACING * 0.25;
-  ctx.strokeStyle = ctx.fillStyle = CONE; ctx.lineWidth = 1;
+  const look = layer('cones'), spacing = ARROW_SPACING / look.density, side = 2.2 * CONE_SIZE * look.size, shift = spacing * 0.25;
+  ctx.strokeStyle = ctx.fillStyle = look.colour; ctx.lineWidth = look.width;
   let drawn = false;
-  for (let sy = top + shift; sy < b; sy += ARROW_SPACING)
-    for (let sx = l + shift; sx < r; sx += ARROW_SPACING) {
+  for (let sy = top + shift; sy < b; sy += spacing)
+    for (let sx = l + shift; sx < r; sx += spacing) {
       const [X] = toData(sx, sy), u = uAlong(X, t);
       if (!isFinite(u)) continue;
       let [[ox, oy], [ix, iy]] = [u + C, u - C].map(speed => {
@@ -1642,8 +1669,8 @@ function drawCones(t) {
         return [sx + side * dx / n, sy + side * dy / n];
       });
       let a = Math.hypot(ox - ix, oy - iy) / 2;
-      if (a > 0.45 * ARROW_SPACING) {
-        const f = 0.45 * ARROW_SPACING / a;
+      if (a > 0.45 * spacing) {
+        const f = 0.45 * spacing / a;
         [ox, oy, ix, iy] = [sx + (ox - sx) * f, sy + (oy - sy) * f, sx + (ix - sx) * f, sy + (iy - sy) * f];
         a = Math.hypot(ox - ix, oy - iy) / 2;
       }
@@ -1804,16 +1831,17 @@ function drawBackground(background) {
     if (ref) {
       drawScalar((x, y) => sampleBackground(background, 's', x, y, t), ref);
       const label = background.layers.find(l => l.type === 'field' && l.values.s).label;
-      keys.push([SCALAR_PLUS, label + ': red +' + fmt(ref) + ', blue \u2212' + fmt(ref) + moment]);
+      keys.push([layer('scalar').plus, label + ': red +' + fmt(ref) + ', blue \u2212' + fmt(ref) + moment]);
     }
   }
-  for (const [show, key, colour, label, offset] of [
-      [state.prefs.showFlow, 'u', css('--muted'), 'u', 0],
-      [state.prefs.showGravity, 'a', css('--g-arrow'), 'g, the acceleration of space', 0.5]]) {
+  for (const [show, key, look, label, offset] of [
+      [state.prefs.showFlow, 'u', layer('u'), 'u', 0],
+      [state.prefs.showGravity, 'a', layer('g'), 'g, the acceleration of space', 0.5]]) {
     if (!show || !backgroundHas(background, key)) continue;
     const ref = backgroundReference(background, key);
     if (!ref) continue;
-    drawArrows((x, y) => sampleBackground(background, key, x, y, t), colour, ref, offset);
+    const colour = look.colour;
+    drawArrows((x, y) => sampleBackground(background, key, x, y, t), look, ref, offset);
     keys.push([colour, label + '  ' + (key === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment, null, null, 'arrow']);
   }
   if (state.prefs.showTwist && backgroundHas(background, 't')) {
@@ -1821,14 +1849,15 @@ function drawBackground(background) {
     if (ref) {
       drawTwist((x, y) => sampleBackground(background, 't', x, y, t), ref);
       const label = background.layers.find(l => l.type === 'field' && l.values.t).label;
-      keys.push([TWIST, label + ': a full arc ' + fmt(ref) + ' rad/s' + moment, null, null, 'twist']);
+      keys.push([layer('twist').colour, label + ': a full arc ' + fmt(ref) + ' rad/s' + moment, null, null, 'twist']);
     }
   }
   if (state.prefs.showSeam)
     for (const layer of background.layers.filter(l => l.type === 'lines')) {
       const k = Math.floor(timeIndex(layer.times, t)), fr = layer.frame ? frameAt(layer.frame, t) : null;
       const c = fr ? Math.cos(fr.angle) : 1, s = fr ? Math.sin(fr.angle) : 0;
-      ctx.strokeStyle = css('--ink'); ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+      const look = layerLook('seam');
+      ctx.strokeStyle = look.colour; ctx.lineWidth = look.width; ctx.setLineDash([6, 4]);
       for (const flat of layer.lines[k]) {
         ctx.beginPath();
         for (let i = 0; i < flat.length; i += 2) {
@@ -1840,7 +1869,7 @@ function drawBackground(background) {
         ctx.stroke();
       }
       ctx.setLineDash([]);
-      keys.push([css('--ink'), layer.label + moment, [6, 4]]);
+      keys.push([look.colour, layer.label + moment, [6, 4]]);
     }
   if (keys.length) keys.push(['transparent', 'background: ' + background.name]);
   return keys;
@@ -1850,14 +1879,14 @@ function drawBackground(background) {
    its size over the run's scale (capped); nothing off the grid or where it is not a number */
 const SCALAR_CELL = 5, SCALAR_PLUS = '#d6452a', SCALAR_MINUS = '#2a6fd6';
 function drawScalar(sample, reference) {
-  const {l, t: top, r, b} = plotRect();
-  for (let sy = top; sy < b; sy += SCALAR_CELL)
-    for (let sx = l; sx < r; sx += SCALAR_CELL) {
-      const [x, y] = toData(sx + SCALAR_CELL / 2, sy + SCALAR_CELL / 2), v = sample(x, y);
+  const {l, t: top, r, b} = plotRect(), look = layer('scalar'), cell = Math.max(2, Math.round(SCALAR_CELL / look.density));
+  for (let sy = top; sy < b; sy += cell)
+    for (let sx = l; sx < r; sx += cell) {
+      const [x, y] = toData(sx + cell / 2, sy + cell / 2), v = sample(x, y);
       if (!v || !isFinite(v[0]) || v[0] === 0) continue;
-      ctx.globalAlpha = Math.min(1, Math.abs(v[0]) / reference) * 0.85;
-      ctx.fillStyle = v[0] > 0 ? SCALAR_PLUS : SCALAR_MINUS;
-      ctx.fillRect(sx, sy, SCALAR_CELL, SCALAR_CELL);
+      ctx.globalAlpha = Math.min(1, Math.min(1, Math.abs(v[0]) / reference) * 0.85 * look.strength);
+      ctx.fillStyle = v[0] > 0 ? look.plus : look.minus;
+      ctx.fillRect(sx, sy, cell, cell);
     }
   ctx.globalAlpha = 1;
 }
@@ -1869,15 +1898,16 @@ function speed(v) { return v >= 1e3 ? fmt(v / 1e3) + ' km/s' : fmt(v) + ' m/s'; 
    there (anticlockwise for a positive rate), its sweep the rate over reference (300 degrees at most); tiny ones left out */
 const TWIST = '#0f766e';
 function drawTwist(sample, reference) {
-  const {l, t: top, r, b} = plotRect(), shift = ARROW_SPACING * 0.75, radius = ARROW_SPACING * 0.2;
-  ctx.strokeStyle = TWIST; ctx.fillStyle = TWIST; ctx.lineWidth = 1;
-  for (let sy = top + shift; sy < b; sy += ARROW_SPACING)
-    for (let sx = l + shift; sx < r; sx += ARROW_SPACING) {
+  const look = layer('twist'), spacing = ARROW_SPACING / look.density;
+  const {l, t: top, r, b} = plotRect(), shift = spacing * 0.75, radius = spacing * 0.2 * look.size;
+  ctx.strokeStyle = look.colour; ctx.fillStyle = look.colour; ctx.lineWidth = look.width;
+  for (let sy = top + shift; sy < b; sy += spacing)
+    for (let sx = l + shift; sx < r; sx += spacing) {
       const [x, y] = toData(sx, sy), v = sample(x, y);
       if (!v || !isFinite(v[0]) || v[0] === 0) continue;
       const sweep = 300 / 180 * Math.PI * Math.min(1, Math.abs(v[0]) / reference);
       if (sweep < Math.PI / 12) continue;
-      twistArc(ctx, sx, sy, radius, sweep, v[0] > 0, 5);
+      twistArc(ctx, sx, sy, radius, sweep, v[0] > 0, 5 * Math.max(0.6, look.size));
     }
 }
 
@@ -1893,11 +1923,13 @@ function twistArc(c, sx, sy, radius, sweep, anticlockwise, head) {
   c.closePath(); c.fill();
 }
 
-function drawArrows(sample, colour, reference, offset) {
-  const {l, t: top, r, b} = plotRect(), longest = ARROW_SPACING * 0.8, shift = ARROW_SPACING * (0.5 + offset);
-  ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 1;
-  for (let sy = top + shift; sy < b; sy += ARROW_SPACING)
-    for (let sx = l + shift; sx < r; sx += ARROW_SPACING) {
+/* look: the layer's colour, density (arrows closer together), size (a full arrow longer) and line width */
+function drawArrows(sample, look, reference, offset) {
+  const spacing = ARROW_SPACING / look.density;
+  const {l, t: top, r, b} = plotRect(), longest = spacing * 0.8 * look.size, shift = spacing * (0.5 + offset);
+  ctx.strokeStyle = look.colour; ctx.fillStyle = look.colour; ctx.lineWidth = look.width;
+  for (let sy = top + shift; sy < b; sy += spacing)
+    for (let sx = l + shift; sx < r; sx += spacing) {
       const [x, y] = toData(sx, sy), v = sample(x, y);
       if (!v) continue;
       const size = Math.hypot(v[0], v[1]);
@@ -2439,7 +2471,7 @@ function showResults() {
   const node = (cls, tip) => { const n = document.createElement('div'); n.className = 'node ' + cls; n.dataset.tip = tip; return n; };
   const fold = (key, open, count, what) => {
     const f = document.createElement('span');
-    f.className = 'fold'; f.textContent = count ? (open ? '▾' : '▸') : '';
+    f.className = 'fold' + (count ? (open ? ' open' : ' shut') : '');
     if (count) {
       f.dataset.tip = (open ? 'Hide' : 'List') + ' its ' + count + ' ' + what;
       f.onclick = e => { e.stopPropagation(); folds.set(key, !open); showResults(); };
@@ -2740,7 +2772,7 @@ function setup() {
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
   SPEEDS.forEach(s => { $('speed').add(new Option(speedName(s), s)); $('pSpeed').add(new Option(speedName(s), s)); });
   setupPlayer();
-  if (!PLAYER) { setupTabs(); setupSplitter(); setupTreeSplit(); setupHelp(); }
+  if (!PLAYER) { setupTabs(); setupSplitter(); setupTreeSplit(); setupLayerSettings(); setupHelp(); }
   if (['appearance', 'details', 'paths'].includes(recall('detailTab'))) detailTab = recall('detailTab');
   for (const id of OPTION_BOXES)
     $(id).onchange = () => { state.prefs[id] = $(id).checked; if (id === 'showTimeMarks' || id === 'showMarkNote') markState.key = null; draw(); };
@@ -2886,6 +2918,66 @@ function setup() {
 /* remembered between visits, in this browser only (and not at all where storage is blocked) */
 const remember = (key, value) => { try { localStorage.setItem('flowViewer.' + key, value); } catch (e) { /* not kept */ } };
 const recall = key => { try { return localStorage.getItem('flowViewer.' + key); } catch (e) { return null; } };
+
+/* each background layer's settings, folded under its checkbox: its colour(s), and sliders for its density, size and
+   line width (and a colour map's strength), with a reset. changes draw at once, and are kept in this browser */
+const SETTING_SLIDERS = {
+  density: {label: 'density', min: 0.25, max: 4, step: 0.05, unit: '\u00d7', tip: {
+    u: 'How close together the arrows are', g: 'How close together the arrows are', twist: 'How close together the arcs are',
+    cones: 'How close together the cones are', flowLines: 'How many flow lines: more of them closer together',
+    contours: 'How many levels of |u| are drawn', scalar: 'How fine the colour map\'s cells are'}},
+  size: {label: 'size', min: 0.25, max: 3, step: 0.05, unit: '\u00d7', tip: {
+    u: 'How long a full arrow is', g: 'How long a full arrow is', twist: 'How big the arcs are', cones: 'How big the cones are'}},
+  width: {label: 'line width', min: 0.5, max: 4, step: 0.1, unit: ' px', tip: {}},
+  strength: {label: 'strength', min: 0.2, max: 2, step: 0.05, unit: '\u00d7', tip: {scalar: 'How strong the colours are: above 1, weaker values show more'}},
+};
+const COLOUR_NAMES = {colour: 'colour', plus: 'positive', minus: 'negative'};
+function setupLayerSettings() {
+  try { state.layers = JSON.parse(recall('layers') || '{}') || {}; } catch (e) { state.layers = {}; }
+  const save = () => remember('layers', JSON.stringify(state.layers));
+  for (const [name, spec] of Object.entries(LAYERS)) {
+    const label = $(spec.box).closest('label'), row = document.createElement('div'), fold = document.createElement('span');
+    row.className = 'layerRow';
+    label.replaceWith(row);
+    fold.className = 'fold shut'; fold.dataset.tip = 'Settings for the ' + spec.name + ': colour, density, size';
+    const panel = document.createElement('div');
+    panel.className = 'layerSettings'; panel.hidden = true;
+    fold.onclick = () => { panel.hidden = !panel.hidden; fold.className = 'fold ' + (panel.hidden ? 'shut' : 'open'); };
+    row.append(fold, label);
+    row.after(panel);
+    const build = () => {
+      panel.innerHTML = '';
+      const now = layer(name), own = state.layers[name] || (state.layers[name] = {});
+      const colours = document.createElement('div');
+      colours.className = 'colours';
+      for (const key of ['colour', 'plus', 'minus'].filter(k => k in spec.defaults)) {
+        const input = Object.assign(document.createElement('input'), {type: 'color', value: now[key]});
+        input.oninput = () => { own[key] = input.value; save(); draw(); };
+        const wrap = document.createElement('label');
+        wrap.dataset.tip = 'The ' + spec.name + (key === 'colour' ? '\'' : '\' ' + COLOUR_NAMES[key] + ' values\'') + ' colour (click to change)';
+        wrap.append(input, ' ' + COLOUR_NAMES[key]);
+        colours.append(wrap);
+      }
+      panel.append(colours);
+      for (const key of Object.keys(SETTING_SLIDERS).filter(k => k in spec.defaults)) {
+        const s = SETTING_SLIDERS[key], line = document.createElement('label'), value = document.createElement('span');
+        line.className = 'slider';
+        line.dataset.tip = s.tip[name] || (key === 'width' ? 'How thick the ' + spec.name + '\'s lines are' : s.label);
+        const input = Object.assign(document.createElement('input'), {type: 'range', min: s.min, max: s.max, step: s.step, value: now[key]});
+        const show = () => { value.textContent = (+input.value).toFixed(key === 'width' ? 1 : 2).replace(/\.?0+$/, '') + s.unit; };
+        input.oninput = () => { own[key] = +input.value; show(); save(); draw(); };
+        show();
+        line.append(Object.assign(document.createElement('span'), {textContent: s.label}), input, value);
+        panel.append(line);
+      }
+      const reset = Object.assign(document.createElement('button'), {textContent: 'Reset'});
+      reset.dataset.tip = 'Back to the ' + spec.name + '\'s usual colour and sizes';
+      reset.onclick = () => { delete state.layers[name]; save(); build(); draw(); };
+      panel.append(reset);
+    };
+    build();
+  }
+}
 
 /* the split between the results list and the selected result, dragged (kept between visits); a double-click puts it
    back */
