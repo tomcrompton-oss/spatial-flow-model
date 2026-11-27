@@ -1,5 +1,5 @@
 """
-the examples in Part 1 of the write-up (docs/archive/part1/), each run in the flow model so the website can show it in the
+the examples in Part 1 of the write-up (docs/part1/), each run in the flow model so the website can show it in the
 browser viewer:
 
   apple     Newton's apple: at rest 11 m above the Earth's surface (v = 0, so w = -u: moving up through space at

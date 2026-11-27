@@ -2163,6 +2163,44 @@ def seamfold():
   return W, H + 10, shapes
 
 
+
+def spinswirl():
+  """a spinning body's flow in the many-body model: Part 1's inflow, plus a swirl from the body's rotating matter,
+  2GJ x r/c^2 r^3, falling off as 1/r^2 - much faster than the inflow's 1/sqrt r - and their sum, space spiralling in,
+  the spiral tighter close in"""
+  W, H = 760, 330
+  shapes = []
+  panels = ((130, 'the inflow, as in Part 1'), (380, 'the swirl from its spin'), (630, 'together'))
+  R = 95
+  for cx, title in panels:
+    cy = 160
+    for ring in (0.45, 0.72, 1.0):
+      for k in range(12):
+        a = 2*math.pi*(k + (0.5 if ring == 0.72 else 0))/12
+        r = R*ring
+        x, y = cx + r*math.cos(a), cy + r*math.sin(a)
+        rin = -1.0/math.sqrt(ring)*14                          #inward, as 1/sqrt r
+        sw = 6.0/ring**2                                       #round, as 1/r^2 (anticlockwise on the page: -y is up)
+        sw = min(sw, 30)
+        if title.startswith('the inflow'):
+          dx, dy = rin*math.cos(a), rin*math.sin(a)
+        elif title.startswith('the swirl'):
+          dx, dy = sw*math.sin(a), -sw*math.cos(a)
+        else:
+          dx, dy = rin*math.cos(a) + sw*math.sin(a), rin*math.sin(a) - sw*math.cos(a)
+        shapes.append(arrow((x, y), (x + dx, y + dy), 'u', 1.2))
+    shapes.append(ellipse(cx, cy, 13, 13, 'sun', 0, 'sun'))
+    shapes.append(text(cx, 34, title, 'ink', 0.9, anchor='middle'))
+  shapes += [text(255, 166, '+', 'ink', 1.8, anchor='middle'), text(505, 166, '=', 'ink', 1.8, anchor='middle'),
+             text(130, 300, '√(2GM/r), straight in', 'ink', 0.8, anchor='middle'),
+             text(380, 300, '2GJ × r / c²r³: falls off as 1/r²', 'ink', 0.8, anchor='middle'),
+             text(630, 300, 'space spirals in, the way it spins', 'ink', 0.8, anchor='middle')]
+  #the spin's sense: a curved arrow round the body in the middle panel
+  pts = circle_points(380, 160, 24, math.radians(200), math.radians(-60), 30)
+  shapes += poly(pts, 'v', 1.6)
+  shapes.append(arrow(pts[-3], pts[-1], 'v', 1.6))
+  return W, H, shapes
+
 TESTS = os.path.join(ROOT, 'docs', 'part1', 'tests', 'images')
 PART1 = os.path.join(ROOT, 'docs', 'part1', 'images')
 PART2 = os.path.join(ROOT, 'docs', 'part2', 'images')
@@ -2170,11 +2208,11 @@ PART6 = os.path.join(ROOT, 'docs', 'part6', 'images')
 PART3 = os.path.join(ROOT, 'docs', 'part3', 'images')
 PART4 = os.path.join(ROOT, 'docs', 'part4', 'images')
 SIMS = os.path.join(ROOT, 'docs', 'appendix-a', 'images')
-DIAGRAMS = {'seamwhy': seamwhy, 'seamprofile': seamprofile, 'seamlevels': seamlevels, 'seamrule': seamrule, 'seamframes': seamframes, 'seamfold': seamfold, 'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
+DIAGRAMS = {'spinswirl': spinswirl, 'seamwhy': seamwhy, 'seamprofile': seamprofile, 'seamlevels': seamlevels, 'seamrule': seamrule, 'seamframes': seamframes, 'seamfold': seamfold, 'ants': ants, 'vectors': vectors, 'steps': steps, 'apple': apple, 'parallel': parallel, 'regions': regions, 'fourclocks': fourclocks,
             'redshift': redshift, 'bending': bending, 'precession': precession, 'shapiro': shapiro,
             'funnel': funnel, 'falling': falling, 'spacetime': spacetime,
             'spacefall': spacefall, 'twister': twister, 'twobodies': twobodies, 'movingbodies': movingbodies, 'pipeline': pipeline, 'classes': classes, 'midpoint': midpoint, 'onepotential': onepotential, 'squeeze': squeeze, 'selfmoving': selfmoving, 'othersflow': othersflow, 'ownspace': ownspace, 'grazing': grazing, 'desitter': desitter, 'jupiterrays': jupiterrays, 'carrying': carrying, 'peeling': peeling, 'pairs': pairs, 'dumbhole': dumbhole, 'hollowsphere': hollowsphere, 'shelloptions': shelloptions, 'potentialflow': potentialflow, 'threebodies': threebodies, 'watershed': watershed, 'stretched': stretched, 'lunarranging': lunarranging, 'jupiterlight': jupiterlight, 'bounce': bounce, 'reverse': reverse, 'outflow': outflow, 'whitetime': whitetime}
-FOLDER = {'seamwhy': PART2, 'seamprofile': PART2, 'seamlevels': PART2, 'seamrule': PART2, 'seamframes': PART2, 'seamfold': PART2, 'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
+FOLDER = {'spinswirl': PART4, 'seamwhy': PART2, 'seamprofile': PART2, 'seamlevels': PART2, 'seamrule': PART2, 'seamframes': PART2, 'seamfold': PART2, 'redshift': TESTS, 'bending': TESTS, 'precession': TESTS, 'shapiro': TESTS,
           'funnel': PART1, 'falling': PART1, 'spacetime': PART1,
           'spacefall': PART1, 'twister': PART1, 'twobodies': PART2, 'movingbodies': PART3, 'pipeline': SIMS, 'classes': SIMS, 'midpoint': SIMS, 'onepotential': PART3, 'squeeze': PART3, 'selfmoving': PART4, 'othersflow': PART4, 'ownspace': PART4, 'grazing': PART3, 'desitter': PART3, 'jupiterrays': PART3, 'carrying': PART3, 'peeling': PART6, 'pairs': PART6, 'dumbhole': PART6, 'hollowsphere': PART2, 'shelloptions': PART2, 'potentialflow': PART2, 'threebodies': PART2, 'watershed': PART2, 'stretched': PART2, 'lunarranging': PART2, 'jupiterlight': PART2, 'bounce': PART1, 'reverse': PART1, 'outflow': PART1, 'whitetime': PART1}     #the rest go in OUT
 

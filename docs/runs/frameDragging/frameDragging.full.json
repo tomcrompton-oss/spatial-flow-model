@@ -1,0 +1,6 @@
+{
+  "kind": "full",
+  "version": 1,
+  "preferences": "frameDragging.prefs.json",
+  "config": "frameDragging.config.json"
+}

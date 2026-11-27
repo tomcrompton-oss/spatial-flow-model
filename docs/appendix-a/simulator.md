@@ -241,6 +241,12 @@ Three kinds of check keep the engine honest:
   what is left when the model is general relativity.
 - **Step size.** The main results are run at two steps and taken to zero step. Their difference is the step's error,
   which should fall as the square of the step.
+- **The same spacetime two ways.** `studies/metric_checks.py` runs one body's spacetime as Part 1's flow and again in
+  isotropic coordinates, with no flow at all, only slowed clocks and curved space. The two give the same physics: an
+  orbit's ends agree to 2 parts in 10¹⁰ of the distance, its precession is within 1.7 × 10⁻⁶ of exact general
+  relativity, light's bending within 1–2 × 10⁻⁸, and a fall from rest within 4 × 10⁻⁷ of the exact fall time.
+  General relativity's own first post-Newtonian metric for the Sun and the Earth runs a Moon-like orbit to within 1 mm
+  of its equations of motion after 5 days.
 
 The regression tests (`./run_regression.sh`) check the engine against exact results and earlier runs in about 20
 seconds.

@@ -1,0 +1,4 @@
+bodies: 0
+light from (0, 0) along +x through u = (0, -k x), k = 0.8c over 1e+09 m; the change in the flow added relativistically
+regions_relativistic: crossed 1000031832 m in 3.703 s, w turned 41.61 degrees, v (0.7477c, -0.1360c), |w| 1.000000c
+backgrounds: part1_regions.backgrounds.json

@@ -1,6 +1,6 @@
 /*
 the browser viewer: a cut-down version of viewer/ (the desktop viewer) that runs in a browser with no server. it reads
-a run's files as docs/archive/formats.md describes them - full.json, its prefs and config, the result csvs and their logs, and
+a run's files as docs/appendix-a/formats.md describes them - full.json, its prefs and config, the result csvs and their logs, and
 background frames - and draws them; the physics stays in engine/, so nothing here works anything out beyond drawing
 (the one formula is a horizon's radius, 2GM/c^2)
 
@@ -84,7 +84,7 @@ function pairs(names) {
   return out;
 }
 
-/* the log lines a viewer reads (docs/archive/formats.md) */
+/* the log lines a viewer reads (docs/appendix-a/formats.md) */
 function parseLog(text) {
   const bodies = [];
   for (const m of text.matchAll(/^body \d+: mass (\S+) kg .*?x (\S+) m\s+y (\S+) m\s+(black|white)(?:\s+spin (\S+))?/gm))
@@ -103,7 +103,7 @@ function files(text) {
   return text.split(',').map(f => f.trim()).filter(Boolean);
 }
 
-/* background frames (docs/archive/formats.md): on a grid at a run of times, t, x, y and any of the flow (u_x, u_y),
+/* background frames (docs/appendix-a/formats.md): on a grid at a run of times, t, x, y and any of the flow (u_x, u_y),
    its acceleration (a_x, a_y) and a scalar s (a wave's strain, say) drawn as a colour map. nan where a field has no
    value (a flow worked out only near some points); a field a file doesn't carry has no reference, so isn't drawn */
 function parseFrames(text) {

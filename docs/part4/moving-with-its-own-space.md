@@ -114,7 +114,7 @@ argued from the equations here, not run as orbits.
 ## Where it stops
 
 A pair of bodies moving round each other this way is general relativity's binary to the first order beyond Newton.
-But a real binary also loses energy, slowly, to gravitational waves: the Hulse–Taylor pulsar's orbit shrinks by 3.5
+Real bodies also spin, which [Spinning Bodies](spinning-bodies.md) takes up. And a real binary also loses energy, slowly, to gravitational waves: the Hulse–Taylor pulsar's orbit shrinks by 3.5
 metres a year. [Part 5](../part5.md) asks whether flowing space can carry those waves.
 
 *The code: studies/binary_regularized.py (the flow round the Earth, the circular binary worked out exactly, and the

@@ -1,0 +1,78 @@
+{
+  "kind": "config",
+  "version": 1,
+  "results": [
+    {
+      "relative": "the procedure, plain vectors.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "dashed",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "the procedure, relativistic.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "solid",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    },
+    {
+      "relative": "the geodesic.csv",
+      "visible": true,
+      "straight": false,
+      "ends": false,
+      "periapsis": false,
+      "apoapsis": false,
+      "styles": {
+        "pos": [
+          "#eb6834",
+          "dotted",
+          "#eb6834"
+        ]
+      },
+      "selection": [
+        [
+          "pos_x",
+          "pos_y"
+        ]
+      ],
+      "group": null,
+      "hiddenOrbits": []
+    }
+  ],
+  "selected": null,
+  "background": null,
+  "timeInterval": ""
+}

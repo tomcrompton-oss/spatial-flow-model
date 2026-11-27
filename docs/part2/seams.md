@@ -232,7 +232,8 @@ light passes.*
 | a circle fixed in space | 77,000 km | 0.05–0.09 rad |
 
 Where the times disagree, the light carries the wrong moment across, and meets the body where it isn't. Where they
-agree, the light follows general relativity to a few millionths of its path. (The kilometre or so left is tens of
+agree, the light follows general relativity to a few millionths of its path. An earlier model ran into this at its
+own seams, with light past a moving Jupiter off by seconds of arc ([One Time or Many](../appendix-b/one-time-or-many.md)). (The kilometre or so left is tens of
 thousands of times smaller than the failures; it may be the next order, and wasn't chased.)
 
 ## In other frames of reference
