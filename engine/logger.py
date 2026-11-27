@@ -42,6 +42,8 @@ class OrbitStats:
     #every periapsis and apoapsis as it happens - a turning point in the distance - as (distance, angle); unlike
     #each orbit's closest and farthest points these stay right when the apsides move fast round the orbit
     self.periapsides, self.apoapsides, self.recent = [], [], []
+    #the turning points since the last orbit ended, as (distance, position): what each orbit's log line reports
+    self.orbitPeri, self.orbitApo = [], []
     self.orbit = 0   #orbits ended so far (the first is a warmup part orbit)
     self.period = 0.0
     self.resetExtremes()
@@ -70,14 +72,29 @@ class OrbitStats:
       self.max, self.maxpos = d, p.pos.copy()
     if d < self.min:
       self.min, self.minpos = d, p.pos.copy()
-    self.recent = (self.recent + [(d, rel)])[-3:]
+    self.recent = (self.recent + [(d, rel, p.pos.copy())])[-3:]
     if len(self.recent) == 3:
-      (d0, _), (d1, r1), (d2, _) = self.recent
+      (d0, _, _), (d1, r1, pos1), (d2, _, _) = self.recent
       if d1 < d0 and d1 <= d2:
         self.periapsides.append((d1, math.atan2(r1[1], r1[0])))
+        self.orbitPeri.append((d1, pos1))
       elif d1 > d0 and d1 >= d2:
         self.apoapsides.append((d1, math.atan2(r1[1], r1[0])))
+        self.orbitApo.append((d1, pos1))
     return d
+
+  def orbitApsides(self):
+    """
+    the periapsis and apoapsis of the orbit just ending, for its log line, as ((distance, position) or None, ...): the
+    closest and farthest of the turning points in the distance since the last orbit ended. orbits end at fixed angles
+    (OrbitCounter), so when the apsides precess the closest and farthest points of an orbit can be where it starts or
+    ends rather than an apsis - and an orbit can have no periapsis in it at all, when one drifts across its end - so
+    the turning points are used, not those extremes; None where there was none
+    """
+    peri = min(self.orbitPeri, key=lambda q: q[0]) if self.orbitPeri else None
+    apo = max(self.orbitApo, key=lambda q: q[0]) if self.orbitApo else None
+    self.orbitPeri, self.orbitApo = [], []
+    return peri, apo
 
   def endOrbit(self):
     """record the orbit just ended; returns the angles of its periapsis and apoapsis"""
@@ -272,12 +289,16 @@ class Log:
 
   def logOrbit(self):
     s = self.stats
-    minpos, maxpos, mn, mx = s.minpos, s.maxpos, s.min, s.max
+    mn, mx = s.min, s.max
+    peri, apo = s.orbitApsides()
     minP, maxP = s.endOrbit()
     self.print("orbit ", self.t/DAY, "days", "min:", mn, "max:", mx)
-    #the same in full, for csv_viewer.py: when the orbit ended, and where its periapsis and apoapsis were
+    #the same in full, for the viewers: when the orbit ended, and where its periapsis and apoapsis were - turning points
+    #in the distance, nan where the orbit had none (see OrbitStats.orbitApsides)
+    nan = (float('nan'), np.array([float('nan')]*2))
+    (pd, pp), (ad, ap) = peri or nan, apo or nan
     self.print('orbit %d: t %r s  periapsis %r m at (%r, %r)  apoapsis %r m at (%r, %r)'
-               % tuple([s.orbit] + [float(v) for v in (self.t, mn, minpos[0], minpos[1], mx, maxpos[0], maxpos[1])]))
+               % tuple([s.orbit] + [float(v) for v in (self.t, pd, pp[0], pp[1], ad, ap[0], ap[1])]))
     self.print(minP, maxP)
     s.resetExtremes()
 

@@ -75,7 +75,9 @@ class Loading:
         (px, py), (ax, ay) = apsides[k]
         #the logger keeps where, not when: take the time of the nearest row
         near = lambda qx, qy: float(t[rows[np.argmin(np.hypot(x[rows] - qx, y[rows] - qy))]])
-        peri, apo = (px, py, near(px, py)), (ax, ay, near(ax, ay))
+        #nan where the orbit had no turning point (an apsis that drifted across the orbit's end): none is marked
+        peri = (px, py, near(px, py)) if np.isfinite([px, py]).all() else None
+        apo = (ax, ay, near(ax, ay)) if np.isfinite([ax, ay]).all() else None
       elif np.isfinite(d).any():
         i, j = rows[np.nanargmin(d)], rows[np.nanargmax(d)]
         peri, apo = (float(x[i]), float(y[i]), float(t[i])), (float(x[j]), float(y[j]), float(t[j]))

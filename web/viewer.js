@@ -479,7 +479,12 @@ function buildOrbits(result, hidden) {
       return {x: qx, y: qy, t: t[best]};
     };
     let peri = null, apo = null;
-    if (k < ends.length && ends[k].peri) { peri = nearest(...ends[k].peri); apo = nearest(...ends[k].apo); }
+    //the log's apsides: turning points in the distance; nan where the orbit had none (an apsis that drifted across the
+    //orbit's end), and then none is marked
+    if (k < ends.length && ends[k].peri) {
+      peri = ends[k].peri.every(isFinite) ? nearest(...ends[k].peri) : null;
+      apo = ends[k].apo.every(isFinite) ? nearest(...ends[k].apo) : null;
+    }
     else {
       let lo = Infinity, hi = -Infinity;
       for (let r = i; r <= j; r++) {
