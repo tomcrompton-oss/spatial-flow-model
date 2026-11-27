@@ -28,7 +28,7 @@ const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showG
                showBodies: true, showSchwarzschild: true, showSpin: false, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false,
                mode: 'xy', logX: false, logY: false, ctTime: false, reverseX: true, showMarkers: false, showTimeMarks: false, timeColumn: 't',
                showContours: false, showFlowLines: false, showCones: false, showSpecialOrbits: false, showMarkNote: true, showMarkLabels: true,
-               showBodyLabels: false, showPeri: false, showApo: false, apsisEvery: 1};
+               showBodyLabels: false, showPeri: false, showApo: false, apsisEvery: 1, showInfallArrows: false, showInfallRings: false};
 //the columns each time option matches, by name, any case (the desktop's TIME_COLUMNS)
 const TIME_OPTIONS = {t: ['t', 'time', 'coord_time'], pt: ['pt', 'tau', 'proper_time', 'proper_t']};
 const TIME_LABELS = {t: 'global time (t)', pt: 'proper time (pt)'};
@@ -38,6 +38,8 @@ const END_COLORS = ['#c2410c', '#0f766e', '#7c3aed', '#a16207'], END_LENGTH = 30
 const CONE = '#8a7fd0', FLOW_LINE = '#c4a46e', ISCO_COLOUR = '#a16207';            //light cones, flow lines, ISCOs
 const WITH_DASH = [8, 4], AGAINST_DASH = [3, 3];   //circular orbits going round with a hole's spin, and against it
 const FLOW_LINES = 20, CONTOUR_SPACING = 10, CONE_SIZE = 12;
+//a path with more rows than THIN_ROWS leaves out rows closer than PATH_THIN pixels on screen to the last one drawn
+let PATH_THIN = 0.35, THIN_ROWS = 20000;
 
 /* each background layer's look, adjustable in the Background tab: its colour (a page colour by name, '--muted', or a
    hex), and density, size and line width as factors of the usual (density: arrows, arcs and cones closer together,
@@ -51,6 +53,8 @@ const LAYERS = {
   contours: {box: 'showContours', name: 'lines of equal |u|', defaults: {colour: '--axis', density: 1, width: 1.5}},
   flowLines: {box: 'showFlowLines', name: 'flow lines', defaults: {colour: '#c4a46e', density: 1, width: 1}},
   cones: {box: 'showCones', name: 'light cones', defaults: {colour: '#8a7fd0', density: 1, size: 1, width: 1}},
+  infallArrows: {box: 'showInfallArrows', name: 'falling space (arrows)', defaults: {colour: '#2a78d6', density: 1, size: 1, width: 1.2, speed: 1}},
+  infallRings: {box: 'showInfallRings', name: 'falling space (rings)', defaults: {colour: '#2a78d6', density: 1, width: 1.2, speed: 1}},
 };
 const layerColour = c => c && c.startsWith('--') ? css(c) : c;
 /* a layer's settings: its defaults, with what has been changed */
@@ -61,22 +65,54 @@ function layer(name) {
   return out;
 }
 
-const state = {
-  results: [],         //{name, file, data, paths, log, env, visible, color}
-  environments: [],    //{key, name, bodies, frames}
-  selected: null,
-  view: null,          //[x0, x1, y0, y1] in metres
-  prefs: {...PREFS},
-  background: SELECTED,
-  replay: {state: 'stopped', t: null, last: 0, mode: 'together'},   //mode 'together' or 'sequence' (in turn)
-  trailStart: null,    //replay: paths drawn from this time, or from the start (null); nothing sets it at present (Clear trails was taken out)
-  timeInterval: '',    //time markers: every this much of the marker column ('' = a round interval, about 10)
-  sources: [],         //what is open: [{source, fullName}], for Reload
-  layers: {},          //each background layer's changed settings (LAYERS), by layer
-};
+/* the replay is one clock for every view, so Play plays them all at once */
+const replay = {state: 'stopped', t: null, last: 0, mode: 'together'};   //mode 'together' or 'sequence' (in turn)
+const sharedLayers = {};   //each background layer's changed settings (LAYERS), by layer: the same in every view
+
+/* a view's state: its results, settings and what it has worked out. the viewer can show two views side by side, each
+   with its own; the panel shows the selected one's */
+function makeState() {
+  return {
+    results: [],         //{name, file, data, paths, log, env, visible, color}
+    environments: [],    //{key, name, bodies, frames}
+    selected: null,
+    view: null,          //[x0, x1, y0, y1] in metres
+    prefs: {...PREFS},
+    background: SELECTED,
+    replay,
+    trailStart: null,    //replay: paths drawn from this time, or from the start (null); nothing sets it at present (Clear trails was taken out)
+    timeInterval: '',    //time markers: every this much of the marker column ('' = a round interval, about 10)
+    sources: [],         //what is open: [{source, fullName}], for Reload
+    layers: sharedLayers,
+    marks: {note: '', column: null, interval: null, key: null},   //the time markers worked out (prepareTimeMarks)
+    flowLineCache: {key: null, lines: []},
+    boxes: {legend: {mode: 'max', out: false, from: null}, key: {mode: 'max', out: false, from: null}},
+    boxButtons: [],      //this frame's legend-box buttons: {x, y, w, h, box, tip}
+    boxRows: [],         //this frame's legend-box rows: {x, y, w, h, tip, path}
+    frontPath: null,     //a path whose legend row is under the pointer: drawn last, on top
+    boxZoom: null,       //a box being dragged out (shift-drag): [x0, y0, x1, y1] on screen
+    spinning: [],        //spinning bodies drawn this frame, turned on the overlay
+    follow: null,        //what the view keeps centred: {kind: 'body', index} or {kind: 'path', file, path}, or null
+    measure: {on: false, points: []},   //the measuring tool: up to two points, each {x, y} plotted, or a row
+    fitSpan: null,       //the fitted view's width, for the zoom slider
+  };
+}
 
 const $ = id => document.getElementById(id);
-const canvas = $('plot'), ctx = canvas.getContext('2d');
+/* the views: each a pane with its plot canvas, an overlay canvas for what moves on its own (spinning bodies, falling
+   space) and its state. the globals below are the pane being drawn or handled: the selected one, except inside
+   withPane */
+const panes = [];
+let active = null, state = null, canvas = null, ctx = null, overlay = null, overlayCtx = null, emptyNote = null;
+function usePane(p) {
+  state = p.state; canvas = p.canvas; ctx = p.ctx; overlay = p.overlay; overlayCtx = p.overlayCtx; emptyNote = p.empty;
+}
+function withPane(p, fn) {
+  const was = currentPane();
+  usePane(p);
+  try { return fn(); } finally { if (was) usePane(was); }
+}
+const currentPane = () => panes.find(p => p.state === state) || null;
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 //---------------------------------------------------------------- reading files
@@ -92,7 +128,7 @@ function folderSource(files) {
 }
 
 function urlSource(base) {
-  return {names: () => [], read: async name => {
+  return {url: String(base), names: () => [], read: async name => {
     const response = await fetch(new URL(name, base));
     if (!response.ok) throw new Error('could not fetch ' + name + ' (' + response.status + ')');
     return response.text();
@@ -239,7 +275,12 @@ function locate(list, v) {
    keep: for a reload, what each result (by file) had set - shown, styles, options, hidden orbits - kept over the
    run's own config */
 async function loadRun(source, fullName, {add = false, keep = null} = {}) {
-  message('loading…');
+  //the view it loads into, which may not stay the selected one while it waits for files: each wait hands the globals
+  //back to the selected view, and takes them again after
+  const pane = currentPane(), wait = async promise => { usePane(active); try { return await promise; } finally { usePane(pane); } };
+  const progress = text => { message(text); pane.loadingNote.textContent = text; };
+  pane.loading = true; pane.loadingNote.hidden = false;
+  progress('loading…');
   if (!add) {
     state.results = []; state.environments = []; state.selected = null; state.backgrounds = null; state.sources = [];
     state.trailStart = null; state.timeInterval = '';
@@ -250,9 +291,9 @@ async function loadRun(source, fullName, {add = false, keep = null} = {}) {
     state.sources.push({source, fullName});
     let entries, chosen = null;
     if (fullName) {
-      const full = JSON.parse(await source.read(fullName));
-      if (full.preferences && !keep) Object.assign(state.prefs, pickPrefs(JSON.parse(await source.read(full.preferences)).preferences || {}));
-      const config = full.config ? JSON.parse(await source.read(full.config)) : {results: []};
+      const full = JSON.parse(await wait(source.read(fullName)));
+      if (full.preferences && !keep) Object.assign(state.prefs, pickPrefs(JSON.parse(await wait(source.read(full.preferences))).preferences || {}));
+      const config = full.config ? JSON.parse(await wait(source.read(full.config))) : {results: []};
       entries = config.results || [];
       if (!add) {
         state.background = config.background === ALL ? ALL : SELECTED;
@@ -267,19 +308,19 @@ async function loadRun(source, fullName, {add = false, keep = null} = {}) {
     //every csv and log at once (one after another, each waits for the server), then every frames file they name
     let done = 0;
     const files = entries.map(entry => entry.relative || entry.path.split('/').pop());
-    const read = name => source.read(name).finally(() => message('loading… ' + (++done) + ' files'));
-    const texts = await Promise.all(files.map(file => Promise.all([
-      read(file), read(file.replace(/\.csv$/, '.log')).catch(() => null)])));   //no log: no bodies
+    const read = name => source.read(name).finally(() => progress('loading… ' + (++done) + ' of ' + (files.length * 2) + ' files'));
+    const texts = await wait(Promise.all(files.map(file => Promise.all([
+      read(file), read(file.replace(/\.csv$/, '.log')).catch(() => null)]))));   //no log: no bodies
     const logs = texts.map(([, log]) => log === null ? {bodies: []} : parseLog(log));
     const named = logs.flatMap(l => l.frames || []);
-    const frameCache = new Map(await Promise.all([...new Set(named)].map(async name => {
+    const frameCache = new Map(await wait(Promise.all([...new Set(named)].map(async name => {
       try { return [name, parseFrames(await read(name))]; }
       catch (e) { message('no frames file ' + name); return [name, null]; }
-    })));
+    }))));
     //a backgrounds file (engine/backgrounds.py): its backgrounds make the Background menu, in place of environments'
     const manifests = [...new Set(logs.map(l => l.backgrounds).filter(Boolean))];
     for (const name of manifests) {
-      try { state.backgrounds = (state.backgrounds || []).concat(parseBackgrounds(await read(name))); }
+      try { state.backgrounds = (state.backgrounds || []).concat(parseBackgrounds(await wait(read(name)))); }
       catch (e) { message('could not read the backgrounds file ' + name + ': ' + e.message); }
     }
     if (state.backgrounds && state.backgrounds.length) {
@@ -307,9 +348,11 @@ async function loadRun(source, fullName, {add = false, keep = null} = {}) {
   } catch (e) {
     message('could not open the run: ' + e.message);
   }
+  pane.loading = false; pane.loadingNote.hidden = true;
   invalidatePlot();
-  syncControls();
+  if (pane === active) syncControls();
   fit();
+  usePane(active);
 }
 
 /* the settings a result has now, as a config entry has them (for Reload, and Choose paths) */
@@ -322,13 +365,17 @@ function resultSettings(r) {
 
 /* read everything open again from where it came from, keeping each result's settings */
 async function reload() {
-  const sources = state.sources.slice(), keep = new Map(state.results.map(r => [r.file, resultSettings(r)]));
+  const pane = currentPane(), sources = state.sources.slice(), keep = new Map(state.results.map(r => [r.file, resultSettings(r)]));
   const selected = state.selected && state.selected.file, view = state.view && state.view.slice();
+  const differences = derivedList(state);
   if (!sources.length) return;
-  for (const [i, {source, fullName}] of sources.entries()) await loadRun(source, fullName, {add: i > 0, keep});
-  state.selected = state.results.find(r => r.file === selected) || state.results[0] || null;
-  if (view) { state.view = view; draw(); }
-  syncControls();
+  for (const [i, {source, fullName}] of sources.entries()) { usePane(pane); await loadRun(source, fullName, {add: i > 0, keep}); }
+  withPane(pane, () => {
+    remakeDerived(differences);
+    state.selected = state.results.find(r => r.file === selected) || state.results[0] || null;
+    if (view) { state.view = view; draw(); }
+  });
+  if (pane === active) syncControls();
 }
 
 /* the selected result taken out (the desktop's Close) */
@@ -547,7 +594,9 @@ function axes() {
 /* whether the plot is the plane itself (x / y, linear), where bodies and backgrounds are drawn as they are (against a
    time column, bodies are drawn as lines, drawBodies) */
 function planeView() {
-  return !timeMode() && !state.prefs.logX && !state.prefs.logY;
+  if (timeMode() || state.prefs.logX || state.prefs.logY) return false;
+  const [ax, ay] = axes();
+  return ax.kind === 'position' && ay.kind === 'position';
 }
 
 /* a value on an axis as plotted: as it is, or log10 of it in the axis's unit (NaN for 0 and below) */
@@ -616,6 +665,7 @@ function toData(sx, sy) {
 }
 
 function fit() {
+  state.keepView = false;
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (const r of state.results.filter(r => r.visible))
     for (const p of r.paths) {
@@ -653,7 +703,7 @@ function fit() {
 }
 
 /* a unit as long across as up: equal aspect in x / y, time as ct in distance / time; not with a log axis */
-const aspectActive = () => (timeMode() ? state.prefs.ctTime : state.prefs.equalAspect) && !state.prefs.logX && !state.prefs.logY;
+const aspectActive = () => (timeMode() ? state.prefs.ctTime : state.prefs.equalAspect && planeView()) && !state.prefs.logX && !state.prefs.logY;
 
 /* with the aspect on, widen whichever axis needs it so a metre is as long across as up */
 function equalise() {
@@ -671,7 +721,7 @@ function zoom(factor, at) {
   if (!state.view) return;
   const v = state.view, [x, y] = at || [(v[0] + v[1]) / 2, (v[2] + v[3]) / 2];
   state.view = [x + (v[0] - x) * factor, x + (v[1] - x) * factor, y + (v[2] - y) * factor, y + (v[3] - y) * factor];
-  draw();
+  moved(); scheduleDraw();
 }
 
 /* pan by fractions of the view (a fraction across the screen: reversed distance moves the other way) */
@@ -679,7 +729,7 @@ function pan(fx, fy) {
   if (!state.view) return;
   const v = state.view, dx = (v[1] - v[0]) * fx * (flipX() ? -1 : 1), dy = (v[3] - v[2]) * fy;
   state.view = [v[0] + dx, v[1] + dx, v[2] + dy, v[3] + dy];
-  draw();
+  stopFollowing(); moved(); scheduleDraw();
 }
 
 /* the View tab's Range: the zoom slider (log10 of the zoom against the fitted view) and each axis's typed range,
@@ -702,7 +752,7 @@ function applyRange() {
   const [ax, ay] = axes(), read = (id, a) => { const v = +$(id).value; return a.log ? (v > 0 ? Math.log10(v) : NaN) : v * a.scale; };
   const v = RANGE_INPUTS.map((id, i) => read(id, i < 2 ? ax : ay));
   if (v.some(x => !isFinite(x)) || v[1] <= v[0] || v[3] <= v[2]) { message('each range needs two numbers, the second larger (above 0 on a log axis)'); return; }
-  state.view = v; draw();
+  stopFollowing(); state.view = v; draw();
 }
 
 /* the joystick: dragging the stick moves the view continuously, faster the further it is pushed (up to
@@ -801,8 +851,9 @@ function draw() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   ctx.fillStyle = css('--page'); ctx.fillRect(0, 0, w, h);
   syncAvailable();
-  $('empty').style.display = state.results.length ? 'none' : 'flex';
+  emptyNote.style.display = state.results.length || currentPane().loading ? 'none' : 'flex';
   if (!state.view) return;
+  if (state.follow) applyFollow();
   if (!PLAYER) syncRange();
   const {l, t, r, b} = plotRect();
   ctx.fillStyle = css('--surface'); ctx.fillRect(l, t, r - l, b - t);
@@ -824,12 +875,12 @@ function draw() {
     if (until === false) continue;
     for (const p of result.paths) {
       if (result.tangent.on) drawTangent(result, p, until);
-      if (!frontPath || frontPath.p !== p) drawPath(result, p, until);
+      if (!state.frontPath || state.frontPath.p !== p) drawPath(result, p, until);
     }
   }
-  if (frontPath && frontPath.result.visible) {
-    const until = drawUntil(frontPath.result);
-    if (until !== false) drawPath(frontPath.result, frontPath.p, until, 2.8);
+  if (state.frontPath && state.frontPath.result.visible) {
+    const until = drawUntil(state.frontPath.result);
+    if (until !== false) drawPath(state.frontPath.result, state.frontPath.p, until, 2.8);
   }
   labelCells.clear();
   for (const result of shown) {
@@ -843,22 +894,26 @@ function draw() {
     }
   }
   flushDots();
-  spinning.length = 0;
+  if (state.measure.points.length) drawMeasure();
+  state.spinning.length = 0;
   if (!state.prefs.logX && !state.prefs.logY) for (const env of fieldEnvironments()) drawBodies(env);
   drawSpinning();
-  if (boxZoom) {
+  if (state.boxZoom) {
     ctx.strokeStyle = css('--accent'); ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-    ctx.strokeRect(Math.min(boxZoom[0], boxZoom[2]), Math.min(boxZoom[1], boxZoom[3]), Math.abs(boxZoom[2] - boxZoom[0]), Math.abs(boxZoom[3] - boxZoom[1]));
+    ctx.strokeRect(Math.min(state.boxZoom[0], state.boxZoom[2]), Math.min(state.boxZoom[1], state.boxZoom[3]), Math.abs(state.boxZoom[2] - state.boxZoom[0]), Math.abs(state.boxZoom[3] - state.boxZoom[1]));
     ctx.setLineDash([]);
   }
   ctx.restore();
   ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1; ctx.strokeRect(l, t, r - l, b - t);
   drawAxes(false);
   keys.push(...pathKeys());
-  boxButtons = []; boxRows = [];
+  state.boxButtons = []; state.boxRows = [];
   if (state.prefs.showPathLegend) drawLegend();
   if (state.prefs.showFieldKey && keys.length) drawKey(keys);
 }
+
+/* every view drawn again (the replay's clock moved, the window changed) */
+function drawAll() { for (const p of panes) withPane(p, draw); }
 
 function drawAxes(grid) {
   const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view, [ax, ay] = axes();
@@ -887,9 +942,9 @@ function drawAxes(grid) {
     ctx.fillStyle = css('--ink'); ctx.font = 'bold 13px -apple-system, Helvetica, Arial, sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
     ctx.fillText(title, l, t - 6);
-    if (markState.note) {
+    if (state.marks.note) {
       ctx.fillStyle = css('--ink2'); ctx.font = '11px -apple-system, Helvetica, Arial, sans-serif'; ctx.textAlign = 'right';
-      ctx.fillText(markState.note, r, t - 6);
+      ctx.fillText(state.marks.note, r, t - 6);
     }
   }
 }
@@ -928,7 +983,8 @@ function drawPath(result, p, until = replayTime(), width = 1.6) {
   }
   const shade = k => k <= 0 || k > 1e9 ? 1 : Math.max(0.12, 0.55 * Math.pow(0.8, k - 1));
   //a new stroke for each orbit (its shade), and each change of colour
-  let pen = false, colour = null, stretch = null, open = false, last = -1;
+  let pen = false, colour = null, stretch = null, open = false, last = -1, drawnAt = [NaN, NaN];
+  const thin = p.px.length > THIN_ROWS ? PATH_THIN : 0;
   const begin = (c, k) => {
     if (open) ctx.stroke();
     ctx.beginPath(); ctx.strokeStyle = colour = c; stretch = k; ctx.globalAlpha = orbit ? shade(current - k) : 1; open = true;
@@ -948,13 +1004,26 @@ function drawPath(result, p, until = replayTime(), width = 1.6) {
     }
     const [sx, sy] = toScreen(p.px[i], p.py[i]);
     const c = rowColour(result, p, i), k = orbit ? orbit[i] : 0;
+    //in a long path, rows closer together on screen than a pixel's fraction are left out of the line (a long run zoomed
+    //out), except where the colour or the orbit changes, and the last row of each stretch
+    if (thin && pen && c === colour && k === stretch && Math.abs(sx - drawnAt[0]) < thin && Math.abs(sy - drawnAt[1]) < thin
+        && i + 1 < p.px.length && isFinite(p.px[i + 1]) && isFinite(p.py[i + 1])) { last = i; continue; }
     if (pen && (c !== colour || k !== stretch)) { ctx.lineTo(sx, sy); begin(c, k); ctx.moveTo(sx, sy); }
     else if (pen) ctx.lineTo(sx, sy);
     else { if (!open || c !== colour || k !== stretch) begin(c, k); ctx.moveTo(sx, sy); }
-    pen = true; last = i;
+    pen = true; last = i; drawnAt = [sx, sy];
   }
   if (open) ctx.stroke();
   ctx.setLineDash([]); ctx.globalAlpha = 1;
+  //a result with a value for each orbit: a dot at each, as they are few
+  if (result.dots) {
+    ctx.fillStyle = p.color || result.color;
+    for (let i = 0; i < p.px.length; i++) {
+      if (!(isFinite(p.px[i]) && isFinite(p.py[i])) || (until !== null && p.t && p.t[i] > until)) continue;
+      const [sx, sy] = toScreen(p.px[i], p.py[i]);
+      ctx.beginPath(); ctx.arc(sx, sy, 3, 0, 2 * Math.PI); ctx.fill();
+    }
+  }
 }
 
 /* a result's time for its tangent: its t column, else the row number (each row a step); and that time's range */
@@ -1107,7 +1176,7 @@ function pathKeys() {
   const every = Math.max(1, Math.round(+state.prefs.apsisEvery) || 1), which = every === 1 ? 'each orbit' : 'every ' + every + ' orbits';
   if (shown.some(r => r.orbits.length) && state.prefs.showPeri) keys.push([css('--ink2'), 'periapsis of ' + which, null, null, 'peri']);
   if (shown.some(r => r.orbits.length) && state.prefs.showApo) keys.push([css('--ink2'), 'apoapsis of ' + which, null, null, 'apo']);
-  if (PLAYER && markState.note) keys.push(['transparent', markState.note]);
+  if (PLAYER && state.marks.note) keys.push(['transparent', state.marks.note]);
   return keys;
 }
 
@@ -1115,7 +1184,6 @@ function pathKeys() {
 /* dots along each path at every interval of a time column (the desktop's time markers): the column chosen under Time
    markers, or in distance / time mode the other one (the chosen one is on the axis). the interval is a round one giving
    about ten, unless one is typed in. a note says the interval, or why there are none */
-const markState = {note: '', column: null, interval: null, key: null};
 const labelCells = new Set();   //screen cells already holding a marker's time, so labels don't overlap
 
 function markerOption() {
@@ -1136,21 +1204,21 @@ function autoInterval() {
 function prepareTimeMarks() {
   const option = markerOption(), typed = String(state.timeInterval).trim();
   const key = [plotKey, option, typed, state.prefs.showTimeMarks, state.results.filter(r => r.visible).map(r => r.file).join()].join('|');
-  if (markState.key === key) return;
-  markState.key = key; markState.note = ''; markState.interval = null; markState.column = null;
+  if (state.marks.key === key) return;
+  state.marks.key = key; state.marks.note = ''; state.marks.interval = null; state.marks.column = null;
   for (const r of state.results) for (const p of r.paths) p.marks = null;
   if (!state.prefs.showTimeMarks || !state.results.length) return;
   if (!state.results.some(r => r.visible && timeColumnOf(r, option))) {
-    markState.note = timeMode() ? 'no second time column for markers' : 'no ' + option + ' column for markers';
+    state.marks.note = timeMode() ? 'no second time column for markers' : 'no ' + option + ' column for markers';
     return;
   }
   const interval = typed === '' ? autoInterval() : +typed;
-  if (!(interval > 0)) { markState.note = typed === '' ? '' : 'the time markers\' interval must be a number above 0'; return; }
-  markState.interval = interval;
+  if (!(interval > 0)) { state.marks.note = typed === '' ? '' : 'the time markers\' interval must be a number above 0'; return; }
+  state.marks.interval = interval;
   for (const r of state.results.filter(r => r.visible)) {
     const c = timeColumnOf(r, option), g = timeColumnOf(r, 't');
     if (!c) continue;
-    markState.column = c;
+    state.marks.column = c;
     const tc = r.data.columns[c], gc = g ? r.data.columns[g] : null;
     const axisName = timeMode() ? timeColumnOf(r, state.prefs.timeColumn) : null, axis = axisName ? r.data.columns[axisName] : null;
     for (const p of r.paths) {
@@ -1158,10 +1226,10 @@ function prepareTimeMarks() {
       const rows = [];
       for (let i = 0; i < tc.length; i++) if (isFinite(tc[i]) && isFinite(p.x[i]) && isFinite(p.y[i]) && shownRow(r, i)) rows.push(i);
       if (rows.length < 2) continue;
-      if (rows.some((row, k) => k && tc[row] < tc[rows[k - 1]])) { markState.note = c + ' does not always increase along ' + p.name; continue; }
+      if (rows.some((row, k) => k && tc[row] < tc[rows[k - 1]])) { state.marks.note = c + ' does not always increase along ' + p.name; continue; }
       const T = [], xs = [], ys = [], at = [], G = [];
       const first = Math.ceil(tc[rows[0]] / interval - 1e-9), last = Math.floor(tc[rows[rows.length - 1]] / interval + 1e-9);
-      if (last - first > MAX_TIME_MARKS) { markState.note = 'interval too small (' + (last - first + 1) + ' markers): try a larger one'; continue; }
+      if (last - first > MAX_TIME_MARKS) { state.marks.note = 'interval too small (' + (last - first + 1) + ' markers): try a larger one'; continue; }
       let k = 0;
       for (let m = first; m <= last; m++) {
         const v = m * interval;
@@ -1175,8 +1243,8 @@ function prepareTimeMarks() {
       p.marks = {T, X, Y, G};
     }
   }
-  if (!markState.note && markState.interval && state.prefs.showMarkNote && markState.column)
-    markState.note = '\u25cf  every ' + fmt(markState.interval) + ' of ' + markState.column;
+  if (!state.marks.note && state.marks.interval && state.prefs.showMarkNote && state.marks.column)
+    state.marks.note = '\u25cf  every ' + fmt(state.marks.interval) + ' of ' + state.marks.column;
 }
 
 /* a path's markers: dots, each labelled with its time where no other label is near; replaying, only along the trail */
@@ -1244,7 +1312,11 @@ function syncAvailable() {
       ['showSeam', has('seam'), 'no seam saved for ' + which + ' (only the eikonal flows have one)'],
       ['showBodies', bodies, 'no bodies in ' + which],
       ['showSchwarzschild', bodies, 'no bodies, so no horizons, in ' + which],
-      ['showSpin', envs.some(e => e.bodies.some(b => b.spin)), 'no spinning bodies in ' + which]]) {
+      ['showSpin', envs.some(e => e.bodies.some(b => b.spin)), 'no spinning bodies in ' + which],
+      ['showInfallArrows', planeView() && (background ? has('u') : envs.some(e => (e.frames && e.frames.layer.u) || e.bodies.length)),
+       !planeView() ? 'falling space is drawn only in the x / y view' : 'no flow of space (u) for ' + which],
+      ['showInfallRings', planeView() && (background ? has('u') : true) && envs.some(e => e.bodies.length),
+       !planeView() ? 'falling space is drawn only in the x / y view' : 'no bodies, or no flow of space, for ' + which]]) {
     const box = $(id), label = box.parentElement;
     if (box.disabled === !ok) continue;
     box.disabled = !ok;
@@ -1333,7 +1405,7 @@ function drawBodies(env) {
       ctx.fillStyle = css('--ink2'); ctx.font = '10px -apple-system, Helvetica, Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
       ctx.fillText(bodyLabel(body), sx, sy + (state.prefs.showSpin && body.spin ? 18 : 10));
     }
-    if (state.prefs.showBodies && state.prefs.showSpin && body.spin) { spinning.push({sx, sy, body}); continue; }
+    if (state.prefs.showBodies && state.prefs.showSpin && body.spin) { state.spinning.push({sx, sy, body}); continue; }
     if (state.prefs.showBodies) {
       ctx.fillStyle = body.black ? '#111' : '#fff'; ctx.strokeStyle = css('--ink'); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.arc(sx, sy, 6, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
@@ -1341,30 +1413,53 @@ function drawBodies(env) {
   }
 }
 
-/* spinning bodies, on a canvas over the plot so that they turn without the plot being redrawn: each a disc with
-   three spokes turning the way the body spins (anticlockwise for positive spin) at SPIN_RATE times its spin (rad/s of
-   the page's clock: a picture, not the real rate), and an arrow round it */
-const SPIN_RATE = 2.5, spinning = [], spinCanvas = $('spinLayer'), spinCtx = spinCanvas.getContext('2d');
-let spinFrame = null;
+/* what moves on its own, on each view's overlay canvas over the plot, so it moves without the plot being redrawn:
+   spinning bodies, each a disc with three spokes turning the way the body spins (anticlockwise for positive spin) at
+   SPIN_RATE times its spin (rad/s of the page's clock: a picture, not the real rate), and an arrow round it; and falling
+   space (drawInfall). where the browser asks for reduced motion they are drawn still */
+const SPIN_RATE = 2.5;
+const REDUCED_MOTION = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : {matches: false};
+const stillMotion = () => REDUCED_MOTION.matches;
+
+/* after each draw of a view: start its overlay's animation, or (nothing moving, or reduced motion) paint it once */
 function drawSpinning() {
-  if (spinning.length) { if (spinFrame === null) spinFrame = requestAnimationFrame(turnSpinning); }
-  else turnSpinning();   //clears it
-}
-function turnSpinning(now = performance.now()) {
-  if (spinFrame !== null) cancelAnimationFrame(spinFrame);
-  spinFrame = null;
-  const ratio = window.devicePixelRatio || 1, w = spinCanvas.clientWidth, h = spinCanvas.clientHeight;
-  if (spinCanvas.width !== Math.round(w * ratio) || spinCanvas.height !== Math.round(h * ratio)) {
-    spinCanvas.width = Math.round(w * ratio); spinCanvas.height = Math.round(h * ratio);
+  const pane = currentPane();
+  if (!pane) return;
+  const moving = state.spinning.length > 0 || infallShown();
+  if (moving && !stillMotion()) {
+    if (pane.frame == null) { pane.last = performance.now(); pane.frame = requestAnimationFrame(now => animate(pane, now)); }
+    return;
   }
-  const c = spinCtx;
+  if (pane.frame != null) { cancelAnimationFrame(pane.frame); pane.frame = null; }
+  paintOverlay(pane, performance.now(), 0);
+}
+
+function animate(pane, now) {
+  pane.frame = null;
+  if (!panes.includes(pane)) return;
+  const dt = Math.min(0.1, Math.max(0, now - pane.last) / 1000);
+  pane.last = now;
+  const moving = withPane(pane, () => paintOverlay(pane, now, dt));
+  if (moving && !stillMotion()) pane.frame = requestAnimationFrame(t => animate(pane, t));
+}
+
+/* the overlay at a moment, dt seconds after the last: whether anything on it moves */
+function paintOverlay(pane, now, dt) {
+  const ratio = window.devicePixelRatio || 1, w = overlay.clientWidth, h = overlay.clientHeight;
+  if (overlay.width !== Math.round(w * ratio) || overlay.height !== Math.round(h * ratio)) {
+    overlay.width = Math.round(w * ratio); overlay.height = Math.round(h * ratio);
+  }
+  const c = overlayCtx;
   c.setTransform(ratio, 0, 0, ratio, 0, 0);
   c.clearRect(0, 0, w, h);
-  if (!spinning.length || !state.view) return;
+  if (!state.view) return false;
   const {l, t, r, b} = plotRect();
   c.save(); c.beginPath(); c.rect(l, t, r - l, b - t); c.clip();
-  for (const {sx, sy, body} of spinning) {
-    const R = 10, turn = -Math.sign(body.spin) * SPIN_RATE * Math.min(1, Math.abs(body.spin)) * now / 1000;
+  const falling = infallShown();
+  if (falling) drawInfall(pane, c, dt);
+  const turnAt = stillMotion() ? 0 : now;
+  for (const {sx, sy, body} of state.spinning) {
+    const R = 10, turn = -Math.sign(body.spin) * SPIN_RATE * Math.min(1, Math.abs(body.spin)) * turnAt / 1000;
     c.fillStyle = body.black ? '#111' : '#fff'; c.strokeStyle = css('--ink'); c.lineWidth = 1;
     c.beginPath(); c.arc(sx, sy, R, 0, 2 * Math.PI); c.fill(); c.stroke();
     c.strokeStyle = body.black ? '#fff' : css('--ink'); c.lineWidth = 1.6;
@@ -1376,7 +1471,173 @@ function turnSpinning(now = performance.now()) {
     twistArc(c, sx, sy, R + 5, 1.5 * Math.PI, body.spin > 0, 7);   //an arrow three quarters of the way round
   }
   c.restore();
-  spinFrame = requestAnimationFrame(turnSpinning);
+  return falling || state.spinning.length > 0;
+}
+
+//---------------------------------------------------------------- falling space
+/* space falling in, drawn moving: points carried by the flow u (arrows, each along u where it is), or rings of space,
+   each a loop of points carried by u, falling into the black bodies (or out of white ones). the motion is a picture:
+   the view's typical |u| moves INFALL_SPEED pixels a second (times the layer's speed), and faster or slower where u is,
+   so where space falls faster the points do too. a point is gone where it reaches a horizon, leaves the view or the
+   flow has no value; arrows come back somewhere else, and rings start again outside */
+const INFALL_SPEED = 30;
+const infallShown = () => planeView() && (state.prefs.showInfallArrows || state.prefs.showInfallRings) && infallHas().some(Boolean);
+/* whether the view has a flow for the arrows, and bodies for the rings */
+function infallHas() {
+  const background = currentBackground(), envs = fieldEnvironments();
+  const flow = background ? backgroundHas(background, 'u') : envs.some(e => (e.frames && e.frames.layer.u) || e.bodies.length);
+  const env = overlayEnv();
+  return [flow && state.prefs.showInfallArrows, flow && !!(env && env.bodies.length) && state.prefs.showInfallRings];
+}
+
+/* metres per pixel, and the view's typical |u| (the median over a coarse grid), worked out again when the view moves */
+function infallScale(pane, t) {
+  const {l, t: top, r, b} = plotRect(), v = state.view;
+  const key = [v.join(), r - l, b - top, t, currentBackground() && currentBackground().name, overlayEnv() && overlayEnv().key].join('|');
+  if (pane.infallScale && pane.infallScale.key === key) return pane.infallScale;
+  const speeds = [];
+  for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) {
+    const [x, y] = toData(l + (i + 0.5) / 9 * (r - l), top + (j + 0.5) / 9 * (b - top)), u = flowAt(x, y, t);
+    if (u) { const s = Math.hypot(u[0], u[1]); if (isFinite(s) && s > 0) speeds.push(s); }
+  }
+  speeds.sort((p, q) => p - q);
+  pane.infallScale = {key, perPixel: Math.abs(toData(l + 1, top)[0] - toData(l, top)[0]), typical: speeds.length ? speeds[speeds.length >> 1] : 0};
+  return pane.infallScale;
+}
+
+/* how close to a body a point is gone: inside half its horizon (a black body's) */
+function swallowed(x, y) {
+  const env = overlayEnv();
+  if (!env) return false;
+  for (const body of env.bodies) if (body.black && Math.hypot(x - body.x, y - body.y) < 0.5 * bodyCircles(body)[0][0]) return true;
+  return false;
+}
+
+/* a point carried by u for dt seconds of the picture's clock, in steps of at most a few pixels: its new place, or null
+   where it is gone */
+function carry(x, y, dt, metresPerSecond, t, perPixel) {
+  let left = dt;
+  for (let k = 0; k < 24 && left > 0; k++) {
+    const u = flowAt(x, y, t);
+    if (!u || !isFinite(u[0]) || !isFinite(u[1])) return null;
+    const size = Math.hypot(u[0], u[1]);
+    if (!(size > 0)) return [x, y];
+    const step = Math.min(left, 4 * perPixel / (size * metresPerSecond));   //4 pixels at most
+    x += u[0] * metresPerSecond * step; y += u[1] * metresPerSecond * step; left -= step;
+    if (swallowed(x, y)) return null;
+  }
+  return [x, y];
+}
+
+function drawInfall(pane, c, dt) {
+  const t = fieldTime() ?? 0, scale = infallScale(pane, t), [arrowsOn, ringsOn] = infallHas();
+  if (!(scale.typical > 0)) return;
+  const env = overlayEnv(), key = [env && env.key, currentBackground() && currentBackground().name].join('|');
+  if (!pane.infall || pane.infall.key !== key) pane.infall = {key, tracers: [], rings: [], wait: 0};
+  const state_ = pane.infall, {l, t: top, r, b} = plotRect(), v = state.view, perPixel = scale.perPixel;
+  //seconds of flow for a second of the picture, for each layer's speed
+  const rate = speedSetting => INFALL_SPEED * speedSetting * perPixel / scale.typical;
+  const inView = (x, y, margin) => { const [sx, sy] = toScreen(x, y); return sx > l - margin && sx < r + margin && sy > top - margin && sy < b + margin; };
+
+  if (arrowsOn) {
+    const look = layer('infallArrows'), spacing = ARROW_SPACING * 1.15 / look.density;
+    const count = Math.min(1500, Math.round((r - l) * (b - top) / (spacing * spacing)));
+    const spawn = p => {
+      for (let k = 0; k < 6; k++) {
+        const [x, y] = toData(l + Math.random() * (r - l), top + Math.random() * (b - top));
+        if (flowAt(x, y, t) && !swallowed(x, y)) return Object.assign(p, {x, y, age: 0, life: 2 + 4 * Math.random()});
+      }
+      return Object.assign(p, {x: NaN, y: NaN, age: 0, life: 0.5});
+    };
+    const list = state_.tracers;
+    while (list.length < count) list.push(Object.assign(spawn({}), {age: Math.random() * 3}));
+    list.length = count;
+    const k = rate(look.speed);
+    c.strokeStyle = c.fillStyle = look.colour; c.lineWidth = look.width;
+    for (const p of list) {
+      p.age += dt;
+      const moved = isFinite(p.x) && dt > 0 ? carry(p.x, p.y, dt, k, t, perPixel) : [p.x, p.y];
+      if (!moved || p.age > p.life || !inView(moved[0], moved[1], 10)) { spawn(p); continue; }
+      [p.x, p.y] = moved;
+      const u = flowAt(p.x, p.y, t);
+      if (!u) continue;
+      const size = Math.hypot(u[0], u[1]), length = 9 * look.size, [sx, sy] = toScreen(p.x, p.y);
+      if (!(size > 0)) continue;
+      c.globalAlpha = 0.85 * Math.max(0, Math.min(1, p.age / 0.4, (p.life - p.age) / 0.4));
+      const dx = u[0] / size * length, dy = -u[1] / size * length;
+      overlayArrow(c, sx - dx / 2, sy - dy / 2, sx + dx / 2, sy + dy / 2);
+    }
+    c.globalAlpha = 1;
+  } else state_.tracers.length = 0;
+
+  if (ringsOn) {
+    const look = layer('infallRings'), k = rate(look.speed), spacingPx = 55 / look.density;
+    const black = env.bodies.filter(b => b.black), white = env.bodies.filter(b => !b.black);
+    const corners = [[v[0], v[2]], [v[0], v[3]], [v[1], v[2]], [v[1], v[3]]];
+    //a ring falling in: round the black bodies' centre of mass, from outside the view; one going out: from round a white body
+    const ring = (cx, cy, R) => {
+      const n = Math.max(48, Math.min(720, Math.round(2 * Math.PI * R / perPixel / 5)));
+      return Array.from({length: n}, (_, i) => [cx + R * Math.cos(2 * Math.PI * i / n), cy + R * Math.sin(2 * Math.PI * i / n)]);
+    };
+    const sources = [];
+    if (black.length) {
+      const m = black.reduce((sum, q) => sum + q.mass, 0);
+      const cx = black.reduce((sum, q) => sum + q.mass * q.x, 0) / m, cy = black.reduce((sum, q) => sum + q.mass * q.y, 0) / m;
+      sources.push({cx, cy, R: Math.max(...corners.map(([x, y]) => Math.hypot(x - cx, y - cy))) * 1.02, inward: true});
+    }
+    for (const q of white) sources.push({cx: q.x, cy: q.y, R: Math.max(1.5 * bodyCircles(q)[0][0], 6 * perPixel), inward: false});
+    //at the start, rings already on their way in, so the view isn't empty while the first ones arrive
+    if (!state_.rings.length && !state_.started) {
+      state_.started = true;
+      for (const src of sources.filter(q => q.inward))
+        for (let R = src.R; R > 4 * perPixel; R -= spacingPx * perPixel) state_.rings.push(ring(src.cx, src.cy, R));
+    }
+    state_.wait -= dt;
+    if (state_.wait <= 0) {
+      for (const src of sources) state_.rings.push(ring(src.cx, src.cy, src.R));
+      //the next when this one has moved a ring's spacing: at the speed of the flow where it starts
+      const src = sources[0], u = src && flowAt(src.cx + src.R, src.cy, t), speedPx = u ? Math.hypot(u[0], u[1]) * k / perPixel : 0;
+      state_.wait = speedPx > 0 ? Math.min(6, spacingPx / speedPx) : 2;
+    }
+    c.strokeStyle = look.colour; c.lineWidth = look.width; c.globalAlpha = 0.8;
+    const reach = Math.max(...corners.map(([x, y]) => Math.hypot(x - (v[0] + v[1]) / 2, y - (v[2] + v[3]) / 2))) * 1.6;
+    state_.rings = state_.rings.filter(points => {
+      let alive = 0;
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+        if (!p) continue;
+        const moved = dt > 0 ? carry(p[0], p[1], dt, k, t, perPixel) : p;
+        if (!moved || Math.hypot(moved[0] - (v[0] + v[1]) / 2, moved[1] - (v[2] + v[3]) / 2) > reach) { points[i] = null; continue; }
+        points[i] = moved; alive++;
+      }
+      if (alive < 3) return false;
+      //the loop, broken where a point is gone or two neighbours have pulled far apart
+      c.beginPath();
+      let pen = false, last = null;
+      for (let i = 0; i <= points.length; i++) {
+        const p = points[i % points.length];
+        if (!p) { pen = false; continue; }
+        const [sx, sy] = toScreen(p[0], p[1]);
+        if (pen && Math.hypot(sx - last[0], sy - last[1]) > 40) pen = false;
+        if (pen) c.lineTo(sx, sy); else c.moveTo(sx, sy);
+        pen = true; last = [sx, sy];
+      }
+      c.stroke();
+      return true;
+    });
+    c.globalAlpha = 1;
+  } else { state_.rings.length = 0; state_.started = false; }
+}
+
+function overlayArrow(c, x0, y0, x1, y1) {
+  c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
+  const length = Math.hypot(x1 - x0, y1 - y0);
+  if (length < 3) return;
+  const ux = (x1 - x0) / length, uy = (y1 - y0) / length, head = Math.min(5, length * 0.55);
+  c.beginPath(); c.moveTo(x1, y1);
+  c.lineTo(x1 - head * ux + head * 0.45 * uy, y1 - head * uy - head * 0.45 * ux);
+  c.lineTo(x1 - head * ux - head * 0.45 * uy, y1 - head * uy + head * 0.45 * ux);
+  c.closePath(); c.fill();
 }
 
 /* the environments whose backgrounds are drawn: all shown results' (All environments), or the selected result's */
@@ -1497,6 +1758,11 @@ function drawOverlaysUnder() {
     }
     if (orbits.some(o => o[1] === 'against')) keys.push([css('--muted'), 'short dashes: going round against the spin', AGAINST_DASH]);
   }
+  if (infallShown()) {
+    const [arrows, rings] = infallHas();
+    if (arrows) keys.push([layer('infallArrows').colour, 'falling space: points carried by u, moving at a picture speed (faster where u is)', null, null, 'arrow']);
+    if (rings) keys.push([layer('infallRings').colour, 'falling space: rings of space carried by u, at a picture speed']);
+  }
   if (planeView() && state.prefs.showFlowLines && drawFlowLines(t)) {
     const one = env && env.bodies.length === 1;
     keys.push([layer('flowLines').colour, one ? 'flow lines: the paths of space, straight ' + (env.bodies[0].black ? 'in to the hole' : 'out of the body')
@@ -1606,14 +1872,14 @@ function drawContours(t) {
 /* flow lines in the plane: for one body straight lines from it (from a spinning hole's ring) out past the view; for
    several, each body's lines followed out against the flow (with it, from a white body), until they leave the view,
    meet the flow coming the other way (a seam), or the flow has no value; worked out once for each view */
-let flowLineCache = {key: null, lines: []};
 const flowLineCount = () => Math.max(2, Math.round(FLOW_LINES * layer('flowLines').density));
 function drawFlowLines(t) {
   const env = overlayEnv();
   if (!env || !env.bodies.length) return false;
   const v = state.view, {l, r} = plotRect(), perPixel = (v[1] - v[0]) / (r - l);
   const count = flowLineCount(), key = [env.key, v.join(), r - l, currentBackground() && currentBackground().name, t, count].join('|');
-  if (flowLineCache.key !== key) {
+  const same = state.flowLineCache.key && state.flowLineCache.key.split('|').filter((x, i) => i !== 1 && i !== 2).join('|') === key.split('|').filter((x, i) => i !== 1 && i !== 2).join('|');
+  if (state.flowLineCache.key !== key && !(interacting() && same)) {
     const lines = [], span = Math.max(v[1] - v[0], v[3] - v[2]);
     const inReach = (x, y) => x > v[0] - span && x < v[1] + span && y > v[2] - span && y < v[3] + span;
     if (env.bodies.length === 1) {
@@ -1645,16 +1911,16 @@ function drawFlowLines(t) {
         if (points.length > 1) lines.push(points);
       }
     }
-    flowLineCache = {key, lines};
+    state.flowLineCache = {key, lines};
   }
   const look = layer('flowLines');
   ctx.strokeStyle = look.colour; ctx.lineWidth = look.width;
-  for (const points of flowLineCache.lines) {
+  for (const points of state.flowLineCache.lines) {
     ctx.beginPath();
     points.forEach(([x, y], i) => { const [sx, sy] = toScreen(x, y); if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
     ctx.stroke();
   }
-  return flowLineCache.lines.length > 0;
+  return state.flowLineCache.lines.length > 0;
 }
 
 /* distance / time mode's backgrounds: the flow line, repeated up the time axis, and light cones; both need global time
@@ -1731,8 +1997,9 @@ function drawCones(t) {
   const look = layer('cones'), spacing = ARROW_SPACING / look.density, side = 2.2 * CONE_SIZE * look.size, shift = spacing * 0.25;
   ctx.strokeStyle = ctx.fillStyle = look.colour; ctx.lineWidth = look.width;
   let drawn = false;
-  for (let sy = top + shift; sy < b; sy += spacing)
-    for (let sx = l + shift; sx < r; sx += spacing) {
+  const [gx, gy] = gridStart(l, top, spacing, shift);
+  for (let sy = gy; sy < b; sy += spacing)
+    for (let sx = gx; sx < r; sx += spacing) {
       const [X] = toData(sx, sy), u = uAlong(X, t);
       if (!isFinite(u)) continue;
       let [[ox, oy], [ix, iy]] = [u + C, u - C].map(speed => {
@@ -1876,7 +2143,11 @@ function sampleBackground(background, key, x, y, t) {
 function backgroundReference(background, key) {
   const {l, t: top, r, b} = plotRect(), range = replayRange() || [0, 0];
   const id = [key, state.view.join(), r - l, b - top, range.join()].join('|');
+  //while the view is moving, the scale from before (worked out again when it stops)
+  background.last = background.last || {};
+  if (!background.cache.has(id) && interacting() && background.last[key] !== undefined) return background.last[key];
   if (!background.cache.has(id)) {
+    if (background.cache.size > 200) background.cache.clear();
     const sizes = [], step = ARROW_SPACING / 2;
     for (const t of Array.from({length: 11}, (_, i) => range[0] + (range[1] - range[0]) * i / 10))
       for (let sy = top + step / 2; sy < b; sy += step)
@@ -1889,6 +2160,7 @@ function backgroundReference(background, key) {
     background.cache.set(id, sizes.length ? sizes[Math.min(sizes.length - 1, Math.floor(p * sizes.length))]
                                           : background.reference[key] || null);
   }
+  background.last[key] = background.cache.get(id);
   return background.cache.get(id);
 }
 
@@ -1951,8 +2223,9 @@ function drawBackground(background) {
 const SCALAR_CELL = 5, SCALAR_PLUS = '#d6452a', SCALAR_MINUS = '#2a6fd6';
 function drawScalar(sample, reference) {
   const {l, t: top, r, b} = plotRect(), look = layer('scalar'), cell = Math.max(2, Math.round(SCALAR_CELL / look.density));
-  for (let sy = top; sy < b; sy += cell)
-    for (let sx = l; sx < r; sx += cell) {
+  const [gx, gy] = gridStart(l, top, cell, 0);
+  for (let sy = gy - cell; sy < b; sy += cell)
+    for (let sx = gx - cell; sx < r; sx += cell) {
       const [x, y] = toData(sx + cell / 2, sy + cell / 2), v = sample(x, y);
       if (!v || !isFinite(v[0]) || v[0] === 0) continue;
       ctx.globalAlpha = Math.min(1, Math.min(1, Math.abs(v[0]) / reference) * 0.85 * look.strength);
@@ -1960,6 +2233,18 @@ function drawScalar(sample, reference) {
       ctx.fillRect(sx, sy, cell, cell);
     }
   ctx.globalAlpha = 1;
+}
+
+/* where a background's screen grid starts: fixed to the plot's own coordinates, so arrows, arcs, cones and colour-map
+   cells move with the plot when it is panned, while their spacing on screen stays the same at any zoom. the grid goes
+   through the screen point of the plot's origin, shifted by shift pixels; returns the first grid point at or after
+   (l, top) */
+function gridStart(l, top, spacing, shift) {
+  let [ox, oy] = toScreen(0, 0);
+  if (!isFinite(ox)) ox = l;
+  if (!isFinite(oy)) oy = top;
+  const mod = (v, m) => ((v % m) + m) % m;
+  return [l + mod(ox + shift - l, spacing), top + mod(oy + shift - top, spacing)];
 }
 
 function speed(v) { return v >= 1e3 ? fmt(v / 1e3) + ' km/s' : fmt(v) + ' m/s'; }
@@ -1972,8 +2257,9 @@ function drawTwist(sample, reference) {
   const look = layer('twist'), spacing = ARROW_SPACING / look.density;
   const {l, t: top, r, b} = plotRect(), shift = spacing * 0.75, radius = spacing * 0.2 * look.size;
   ctx.strokeStyle = look.colour; ctx.fillStyle = look.colour; ctx.lineWidth = look.width;
-  for (let sy = top + shift; sy < b; sy += spacing)
-    for (let sx = l + shift; sx < r; sx += spacing) {
+  const [gx, gy] = gridStart(l, top, spacing, shift);
+  for (let sy = gy; sy < b; sy += spacing)
+    for (let sx = gx; sx < r; sx += spacing) {
       const [x, y] = toData(sx, sy), v = sample(x, y);
       if (!v || !isFinite(v[0]) || v[0] === 0) continue;
       const sweep = 300 / 180 * Math.PI * Math.min(1, Math.abs(v[0]) / reference);
@@ -1999,8 +2285,9 @@ function drawArrows(sample, look, reference, offset) {
   const spacing = ARROW_SPACING / look.density;
   const {l, t: top, r, b} = plotRect(), longest = spacing * 0.8 * look.size, shift = spacing * (0.5 + offset);
   ctx.strokeStyle = look.colour; ctx.fillStyle = look.colour; ctx.lineWidth = look.width;
-  for (let sy = top + shift; sy < b; sy += spacing)
-    for (let sx = l + shift; sx < r; sx += spacing) {
+  const [gx, gy] = gridStart(l, top, spacing, shift);
+  for (let sy = gy; sy < b; sy += spacing)
+    for (let sx = gx; sx < r; sx += spacing) {
       const [x, y] = toData(sx, sy), v = sample(x, y);
       if (!v) continue;
       const size = Math.hypot(v[0], v[1]);
@@ -2027,13 +2314,9 @@ function arrow(x0, y0, x1, y1) {
    chevron: pointing into the plot it pulls the box out a step (hidden, then lines, then names), pointing back to the
    edge it tucks it away a step. at either end it turns round. the box slides sideways from its edge, animated */
 const BOX_ANIM_MS = 220;
-const boxes = {legend: {mode: 'max', out: false, from: null}, key: {mode: 'max', out: false, from: null}};
 const BOX_WIDTH = {hidden: 0, min: 1, max: 2};          //how far out each state is
 const BOX_OUT = {hidden: 'min', min: 'max'}, BOX_IN = {max: 'min', min: 'hidden'};
-let boxButtons = [];                //this frame's buttons: {x, y, w, h, box, tip}
-let boxRows = [];                   //this frame's rows: {x, y, w, h, tip, path}
 let boxFrame = null;
-let frontPath = null;               //a path whose legend row is under the pointer: drawn last, on top
 
 const ease = f => f < 0.5 ? 2 * f * f : 1 - 2 * (1 - f) * (1 - f);
 const inside = (h, x, y) => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h;
@@ -2042,7 +2325,7 @@ const inside = (h, x, y) => x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y +
 function boxProgress(box) {
   const goal = BOX_WIDTH[box.mode];
   if (!box.from) return goal;
-  const f = Math.min(1, (performance.now() - box.from.at) / BOX_ANIM_MS);
+  const f = stillMotion() ? 1 : Math.min(1, (performance.now() - box.from.at) / BOX_ANIM_MS);
   if (f >= 1) { box.from = null; return goal; }
   return box.from.w + (goal - box.from.w) * ease(f);
 }
@@ -2051,11 +2334,16 @@ function boxProgress(box) {
 const boxGoesOut = box => box.mode === 'hidden' ? true : box.mode === 'max' ? false : box.out;
 
 function stepBox(name) {
-  const box = boxes[name], out = boxGoesOut(box);
+  const box = state.boxes[name], out = boxGoesOut(box);
   box.from = {w: boxProgress(box), at: performance.now()};
   box.mode = out ? BOX_OUT[box.mode] : BOX_IN[box.mode];
   box.out = out;
-  const step = () => { draw(); boxFrame = Object.values(boxes).some(b => b.from) ? requestAnimationFrame(step) : null; };
+  //each view with a box on the move drawn again, until they have all arrived
+  const step = () => {
+    let moving = false;
+    for (const p of panes) withPane(p, () => { if (Object.values(state.boxes).some(b => b.from)) { draw(); moving = true; } });
+    boxFrame = moving ? requestAnimationFrame(step) : null;
+  };
   if (boxFrame === null) boxFrame = requestAnimationFrame(step);
 }
 
@@ -2078,7 +2366,7 @@ const BOX_TIPS = {legend: {'hidden>': 'Show the paths\' lines', 'min>': 'Show th
 /* lines: [colour, text, dash, path] - path, for a path's row, is {result, p} */
 function drawBox(lines, anchor, name) {
   const {l, t, r, b} = plotRect(), rowH = 18, swatch = 26, btn = 18;
-  const box = boxes[name], f = boxProgress(box), right = anchor === 'top-right';
+  const box = state.boxes[name], f = boxProgress(box), right = anchor === 'top-right';
   //the text shrinks (to 9px) to keep the box inside the plot
   let size = 12, widest;
   for (; ; size--) {
@@ -2118,19 +2406,19 @@ function drawBox(lines, anchor, name) {
       ctx.globalAlpha = 0.25 + 0.75 * Math.max(0, f - 1);
       ctx.fillText(text, lx + swatch + 14, cy);
       ctx.globalAlpha = 1;
-      boxRows.push({x, y: ry, w: width, h: rowH, tip: text, path});
+      state.boxRows.push({x, y: ry, w: width, h: rowH, tip: text, path});
     });
     ctx.restore();
   }
   const out = boxGoesOut(box);
   //pointing into the plot pulls the box out: < at the top right, > at the bottom left
   drawBoxButton(bx, by, btn, right ? out : !out);
-  boxButtons.push({x: bx, y: by, w: btn, h: btn, box: name, tip: BOX_TIPS[name][box.mode + (out ? '>' : '<')]});
+  state.boxButtons.push({x: bx, y: by, w: btn, h: btn, box: name, tip: BOX_TIPS[name][box.mode + (out ? '>' : '<')]});
 }
 
 /* a press on a box's button: a step out or in; true if it was one */
 function boxPress(e) {
-  const hit = boxButtons.find(h => inside(h, e.offsetX, e.offsetY));
+  const hit = state.boxButtons.find(h => inside(h, e.offsetX, e.offsetY));
   if (!hit) return false;
   stepBox(hit.box);
   $('tip').style.display = 'none';           //the button moves: its tip comes back with the next move of the pointer
@@ -2146,9 +2434,9 @@ function positionLines(x, y) {
 /* hover text on the plot, as lines (a description, then each value on its own): a box's button or row, a body, or
    the nearest drawn path within a few pixels */
 function hoverText(sx, sy) {
-  const button = boxButtons.find(h => inside(h, sx, sy));
+  const button = state.boxButtons.find(h => inside(h, sx, sy));
   if (button) return {lines: [button.tip], pointer: true};
-  const row = boxRows.find(h => inside(h, sx, sy));
+  const row = state.boxRows.find(h => inside(h, sx, sy));
   if (row) return {lines: [row.tip], path: row.path};
   const {l, t, r, b} = plotRect();
   if (sx < l || sx > r || sy < t || sy > b || !state.view) return null;
@@ -2194,9 +2482,9 @@ function hoverText(sx, sy) {
 
 function hoverAt(e) {
   const found = hoverText(e.offsetX, e.offsetY);
-  canvas.style.cursor = found && found.pointer ? 'pointer' : '';
+  canvas.style.cursor = found && found.pointer ? 'pointer' : state.measure.on ? 'crosshair' : '';
   const front = found && found.path || null;
-  if ((front && front.p) !== (frontPath && frontPath.p)) { frontPath = front; draw(); }
+  if ((front && front.p) !== (state.frontPath && state.frontPath.p)) { state.frontPath = front; draw(); }
   const tip = $('tip');
   if (!found) { if (!tipFor) tip.style.display = 'none'; return; }
   tipFor = null;
@@ -2279,13 +2567,24 @@ function fieldTime() {
   return now ? now.t : null;
 }
 
-function canPlayInTurn() { return segments().length > 1; }
+/* the clock's range across every view: from the earliest start to the latest end, so each view is drawn at the same
+   time while the replay runs (a view whose run is over shows all of it) */
+function clockRange(mode = replay.mode) {
+  let lo = Infinity, hi = -Infinity;
+  for (const p of panes) {
+    const range = withPane(p, () => replayRange(mode));
+    if (range) { lo = Math.min(lo, range[0]); hi = Math.max(hi, range[1]); }
+  }
+  return isFinite(lo) ? [lo, hi] : null;
+}
+
+function canPlayInTurn() { return panes.some(p => withPane(p, () => segments().length > 1)); }
 
 function play(mode = 'together') {
   const rp = state.replay;
   if (rp.state === 'playing' && rp.mode === mode) return;
   if (rp.mode !== mode) { rp.mode = mode; rp.state = 'stopped'; }
-  const range = replayRange();
+  const range = clockRange();
   if (!range) return;
   if (rp.state === 'stopped' || rp.t >= range[1]) rp.t = range[0];
   rp.state = 'playing'; rp.last = performance.now();
@@ -2294,7 +2593,7 @@ function play(mode = 'together') {
 }
 
 function tick() {
-  const rp = state.replay, range = replayRange();
+  const rp = state.replay, range = clockRange();
   if (rp.state !== 'playing' || !range) return;
   //the clock, not the frame's own timestamp: that can be earlier than play()'s start (in a background or embedded
   //frame), which ran the replay backwards out of the run
@@ -2312,7 +2611,7 @@ function tick() {
 function stopReplay() { state.replay.state = 'stopped'; state.replay.t = null; }
 
 function seek(f) {
-  const range = replayRange();
+  const range = clockRange();
   if (!range) return;
   if (state.replay.state === 'stopped') state.replay.state = 'paused';
   state.replay.t = range[0] + f * (range[1] - range[0]);
@@ -2325,6 +2624,7 @@ const STOPPED_LABEL = 'stopped - ×1 plays the whole run in ' + REPLAY_SECONDS +
 function replayLabel(word, clock, range, mode = state.replay.mode) {
   if (mode !== 'sequence') return word + '  t = ' + fmt(clock) + ' of ' + fmt(range[1]) + ' s';
   const g = currentSegment(clock);
+  if (!g) return word + '  t = ' + fmt(clock) + ' s';
   return word + '  ' + (g.index + 1) + '/' + g.count + '  t = ' + fmt(g.t) + ' of ' + fmt(g.hi) + ' s';
 }
 
@@ -2333,13 +2633,13 @@ function replayLabel(word, clock, range, mode = state.replay.mode) {
 let labelFit = {key: null, width: 0};
 function fitReplayLabel() {
   const label = $('replayLabel');
-  const key = segments().map(g => g.result.file + ':' + g.lo + ':' + g.hi).join();
+  const key = panes.map(p => withPane(p, () => segments().map(g => g.result.file + ':' + g.lo + ':' + g.hi).join())).join('/');
   if (labelFit.key === key) return;
   const ctx = document.createElement('canvas').getContext('2d'), style = getComputedStyle(label);
   ctx.font = style.fontSize + ' ' + style.fontFamily;
   const texts = [STOPPED_LABEL];
   for (const mode of canPlayInTurn() ? ['together', 'sequence'] : ['together']) {    //both, so switching doesn't resize it
-    const range = replayRange(mode);
+    const range = clockRange(mode);
     if (range) for (let i = 0; i <= 400; i++)
       for (const word of ['playing', 'paused']) texts.push(replayLabel(word, range[0] + i / 400 * (range[1] - range[0]), range, mode));
   }
@@ -2349,7 +2649,7 @@ function fitReplayLabel() {
 }
 
 function showReplay() {
-  const rp = state.replay, range = replayRange();
+  const rp = state.replay, range = clockRange();
   fitReplayLabel();
   //while playing, Pause and Restart stand in for Play and Play in turn; paused, Restart stays, to get back to the start
   const playing = rp.state === 'playing';
@@ -2366,7 +2666,7 @@ function showReplay() {
   }
   $('replayLabel').title = $('replayLabel').textContent;
   showPlayer();
-  draw();
+  drawAll();
 }
 
 /* the player's icons */
@@ -2416,7 +2716,7 @@ function showPlayer() {
    its own colour, each crossing the whole track while its result plays (those before it at the end, those after at the
    start). stopped, the whole run is shown, so they are all at the end */
 function showTrack() {
-  const track = $('pTrack'), rp = state.replay, range = replayRange();
+  const track = $('pTrack'), rp = state.replay, range = clockRange();
   const markers = [];
   if (range) {
     const at = rp.state === 'stopped' ? null : rp.t;
@@ -2447,11 +2747,12 @@ function showTrack() {
    is); stopped, the whole run is shown, so its end. its width is set from the widest it can be, so it doesn't jitter */
 function showTime() {
   if (!PLAYER) return;
-  const rp = state.replay, range = replayRange(), el = $('pTime');
+  const rp = state.replay, range = clockRange(), el = $('pTime');
   if (!range) { el.textContent = ''; return; }
   const text = (clock, mode) => {
     if (mode !== 'sequence') return fmt(clock) + ' / ' + fmt(range[1]) + ' s';
     const g = currentSegment(clock);
+    if (!g) return fmt(clock) + ' s';
     return (g.index + 1) + '/' + g.count + '  ' + fmt(g.t) + ' / ' + fmt(g.hi) + ' s';
   };
   const key = rp.mode + ':' + range.join();
@@ -2487,6 +2788,650 @@ function showTip(el) {
 }
 function hideTip() { tipFor = null; $('tip').style.display = 'none'; }
 
+//---------------------------------------------------------------- moving smoothly
+/* while the view is being moved (dragged, zoomed, the joystick), redraws wait for the next frame, and what is slow to
+   work out (the background's arrow scale, flow lines) is kept from before; a moment after it stops, the view is drawn
+   again with everything worked out afresh */
+let drawRequest = null, movingUntil = 0, settleTimer = null;
+function scheduleDraw() {
+  const pane = currentPane();
+  if (pane) pane.dirty = true;
+  if (drawRequest === null) drawRequest = requestAnimationFrame(() => {
+    drawRequest = null;
+    for (const p of panes) if (p.dirty) { p.dirty = false; withPane(p, draw); }
+  });
+}
+const interacting = () => performance.now() < movingUntil;
+function moved() {
+  movingUntil = performance.now() + 180;
+  clearTimeout(settleTimer);
+  const pane = currentPane();
+  settleTimer = setTimeout(() => { if (pane && panes.includes(pane)) withPane(pane, draw); }, 220);
+}
+
+//---------------------------------------------------------------- following a body or a path
+/* the view kept centred on a body, or on where a path is at the replay's time (its end when stopped): the view's size
+   stays as it is, and zooming is about the centre. moving the view by hand stops it */
+function stopFollowing() {
+  if (!state.follow) return;
+  state.follow = null;
+  if (!PLAYER && state === active.state) syncFollow();
+}
+
+/* the followed thing's place as plotted: [X, Y] (Y null where only X is known), or null */
+function followTarget() {
+  const f = state.follow, [ax, ay] = axes();
+  if (!f) return null;
+  if (f.kind === 'body') {
+    const env = overlayEnv(), body = env && env.bodies[f.index];
+    if (!body) return null;
+    if (timeMode()) return [toAxis(Math.hypot(body.x, body.y), ax), null];
+    if (ax.kind !== 'position' || ay.kind !== 'position') return null;
+    return [toAxis(body.x, ax), toAxis(body.y, ay)];
+  }
+  const result = state.results.find(r => r.file === f.file && r.visible), p = result && result.paths.find(q => q.name === f.path);
+  if (!p) return null;
+  plotted(result, p);
+  const until = drawUntil(result);
+  if (until === false) return null;
+  let last = -1;
+  for (let i = 0; i < p.px.length; i++) {
+    if (!(isFinite(p.px[i]) && isFinite(p.py[i])) || !shownRow(result, i)) continue;
+    if (until !== null && p.t && p.t[i] > until) {
+      //between the last row and this one, at the replay's time
+      if (last >= 0 && i === last + 1 && p.t[i] > p.t[last]) {
+        const k = (until - p.t[last]) / (p.t[i] - p.t[last]);
+        return [p.px[last] + k * (p.px[i] - p.px[last]), p.py[last] + k * (p.py[i] - p.py[last])];
+      }
+      break;
+    }
+    last = i;
+  }
+  return last >= 0 ? [p.px[last], p.py[last]] : null;
+}
+
+function applyFollow() {
+  const at = followTarget();
+  if (!at) return;
+  const v = state.view, hx = (v[1] - v[0]) / 2, hy = (v[3] - v[2]) / 2;
+  state.view = [at[0] - hx, at[0] + hx, at[1] === null ? v[2] : at[1] - hy, at[1] === null ? v[3] : at[1] + hy];
+}
+
+/* the Centre on menu: nothing, each body of the background drawn, each shown result's paths */
+function syncFollow() {
+  const menu = $('follow');
+  if (!menu) return;
+  menu.innerHTML = '';
+  menu.add(new Option('nothing (the view stays put)', ''));
+  const env = overlayEnv();
+  (env ? env.bodies : []).forEach((b, i) => menu.add(new Option('body ' + (i + 1) + ': ' + bodyLabel(b) + (b.black ? ' black' : ''), 'body:' + i)));
+  for (const r of state.results.filter(r => r.visible))
+    for (const p of r.paths) menu.add(new Option('path: ' + r.name + (r.paths.length > 1 ? ' ' + p.name : ''), 'path:' + r.file + '\n' + p.name));
+  const f = state.follow, value = !f ? '' : f.kind === 'body' ? 'body:' + f.index : 'path:' + f.file + '\n' + f.path;
+  menu.value = [...menu.options].some(o => o.value === value) ? value : '';
+}
+
+function chooseFollow(value) {
+  if (!value) state.follow = null;
+  else if (value.startsWith('body:')) state.follow = {kind: 'body', index: +value.slice(5)};
+  else { const [file, path] = value.slice(5).split('\n'); state.follow = {kind: 'path', file, path}; }
+  draw();
+}
+
+//---------------------------------------------------------------- measuring
+/* the measuring tool: a click puts a point on the plot (on the nearest path's row, if one is within a few pixels, else
+   where the click was); two points give the distance between them. a third click starts again. a point can also be put
+   on the selected result's row at a time typed in */
+function nearestRow(sx, sy) {
+  let best = null, bestD = 8;
+  for (const result of state.results.filter(r => r.visible)) {
+    const until = drawUntil(result);
+    if (until === false) continue;
+    for (const p of result.paths) {
+      plotted(result, p);
+      for (let i = 0; i < p.px.length; i++) {
+        if (until !== null && p.t && p.t[i] > until) break;
+        if (!(isFinite(p.px[i]) && isFinite(p.py[i])) || !shownRow(result, i)) continue;
+        const [qx, qy] = toScreen(p.px[i], p.py[i]), d = Math.hypot(sx - qx, sy - qy);
+        if (d < bestD) { bestD = d; best = {file: result.file, path: p.name, row: i}; }
+      }
+    }
+  }
+  return best;
+}
+
+function measureAt(sx, sy) {
+  const m = state.measure;
+  if (m.points.length >= 2) m.points = [];
+  const row = nearestRow(sx, sy);
+  if (row) m.points.push(row);
+  else { const [X, Y] = toData(sx, sy); m.points.push({X, Y}); }
+  showMeasure(); draw();
+}
+
+/* a measured point as plotted, with its row's result and path if it has one */
+function measurePoint(pt) {
+  if (pt.row === undefined) return {X: pt.X, Y: pt.Y};
+  const result = state.results.find(r => r.file === pt.file), p = result && result.paths.find(q => q.name === pt.path);
+  if (!p) return null;
+  plotted(result, p);
+  return {X: p.px[pt.row], Y: p.py[pt.row], result, p, row: pt.row};
+}
+
+function pinRowAt() {
+  const r = state.selected, T = +$('measureT').value, name = r && timeColumnOf(r, 't');
+  if (!r || !name || !isFinite(T)) { message(r && !name ? 'the selected result has no t column' : 'type a time in seconds'); return; }
+  const t = r.data.columns[name];
+  let best = -1;
+  for (let i = 0; i < t.length; i++) if (isFinite(t[i]) && (best < 0 || Math.abs(t[i] - T) < Math.abs(t[best] - T))) best = i;
+  if (best < 0) return;
+  const m = state.measure;
+  if (m.points.length >= 2) m.points = [];
+  m.points.push({file: r.file, path: r.paths[0].name, row: best});
+  showMeasure(); draw();
+}
+
+/* the points, the line between them and a label, drawn on the plot */
+function drawMeasure() {
+  const pts = state.measure.points.map(measurePoint).filter(Boolean);
+  if (!pts.length) return;
+  const screen = pts.map(q => toScreen(q.X, q.Y));
+  ctx.strokeStyle = css('--accent'); ctx.fillStyle = css('--accent'); ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  if (screen.length === 2) { ctx.setLineDash([5, 3]); line(screen[0][0], screen[0][1], screen[1][0], screen[1][1]); ctx.setLineDash([]); }
+  screen.forEach(([sx, sy], i) => {
+    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, 2 * Math.PI); ctx.stroke();
+    line(sx - 8, sy, sx + 8, sy); line(sx, sy - 8, sx, sy + 8);
+    ctx.font = 'bold 11px -apple-system, Helvetica, Arial, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('AB'[i], sx + 6, sy - 5);
+  });
+  if (screen.length === 2) {
+    const text = measureLines().distance;
+    if (text) {
+      const mx = (screen[0][0] + screen[1][0]) / 2, my = (screen[0][1] + screen[1][1]) / 2;
+      ctx.font = '11px -apple-system, Helvetica, Arial, sans-serif';
+      const w = ctx.measureText(text).width;
+      ctx.fillStyle = css('--surface'); ctx.fillRect(mx - w / 2 - 4, my - 9, w + 8, 18);
+      ctx.strokeStyle = css('--accent'); ctx.lineWidth = 1; ctx.strokeRect(mx - w / 2 - 4, my - 9, w + 8, 18);
+      ctx.fillStyle = css('--ink'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(text, mx, my);
+    }
+  }
+}
+
+/* what the measured points say: each point's lines, and the distance between them */
+function measureLines() {
+  const pts = state.measure.points.map(measurePoint).filter(Boolean), [ax, ay] = axes(), out = {points: [], distance: ''};
+  const value = (v, a) => a.log ? Math.pow(10, v) : v / a.scale, unitOf = a => (a.label.match(/\(([^)]*)\)/) || [])[1] || '';
+  pts.forEach((q, i) => {
+    const lines = ['ABCD'[i] + ': ' + ax.label.replace('  [log]', '') + ' ' + fmt(value(q.X, ax)) + ', ' + ay.label.replace('  [log]', '') + ' ' + fmt(value(q.Y, ay))];
+    if (q.result) {
+      const t = timeColumnOf(q.result, 't');
+      lines.push('   ' + q.result.name + (q.result.paths.length > 1 ? ' ' + q.p.name : '') + ', row ' + (q.row + 1) +
+                 (t ? ', t = ' + fmt(q.result.data.columns[t][q.row]) + ' s' : ''));
+    }
+    out.points.push(...lines);
+  });
+  if (pts.length === 2) {
+    const [a, b] = pts;
+    if (!ax.log && !ay.log && ax.kind === ay.kind && ax.scale === ay.scale && ax.kind !== 'time')
+      out.distance = 'AB = ' + fmt(Math.hypot(b.X - a.X, b.Y - a.Y) / ax.scale) + ' ' + unitOf(ax);
+    else out.distance = (ax.log ? 'x × ' + fmt(value(b.X, ax) / value(a.X, ax)) : 'Δx = ' + fmt(value(b.X, ax) - value(a.X, ax)) + ' ' + unitOf(ax)) + ',  ' +
+                        (ay.log ? 'y × ' + fmt(value(b.Y, ay) / value(a.Y, ay)) : 'Δy = ' + fmt(value(b.Y, ay) - value(a.Y, ay)) + ' ' + unitOf(ay));
+    const ta = a.result && timeColumnOf(a.result, 't'), tb = b.result && timeColumnOf(b.result, 't');
+    if (ta && tb) out.distance += ',  Δt = ' + fmt(b.result.data.columns[tb][b.row] - a.result.data.columns[ta][a.row]) + ' s';
+  }
+  return out;
+}
+
+function showMeasure() {
+  if (PLAYER || !$('measureOut') || state !== active.state) return;
+  const m = state.measure, lines = measureLines();
+  $('measure').setAttribute('aria-pressed', String(m.on));
+  $('measure').textContent = m.on ? 'Measuring: on' : 'Measure';
+  $('measureOut').textContent = lines.points.length ? [...lines.points, lines.distance].filter(Boolean).join('\n')
+                                : m.on ? 'Click the plot to put point A, then B. Esc clears them.' : '';
+}
+
+//---------------------------------------------------------------- results made from others (Add…)
+/* new results worked out from the open ones, each a value against t, chosen in the Add dialog:
+   - difference: at each row of a result, another result at the same t (interpolated), and the difference between them
+   - orbits: a value for each whole orbit of a result, at the orbit's periapsis, apoapsis or end (from the orbits its
+     log gives): how its closest and farthest points, their directions, its period and shape change
+   - path: a value at each row of a result: its distances, speeds and the angle it has gone round
+   distances and angles are from the result's first body (the origin if it has none). each is kept as {kind, a, b,
+   column} on the result, so it is made again after a reload, in a link and in a copied view */
+const DERIVED = {
+  difference: {
+    apart: ['distance apart', 'How far apart the two are, |rA − rB|'],
+    radial: ['difference in distance from origin', 'The first one\'s distance from the origin less the second one\'s'],
+    dx: ['difference in x', 'The first one\'s x less the second one\'s'],
+    dy: ['difference in y', 'The first one\'s y less the second one\'s'],
+  },
+  orbits: {
+    periDistance: ['periapsis distance', 'Each orbit\'s closest distance to the body, at the time of its periapsis'],
+    apoDistance: ['apoapsis distance', 'Each orbit\'s farthest distance from the body, at the time of its apoapsis'],
+    periAngle: ['periapsis direction (deg)', 'The direction of each orbit\'s periapsis from the body, in degrees, counted on round: its rise is the orbit\'s precession'],
+    apoAngle: ['apoapsis direction (deg)', 'The direction of each orbit\'s apoapsis from the body, in degrees, counted on round'],
+    precession: ['periapsis shift per orbit (arcsec)', 'How far each orbit\'s periapsis has turned since the last orbit\'s, in seconds of arc'],
+    period: ['period (days)', 'Each orbit\'s time from start to end, in days, at its end'],
+    eccentricity: ['eccentricity (ratio)', 'Each orbit\'s (apoapsis − periapsis) / (apoapsis + periapsis), at its end'],
+    semiMajor: ['semi-major axis', 'Each orbit\'s (periapsis + apoapsis) / 2, at its end'],
+  },
+  path: {
+    origin: ['distance from origin', 'How far the path is from the origin, at each row'],
+    body: ['distance from body', 'How far the path is from the result\'s first body, at each row'],
+    speed: ['speed (m/s)', 'The path\'s speed, from its velocity columns (or the change between rows)'],
+    radial: ['radial speed (m/s)', 'How fast the path moves away from the body (negative: towards it)'],
+    angle: ['angle round body (deg)', 'How far the path has gone round the body since it started, in degrees, counted on round'],
+  },
+};
+const DERIVED_KINDS = {difference: 'Difference', orbits: 'Each orbit', path: 'Along the path'};
+
+/* a result's centre for distances and angles: its first body, or the origin */
+function centreOf(r) {
+  const body = r.env && r.env.bodies && r.env.bodies[0];
+  return body ? [body.x, body.y] : [0, 0];
+}
+
+/* angles (radians, -pi..pi) counted on round, in degrees */
+function unwrapDegrees(angles) {
+  const out = [];
+  let last = null, turned = 0;
+  for (const a of angles) {
+    if (!isFinite(a)) { out.push(NaN); continue; }
+    if (last !== null) turned += ((a - last + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+    else turned = a;
+    last = a;
+    out.push(turned * 180 / Math.PI);
+  }
+  return out;
+}
+
+/* the columns {t, value} for a choice, or a reason there are none */
+function derivedColumns(spec) {
+  const a = state.results.find(r => r.file === spec.a), [label] = DERIVED[spec.kind][spec.column];
+  if (!a) return 'the result it was made from is not open';
+  const ta = timeColumnOf(a, 't'), pa = a.paths[0];
+  if (!ta || !pa) return a.name + ' has no t column';
+  const t = a.data.columns[ta], [cx, cy] = centreOf(a);
+  if (spec.kind === 'difference') {
+    const b = state.results.find(r => r.file === spec.b), tb = b && timeColumnOf(b, 't');
+    if (!b || !tb) return 'the second result has no t column';
+    const pb = b.paths[0], tB = b.data.columns[tb];
+    const order = [...tB.keys()].filter(i => isFinite(tB[i]) && isFinite(pb.x[i]) && isFinite(pb.y[i])).sort((i, j) => tB[i] - tB[j]);
+    const at = (xs, T) => {
+      let lo = 0, hi = order.length - 1;
+      if (!order.length || T < tB[order[0]] || T > tB[order[hi]]) return NaN;
+      while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (tB[order[mid]] <= T) lo = mid; else hi = mid; }
+      const i = order[lo], j = order[hi], f = tB[j] === tB[i] ? 0 : (T - tB[i]) / (tB[j] - tB[i]);
+      return xs[i] + f * (xs[j] - xs[i]);
+    };
+    const T = [], V = [];
+    for (let i = 0; i < t.length; i++) {
+      const xb = at(pb.x, t[i]), yb = at(pb.y, t[i]);
+      if (!(isFinite(t[i]) && isFinite(pa.x[i]) && isFinite(xb))) continue;
+      T.push(t[i]);
+      V.push({apart: Math.hypot(pa.x[i] - xb, pa.y[i] - yb), radial: Math.hypot(pa.x[i], pa.y[i]) - Math.hypot(xb, yb),
+              dx: pa.x[i] - xb, dy: pa.y[i] - yb}[spec.column]);
+    }
+    return {t: T, v: V, label, name: a.name + ' − ' + b.name + ': ' + label};
+  }
+  if (spec.kind === 'orbits') {
+    const whole = (a.orbits || []).filter(o => o.full && o.peri && o.apo);
+    if (!whole.length) return a.name + ' has no whole orbits in its log';
+    const dist = q => Math.hypot(q.x - cx, q.y - cy), angle = q => Math.atan2(q.y - cy, q.x - cx);
+    const periAngles = unwrapDegrees(whole.map(o => angle(o.peri)));
+    const T = [], V = [];
+    whole.forEach((o, k) => {
+      const rp = dist(o.peri), ra = dist(o.apo);
+      const value = {periDistance: [o.peri.t, rp], apoDistance: [o.apo.t, ra], periAngle: [o.peri.t, periAngles[k]],
+                     apoAngle: [o.apo.t, null], precession: [o.peri.t, k ? (periAngles[k] - periAngles[k - 1]) * 3600 : NaN],
+                     period: [o.t1, (o.t1 - o.t0) / 86400], eccentricity: [o.t1, (ra - rp) / (ra + rp)], semiMajor: [o.t1, (ra + rp) / 2]}[spec.column];
+      T.push(value[0]); V.push(value[1]);
+    });
+    if (spec.column === 'apoAngle') unwrapDegrees(whole.map(o => angle(o.apo))).forEach((v, k) => { V[k] = v; });
+    //in order of time, those with a value
+    const rows = T.map((x, k) => [x, V[k]]).filter(([x, v]) => isFinite(x) && isFinite(v)).sort((p, q) => p[0] - q[0]);
+    return {t: rows.map(r => r[0]), v: rows.map(r => r[1]), label, name: a.name + ': ' + label, dots: true};
+  }
+  //along the path
+  const v = velocityPair(a), n = t.length, V = new Array(n).fill(NaN);
+  const vel = i => {
+    if (v) return [a.data.columns[v[1]][i], a.data.columns[v[2]][i]];
+    const j = i + 1 < n && isFinite(pa.x[i + 1]) ? i + 1 : i - 1;
+    if (j < 0 || !isFinite(pa.x[j]) || t[j] === t[i]) return [NaN, NaN];
+    const [p, q] = j > i ? [i, j] : [j, i];
+    return [(pa.x[q] - pa.x[p]) / (t[q] - t[p]), (pa.y[q] - pa.y[p]) / (t[q] - t[p])];
+  };
+  if (spec.column === 'angle') unwrapDegrees(Array.from(pa.x, (x, i) => Math.atan2(pa.y[i] - cy, x - cx))).forEach((d, i) => { V[i] = d; });
+  else for (let i = 0; i < n; i++) {
+    const dx = pa.x[i] - cx, dy = pa.y[i] - cy, d = Math.hypot(dx, dy);
+    if (spec.column === 'origin') V[i] = Math.hypot(pa.x[i], pa.y[i]);
+    else if (spec.column === 'body') V[i] = d;
+    else { const [vx, vy] = vel(i); V[i] = spec.column === 'speed' ? Math.hypot(vx, vy) : (vx * dx + vy * dy) / d; }
+  }
+  const T = [], W = [];
+  for (let i = 0; i < n; i++) if (isFinite(t[i]) && isFinite(V[i])) { T.push(t[i]); W.push(V[i]); }
+  return {t: T, v: W, label, name: a.name + ': ' + label};
+}
+
+/* the result for a choice: its columns as a csv's, drawn as value against t, or null (with a message) */
+function makeDerived(spec) {
+  const made = derivedColumns(spec);
+  if (typeof made === 'string') { message(made); return null; }
+  if (!made.t.length) { message('no values for ' + DERIVED[spec.kind][spec.column][0]); return null; }
+  const cols = {t: Float64Array.from(made.t), [made.label]: Float64Array.from(made.v)};
+  const data = {names: Object.keys(cols), columns: cols, rows: made.t.length, text: name => Array.from(cols[name], x => isFinite(x) ? String(x) : '')};
+  const log = {bodies: [], orbitEnds: [], text: 'Made in the viewer from ' + spec.a + (spec.b ? ' and ' + spec.b : '') + ': ' + made.label +
+               ' against t (' + DERIVED_KINDS[spec.kind].toLowerCase() + ').'};
+  const result = {name: made.name, file: 'added: ' + [spec.kind, spec.a, spec.b || '', spec.column].join(' | '), data, log, visible: true,
+                  color: SERIES[state.results.length % SERIES.length], source: null, ends: false, orbitEvery: 1, dots: !!made.dots,
+                  tangent: {on: false, t: null, color: null, style: 'dashed'}, derived: {kind: spec.kind, a: spec.a, b: spec.b || null, column: spec.column}};
+  result.paths = buildPaths(result, {selection: [['t', made.label]]});
+  result.env = environmentFor(log, new Map());
+  result.orbits = [];
+  return result;
+}
+
+/* the dialog's choices added as results (any already open replaced), the last selected */
+function addDerived(specs) {
+  let last = null;
+  for (const spec of specs) {
+    const r = makeDerived(spec);
+    if (!r) continue;
+    state.results = state.results.filter(x => x.file !== r.file);
+    state.results.push(r);
+    last = r;
+  }
+  if (!last) return false;
+  state.selected = last;
+  if (timeMode()) message('added results are drawn against t: choose the x / y view (View tab) to see them');
+  resultsChanged(); fit();
+  return true;
+}
+
+/* added results made again after a reload or from a link */
+function remakeDerived(list) {
+  for (const d of list) {
+    const r = makeDerived(d.kind ? d : {kind: 'difference', ...d});   //older links: differences only
+    if (r && d.settings) Object.assign(r, {visible: d.settings.visible});
+    if (r) state.results.push(r);
+  }
+}
+const derivedList = st => st.results.filter(r => r.derived).map(r => ({...r.derived, settings: {visible: r.visible}}));
+
+/* the Add dialog: what kind of result, made from which, and which values (several at once) */
+function openAddDialog() {
+  const dialog = $('addDialog'), base = state.results.filter(r => !r.derived);
+  if (!base.length) { message('open a run first'); return; }
+  const kind = $('addKind'), from = $('addFrom'), other = $('addOther'), values = $('addValues');
+  from.innerHTML = ''; other.innerHTML = '';
+  for (const r of base) { from.add(new Option(r.name, r.file)); other.add(new Option(r.name, r.file)); }
+  if (state.selected && !state.selected.derived) from.value = state.selected.file;
+  const show = () => {
+    const k = kind.value, a = base.find(r => r.file === from.value);
+    $('addOtherRow').style.display = k === 'difference' ? '' : 'none';
+    if (k === 'difference' && other.value === from.value) other.value = (base.find(r => r.file !== from.value) || {}).file || '';
+    values.innerHTML = '';
+    for (const [column, [label, tip]] of Object.entries(DERIVED[k])) {
+      const why = !a ? '' : !timeColumnOf(a, 't') ? 'it has no t column'
+                : k === 'orbits' && !(a.orbits || []).some(o => o.full && o.peri) ? 'its log has no whole orbits'
+                : k === 'path' && (column === 'body' || column === 'radial' || column === 'angle') && !(a.env && a.env.bodies.length) ? 'it has no bodies (the origin is used)' : '';
+      const box = Object.assign(document.createElement('input'), {type: 'checkbox', value: column, disabled: why && !why.includes('origin')});
+      const line = document.createElement('label');
+      line.className = 'check'; line.dataset.tip = tip + (why ? '. ' + (why.includes('origin') ? 'Note: ' : 'Not available: ') + why : '');
+      line.append(box, ' ' + label);
+      values.append(line);
+    }
+    $('addNote').textContent = {difference: 'The first result less the second, at the first one\'s times (the second interpolated to them).',
+                                orbits: 'One value for each whole orbit the result\'s log gives, measured from its first body.',
+                                path: 'A value at each row of the result\'s first path, measured from its first body.'}[k];
+  };
+  kind.onchange = from.onchange = other.onchange = show;
+  show();
+  $('addOk').onclick = e => {
+    e.preventDefault();
+    const chosen = [...values.querySelectorAll('input:checked')].map(b => b.value);
+    if (!chosen.length) { $('addNote').textContent = 'Tick at least one value.'; return; }
+    if (kind.value === 'difference' && other.value === from.value) { $('addNote').textContent = 'Choose two different results.'; return; }
+    if (addDerived(chosen.map(column => ({kind: kind.value, a: from.value, b: kind.value === 'difference' ? other.value : null, column})))) dialog.close();
+  };
+  $('addCancel').onclick = () => dialog.close();
+  //hover help over the dialog: the tip goes into it while it is open (a modal dialog is drawn over everything else)
+  dialog.append($('tip'));
+  dialog.onclose = () => { hideTip(); $('app').append($('tip')); };
+  dialog.showModal();
+}
+
+//---------------------------------------------------------------- export
+function download(blob, name) {
+  const a = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: name});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const exportName = ext => (state.results.length === 1 ? state.results[0].name : (state.sources[0] && state.sources[0].fullName || 'plot').replace(/\.full\.json$/, '')) + '.' + ext;
+
+/* the selected view as a picture: the plot and what moves over it, as they are now */
+function exportPng() {
+  const out = document.createElement('canvas');
+  out.width = canvas.width; out.height = canvas.height;
+  const c = out.getContext('2d');
+  c.drawImage(canvas, 0, 0);
+  if (overlay.width === canvas.width) c.drawImage(overlay, 0, 0);
+  out.toBlob(blob => download(blob, exportName('png')), 'image/png');
+}
+
+/* the selected view drawn again into an SVG (SvgContext stands in for the canvas), so it can be scaled and edited */
+function exportSvg() {
+  const w = canvas.clientWidth, h = canvas.clientHeight, svg = new SvgContext(w, h), real = ctx;
+  ctx = svg;
+  try {
+    draw();
+    for (const {sx, sy, body} of state.spinning) {   //spinning bodies, still
+      ctx.fillStyle = body.black ? '#111' : '#fff'; ctx.strokeStyle = css('--ink'); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(sx, sy, 10, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = css('--ink'); ctx.fillStyle = css('--ink'); ctx.lineWidth = 1.4;
+      twistArc(ctx, sx, sy, 15, 1.5 * Math.PI, body.spin > 0, 7);
+    }
+  } finally { ctx = real; draw(); }
+  download(new Blob([svg.toString()], {type: 'image/svg+xml'}), exportName('svg'));
+}
+
+/* the shown rows of the shown results (not in hidden orbits; up to the replay's time while it runs), one csv, with a
+   column naming each row's result */
+function exportCsv() {
+  const shown = state.results.filter(r => r.visible), names = [...new Set(shown.flatMap(r => r.data.names))];
+  const quote = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const lines = [['result', ...names].map(quote).join(',')];
+  for (const r of shown) {
+    const until = drawUntil(r), t = r.paths[0] && r.paths[0].t;
+    if (until === false) continue;
+    for (let i = 0; i < r.data.rows; i++) {
+      if (!shownRow(r, i) || (until !== null && t && t[i] > until)) continue;
+      lines.push([quote(r.name), ...names.map(n => r.data.columns[n] ? quote(r.data.text(n)[i] || '') : '')].join(','));
+    }
+  }
+  download(new Blob([lines.join('\n') + '\n'], {type: 'text/csv'}), exportName('csv'));
+}
+
+/* a stand-in for a canvas's 2d context that writes SVG: the drawing calls the viewer makes, arcs and ellipses as short
+   straight pieces, text as text */
+class SvgContext {
+  constructor(w, h) {
+    this.w = w; this.h = h; this.defs = []; this.root = {open: '', children: []}; this.ids = 0;
+    this.st = {m: [1, 0, 0, 1, 0, 0], group: this.root, fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1, dash: [],
+               font: '10px sans-serif', textAlign: 'start', textBaseline: 'alphabetic', lineCap: 'butt', lineJoin: 'miter'};
+    this.stack = []; this.d = ''; this.at = null;
+    this.measure = document.createElement('canvas').getContext('2d');
+  }
+  get fillStyle() { return this.st.fillStyle; } set fillStyle(v) { this.st.fillStyle = v; }
+  get strokeStyle() { return this.st.strokeStyle; } set strokeStyle(v) { this.st.strokeStyle = v; }
+  get lineWidth() { return this.st.lineWidth; } set lineWidth(v) { this.st.lineWidth = v; }
+  get globalAlpha() { return this.st.globalAlpha; } set globalAlpha(v) { this.st.globalAlpha = v; }
+  get font() { return this.st.font; } set font(v) { this.st.font = v; }
+  get textAlign() { return this.st.textAlign; } set textAlign(v) { this.st.textAlign = v; }
+  get textBaseline() { return this.st.textBaseline; } set textBaseline(v) { this.st.textBaseline = v; }
+  get lineCap() { return this.st.lineCap; } set lineCap(v) { this.st.lineCap = v; }
+  get lineJoin() { return this.st.lineJoin; } set lineJoin(v) { this.st.lineJoin = v; }
+  setLineDash(d) { this.st.dash = d.slice(); }
+  setTransform() { this.st.m = [1, 0, 0, 1, 0, 0]; }   //the device-pixel scale: not wanted in an SVG
+  save() { this.stack.push({...this.st, m: this.st.m.slice(), dash: this.st.dash.slice()}); }
+  restore() { if (this.stack.length) this.st = this.stack.pop(); }
+  transform(a, b, c, d, e, f) { const m = this.st.m; this.st.m = [m[0] * a + m[2] * b, m[1] * a + m[3] * b, m[0] * c + m[2] * d, m[1] * c + m[3] * d, m[0] * e + m[2] * f + m[4], m[1] * e + m[3] * f + m[5]]; }
+  translate(x, y) { this.transform(1, 0, 0, 1, x, y); }
+  rotate(a) { const c = Math.cos(a), s = Math.sin(a); this.transform(c, s, -s, c, 0, 0); }
+  pt(x, y) { const m = this.st.m; return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]; }
+  n(v) { return Math.round(v * 100) / 100; }
+  beginPath() { this.d = ''; this.at = null; }
+  moveTo(x, y) { const [a, b] = this.pt(x, y); this.d += 'M' + this.n(a) + ' ' + this.n(b); this.at = [x, y]; this.start = [x, y]; }
+  lineTo(x, y) { if (!this.at) { this.moveTo(x, y); return; } const [a, b] = this.pt(x, y); this.d += 'L' + this.n(a) + ' ' + this.n(b); this.at = [x, y]; }
+  closePath() { this.d += 'Z'; if (this.start) this.at = this.start; }
+  rect(x, y, w, h) { this.moveTo(x, y); this.lineTo(x + w, y); this.lineTo(x + w, y + h); this.lineTo(x, y + h); this.closePath(); }
+  ellipse(cx, cy, rx, ry, rot, a0, a1, anticlockwise) {
+    let sweep = a1 - a0;
+    if (anticlockwise && sweep > 0) sweep -= 2 * Math.PI * Math.ceil(sweep / (2 * Math.PI));
+    if (!anticlockwise && sweep < 0) sweep += 2 * Math.PI * Math.ceil(-sweep / (2 * Math.PI));
+    if (Math.abs(sweep) > 2 * Math.PI) sweep = Math.sign(sweep) * 2 * Math.PI;
+    const steps = Math.max(8, Math.min(180, Math.ceil(Math.abs(sweep) * Math.max(rx, ry) / 2))), c = Math.cos(rot), s = Math.sin(rot);
+    for (let k = 0; k <= steps; k++) {
+      const a = a0 + sweep * k / steps, ex = rx * Math.cos(a), ey = ry * Math.sin(a), x = cx + c * ex - s * ey, y = cy + s * ex + c * ey;
+      if (k === 0 && this.at) this.lineTo(x, y); else if (k === 0) this.moveTo(x, y); else this.lineTo(x, y);
+    }
+  }
+  arc(cx, cy, r, a0, a1, anticlockwise) { this.ellipse(cx, cy, r, r, 0, a0, a1, anticlockwise); }
+  esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  paint(kind) {
+    if (!this.d) return;
+    const st = this.st, alpha = st.globalAlpha < 1 ? ' opacity="' + this.n(st.globalAlpha) + '"' : '';
+    if (kind === 'fill') this.add('<path d="' + this.d + '" fill="' + this.esc(st.fillStyle) + '"' + alpha + '/>');
+    else this.add('<path d="' + this.d + '" fill="none" stroke="' + this.esc(st.strokeStyle) + '" stroke-width="' + this.n(st.lineWidth) + '"' +
+                  (st.dash.length ? ' stroke-dasharray="' + st.dash.join(' ') + '"' : '') + (st.lineCap !== 'butt' ? ' stroke-linecap="' + st.lineCap + '"' : '') +
+                  (st.lineJoin !== 'miter' ? ' stroke-linejoin="' + st.lineJoin + '"' : '') + alpha + '/>');
+  }
+  add(el) { this.st.group.children.push(el); }
+  fill() { this.paint('fill'); }
+  stroke() { this.paint('stroke'); }
+  fillRect(x, y, w, h) { const d = this.d, at = this.at; this.beginPath(); this.rect(x, y, w, h); this.fill(); this.d = d; this.at = at; }
+  strokeRect(x, y, w, h) { const d = this.d, at = this.at; this.beginPath(); this.rect(x, y, w, h); this.stroke(); this.d = d; this.at = at; }
+  clearRect() {}
+  clip() {
+    const id = 'c' + (++this.ids);
+    this.defs.push('<clipPath id="' + id + '"><path d="' + this.d + '"/></clipPath>');
+    const group = {open: '<g clip-path="url(#' + id + ')">', children: []};
+    this.st.group.children.push(group);
+    this.st.group = group;
+  }
+  measureText(t) { this.measure.font = this.st.font; return this.measure.measureText(t); }
+  fillText(text, x, y) {
+    const st = this.st, size = +(st.font.match(/(\d+(?:\.\d+)?)px/) || [0, 10])[1], bold = /bold/.test(st.font);
+    const anchor = {center: 'middle', right: 'end', end: 'end'}[st.textAlign] || 'start';
+    const shift = {top: 0.8, middle: 0.35, bottom: -0.2, alphabetic: 0}[st.textBaseline] || 0, m = st.m;
+    this.add('<text transform="matrix(' + m.map(v => this.n(v)).join(' ') + ')" x="' + this.n(x) + '" y="' + this.n(y + shift * size) + '" font-size="' + size +
+             '" font-family="-apple-system, Helvetica, Arial, sans-serif"' + (bold ? ' font-weight="bold"' : '') + ' text-anchor="' + anchor + '" fill="' +
+             this.esc(st.fillStyle) + '"' + (st.globalAlpha < 1 ? ' opacity="' + this.n(st.globalAlpha) + '"' : '') + ' xml:space="preserve">' + this.esc(text) + '</text>');
+  }
+  toString() {
+    const out = g => g.open + g.children.map(c => typeof c === 'string' ? c : out(c)).join('\n') + (g.open ? '</g>' : '');
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + this.w + '" height="' + this.h + '" viewBox="0 0 ' + this.w + ' ' + this.h + '">\n<defs>' +
+           this.defs.join('') + '</defs>\n' + out(this.root) + '\n</svg>\n';
+  }
+}
+
+//---------------------------------------------------------------- links
+/* the views as they are, in the address: each view's runs (only runs the viewer reads from a web address can be
+   linked), settings, framing and what it follows, and each result's options; and the background layers' looks. the
+   link's state is compressed where the browser can */
+function linkPaths(url) {
+  //a run's address relative to the viewer's own folder, so a link or an embedded player works where the site is
+  const here = new URL('.', location.href), there = new URL(url, location.href);
+  if (there.origin !== here.origin) return there.href;
+  const from = here.pathname.split('/').filter(Boolean), to = there.pathname.split('/').filter(Boolean);
+  let k = 0;
+  while (k < from.length && k < to.length - 1 && from[k] === to[k]) k++;
+  return '../'.repeat(from.length - k) + to.slice(k).join('/');
+}
+
+function viewLinkState() {
+  const views = [];
+  for (const p of panes) {
+    const st = p.state;
+    if (!st.sources.length) continue;
+    if (st.sources.some(s => !s.source.url)) return {error: 'only runs opened from a web address can be linked (not a folder from this computer)'};
+    const prefs = {};
+    for (const [k, v] of Object.entries(st.prefs)) if (PREFS[k] !== v) prefs[k] = v;
+    const results = {};
+    for (const r of st.results.filter(r => !r.derived)) results[r.file] = resultSettings(r);
+    views.push({runs: st.sources.map(s => [linkPaths(new URL(s.fullName || '', s.source.url).href), s.fullName]), prefs, results,
+                view: st.view, background: st.background, timeInterval: st.timeInterval, follow: st.follow,
+                selected: st.selected && st.selected.file, differences: derivedList(st)});
+  }
+  if (!views.length) return {error: 'nothing open to link to'};
+  return {v: 1, views, active: Math.max(0, panes.indexOf(active)), layers: sharedLayers};
+}
+
+async function encodeState(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  const b64 = u8 => btoa(String.fromCharCode(...u8)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  if (window.CompressionStream) {
+    try {
+      const packed = new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+      return 'z' + b64(packed);
+    } catch (e) { /* plain, below */ }
+  }
+  return 'j' + b64(bytes);
+}
+
+async function decodeState(text) {
+  const raw = atob(text.slice(1).replace(/-/g, '+').replace(/_/g, '/')), bytes = Uint8Array.from(raw, ch => ch.charCodeAt(0));
+  const plain = text[0] === 'z' ? new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()) : bytes;
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+
+async function copyText(text, what) {
+  try { await navigator.clipboard.writeText(text); message(what + ' copied'); }
+  catch (e) { window.prompt('Copy the ' + what.toLowerCase() + ':', text); }
+}
+
+async function copyLink(embed) {
+  const linked = viewLinkState();
+  if (linked.error) { message(linked.error); return; }
+  const code = await encodeState(linked), url = new URL(location.href);
+  url.search = '';
+  if (embed) {
+    const src = '../viewer/index.html?player&state=' + code;
+    copyText('<iframe src="' + src + '" width="100%" height="520"\n        loading="lazy" title="What the run shows"></iframe>', 'Player embed');
+  } else {
+    url.searchParams.set('state', code);
+    copyText(url.href.replace('state=' + encodeURIComponent(code), 'state=' + code), 'Link');
+  }
+}
+
+/* open the views a link holds */
+async function openLinked(linked) {
+  while (panes.length < linked.views.length) addPane(makeState());
+  Object.assign(sharedLayers, linked.layers || {});
+  for (const [i, saved] of linked.views.entries()) {
+    const pane = panes[i], keep = new Map(Object.entries(saved.results || {}));
+    for (const [k, [path, fullName]] of saved.runs.entries()) {
+      const url = new URL(path, location.href);
+      usePane(pane);
+      const source = urlSource(new URL('.', url));
+      await loadRun(source, url.pathname.split('/').pop() || fullName, {add: k > 0, keep});
+    }
+    withPane(pane, () => {
+      state.prefs = {...PREFS, ...(saved.prefs || {})};
+      state.background = saved.background || state.background;
+      state.timeInterval = saved.timeInterval || '';
+      state.follow = saved.follow || null;
+      remakeDerived(saved.differences || []);
+      state.selected = state.results.find(r => r.file === saved.selected) || state.results[0] || null;
+      invalidatePlot(); state.marks.key = null;
+      if (saved.view) { state.view = saved.view.slice(); state.keepView = true; equalise(); } else fit();
+    });
+  }
+  activate(panes[Math.min(linked.active || 0, panes.length - 1)]);
+  syncControls(); drawAll();
+}
+
 //---------------------------------------------------------------- controls
 
 function message(text) { $('message').textContent = text; }
@@ -2494,7 +3439,8 @@ function message(text) { $('message').textContent = text; }
 //the checkboxes that are just a display option, by the option's name
 const OPTION_BOXES = ['showFlow', 'showGravity', 'showScalar', 'showTwist', 'showSeam', 'showBodies', 'showSchwarzschild', 'showSpin',
                       'showGrid', 'showPathLegend', 'showPeri', 'showApo', 'showFieldKey', 'showMarkers', 'showTimeMarks', 'showContours',
-                      'showFlowLines', 'showSpecialOrbits', 'showCones', 'showMarkNote', 'showMarkLabels', 'showBodyLabels', 'reverseX'];
+                      'showFlowLines', 'showSpecialOrbits', 'showCones', 'showMarkNote', 'showMarkLabels', 'showBodyLabels', 'reverseX',
+                      'showInfallArrows', 'showInfallRings'];
 //those that change what is plotted (the paths' plotted values), or the aspect
 const PLOT_BOXES = ['logX', 'logY', 'ctTime', 'equalAspect'];
 const LEGEND_BOXES = ['showPathLegend', 'showFieldKey', 'showMarkNote', 'showMarkLabels', 'showBodyLabels'];
@@ -2527,6 +3473,8 @@ function syncControls() {
   showDescription();
   showResults();
   showDetails();
+  syncFollow();
+  showMeasure();
   showReplay();
 }
 
@@ -2606,8 +3554,8 @@ function endTime(r) {
   return null;
 }
 
-function resultsChanged() { invalidatePlot(); markState.key = null; showResults(); showDetails(); showReplay(); }
-function orbitsChanged(r) { invalidatePlot(); markState.key = null; showResults(); showDetails(); draw(); }
+function resultsChanged() { invalidatePlot(); state.marks.key = null; showResults(); showDetails(); syncFollow(); showReplay(); }
+function orbitsChanged(r) { invalidatePlot(); state.marks.key = null; showResults(); showDetails(); draw(); }
 
 /* the selected result, in three tabs: Appearance (each path's colour, how it goes through the orbits and its line;
    the tangent; end arrows; orbits shown), Details (a summary and the log) and Choose paths (which columns are drawn) */
@@ -2766,7 +3714,7 @@ function rebuildPaths(r, selection, group) {
   const settings = resultSettings(r);
   r.paths = buildPaths(r, {...settings, selection, group});
   r.orbits = buildOrbits(r, settings.hiddenOrbits);
-  invalidatePlot(); markState.key = null;
+  invalidatePlot(); state.marks.key = null;
   showResults(); showDetails(); fit();
 }
 
@@ -2831,22 +3779,156 @@ function showStatus(sx, sy) {
 
 /* the mode or a log axis changed: work the plotted values out again, and fit */
 function plotChanged() {
-  invalidatePlot(); markState.key = null;
+  invalidatePlot(); state.marks.key = null;
+  state.measure.points = state.measure.points.filter(q => q.row !== undefined);   //a point off the paths was in the old axes
   document.body.classList.toggle('time', timeMode());
   syncControls();
   fit();
 }
 
-let boxZoom = null;     //a box being dragged out (shift-drag): [x0, y0, x1, y1] on screen
+
+/* a view's pane: made from the template, its handlers wired, and added after the others */
+function addPane(st) {
+  const el = $('paneTemplate').content.firstElementChild.cloneNode(true);
+  const canvas = el.querySelector('canvas.plot'), overlay = el.querySelector('canvas.overlay');
+  if (!panes.length) canvas.id = 'plot';
+  const pane = {state: st, el, canvas, ctx: canvas.getContext('2d'), overlay, overlayCtx: overlay.getContext('2d'),
+                empty: el.querySelector('.empty'), loadingNote: el.querySelector('.loading'), frame: null, loading: false};
+  $('panes').append(el);
+  panes.push(pane);
+  wirePane(pane);
+  layoutPanes();
+  return pane;
+}
+
+/* the panel shows the selected view's settings */
+function activate(pane) {
+  if (active === pane) return;
+  active = pane;
+  usePane(pane);
+  layoutPanes();
+  if (setupDone) syncControls();
+}
+let setupDone = false;
+
+function layoutPanes() {
+  const split = panes.length > 1;
+  $('panes').classList.toggle('split', split);
+  panes.forEach((p, i) => {
+    p.el.classList.toggle('active', p === active);
+    p.el.querySelector('.paneTag').textContent = 'View ' + (i + 1);
+  });
+  if (!PLAYER && $('splitView')) {
+    $('splitView').textContent = split ? 'One view' : 'Split view';
+    $('splitView').dataset.tip = split ? 'Back to one view: the selected view stays, the other is closed'
+                                       : 'Two views side by side, each with its own results and settings: the new one starts as a copy of this one. Click a view to select it; Play plays both';
+  }
+}
+
+/* Split view: a second view, a copy of the selected one; One view: the selected one only */
+function toggleSplit() {
+  if (panes.length > 1) {
+    for (const p of panes.filter(p => p !== active)) { if (p.frame != null) cancelAnimationFrame(p.frame); p.el.remove(); panes.splice(panes.indexOf(p), 1); }
+    layoutPanes();
+  } else {
+    const copy = cloneState(state);
+    const pane = addPane(copy);
+    withPane(pane, () => invalidatePlot());
+    activate(pane);
+  }
+  //each view's width has changed: keep a metre as long across as up
+  for (const p of panes) withPane(p, () => { if (state.view) equalise(); });
+  drawAll();
+}
+
+/* a copy of a view's state: the same runs, read once and shared, with each result's own settings copied */
+function cloneState(from) {
+  const st = makeState();
+  Object.assign(st, {prefs: {...from.prefs}, view: from.view && from.view.slice(), background: from.background, backgrounds: from.backgrounds,
+                     environments: from.environments.slice(), sources: from.sources.slice(), timeInterval: from.timeInterval,
+                     fitSpan: from.fitSpan, follow: from.follow && {...from.follow}});
+  st.results = from.results.map(r => {
+    const settings = resultSettings(r);
+    const copy = {name: r.name, file: r.file, data: r.data, log: r.log, visible: r.visible, color: r.color, source: r.source, ends: r.ends,
+                  tangent: {...r.tangent}, env: r.env, orbitEvery: r.orbitEvery, derived: r.derived, dots: r.dots};
+    withState(st, () => { copy.paths = buildPaths(copy, settings); copy.orbits = buildOrbits(copy, settings.hiddenOrbits); });
+    return copy;
+  });
+  st.selected = st.results[from.results.indexOf(from.selected)] || st.results[0] || null;
+  return st;
+}
+function withState(st, fn) { const was = state; state = st; try { return fn(); } finally { state = was; } }
+
+/* a view's plot: hover text, the legend boxes' buttons (in the player too), and (not in the player, which stays as its
+   page set it) pan by dragging, zoom to a box with shift-drag, zoom with the wheel at the pointer, fit with a double
+   click, and the measuring tool. a press selects the view */
+function wirePane(pane) {
+  const canvas = pane.canvas, here = fn => e => withPane(pane, () => fn(e));
+  let hoverFrame = null, hoverEvent = null;
+  canvas.addEventListener('pointermove', e => {
+    hoverEvent = e;
+    if (hoverFrame === null) hoverFrame = requestAnimationFrame(() => { hoverFrame = null; withPane(pane, () => { hoverAt(hoverEvent); if (!PLAYER) showStatus(hoverEvent.offsetX, hoverEvent.offsetY); }); });
+  });
+  canvas.addEventListener('pointerleave', here(() => {
+    if (!tipFor) $('tip').style.display = 'none';
+    canvas.style.cursor = '';
+    if (state.frontPath) { state.frontPath = null; draw(); }
+    if (!PLAYER) showStatus();
+  }));
+  if (PLAYER) { canvas.onpointerdown = e => { activate(pane); boxPress(e); }; return; }
+  let dragging = null;
+  canvas.onpointerdown = e => {
+    activate(pane);
+    canvas.focus();
+    if (boxPress(e) || !state.view) return;
+    if (state.measure.on && !e.shiftKey) { dragging = {measure: [e.offsetX, e.offsetY]}; return; }
+    if (e.shiftKey) state.boxZoom = [e.offsetX, e.offsetY, e.offsetX, e.offsetY];
+    else dragging = [e.offsetX, e.offsetY, state.view.slice()];
+    try { canvas.setPointerCapture(e.pointerId); } catch (x) { /* a synthetic pointer */ }
+  };
+  canvas.onpointermove = here(e => {
+    if (state.boxZoom) { state.boxZoom[2] = e.offsetX; state.boxZoom[3] = e.offsetY; draw(); return; }
+    if (!dragging || dragging.measure) return;
+    const {l, t, r, b} = plotRect(), [px, py, v] = dragging;
+    const dx = (e.offsetX - px) / (r - l) * (v[1] - v[0]) * (flipX() ? -1 : 1), dy = (e.offsetY - py) / (b - t) * (v[3] - v[2]);
+    state.view = [v[0] - dx, v[1] - dx, v[2] + dy, v[3] + dy];
+    stopFollowing(); moved(); scheduleDraw();
+  });
+  canvas.onpointerup = here(e => {
+    if (dragging && dragging.measure) {
+      const [x0, y0] = dragging.measure;
+      dragging = null;
+      if (Math.hypot(e.offsetX - x0, e.offsetY - y0) < 5) measureAt(e.offsetX, e.offsetY);
+      return;
+    }
+    dragging = null;
+    if (!state.boxZoom) return;
+    const [x0, y0, x1, y1] = state.boxZoom;
+    state.boxZoom = null;
+    if (Math.abs(x1 - x0) > 4 && Math.abs(y1 - y0) > 4) {
+      const [ax, ay] = toData(x0, y0), [bx, by] = toData(x1, y1);
+      state.view = [Math.min(ax, bx), Math.max(ax, bx), Math.min(ay, by), Math.max(ay, by)];
+      stopFollowing(); equalise();
+    }
+    draw();
+  });
+  canvas.ondblclick = here(e => { if (!state.measure.on && !state.boxButtons.some(h => inside(h, e.offsetX, e.offsetY))) fit(); });
+  canvas.addEventListener('wheel', here(e => {
+    if (!state.view) return;
+    e.preventDefault();
+    zoom(Math.exp(e.deltaY * 0.0015), state.follow ? null : toData(e.offsetX, e.offsetY));
+  }), {passive: false});
+}
 
 function setup() {
+  activate(addPane(makeState()));
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
   SPEEDS.forEach(s => { $('speed').add(new Option(speedName(s), s)); $('pSpeed').add(new Option(speedName(s), s)); });
   setupPlayer();
   if (!PLAYER) { setupTabs(); setupSplitter(); setupTreeSplit(); setupLayerSettings(); setupHelp(); }
   if (['appearance', 'details', 'paths'].includes(recall('detailTab'))) detailTab = recall('detailTab');
   for (const id of OPTION_BOXES)
-    $(id).onchange = () => { state.prefs[id] = $(id).checked; if (id === 'showTimeMarks' || id === 'showMarkNote') markState.key = null; draw(); };
+    $(id).onchange = () => { state.prefs[id] = $(id).checked; if (id === 'showTimeMarks' || id === 'showMarkNote') state.marks.key = null; draw(); };
   for (const id of ['logX', 'logY', 'ctTime'])
     $(id).onchange = () => { state.prefs[id] = $(id).checked; plotChanged(); };
   $('equalAspect').onchange = () => { state.prefs.equalAspect = $('equalAspect').checked; equalise(); draw(); };
@@ -2865,12 +3947,12 @@ function setup() {
       const v = state.view, dx = ax0.log ? Math.log10(ax0.scale / ax1.scale) : 0, dy = ay0.log ? Math.log10(ay0.scale / ay1.scale) : 0;
       state.view = [v[0] + dx, v[1] + dx, v[2] + dy, v[3] + dy];
     }
-    invalidatePlot(); markState.key = null; draw();
+    invalidatePlot(); state.marks.key = null; draw();
   };
-  $('timeColumn').onchange = () => { state.prefs.timeColumn = $('timeColumn').value; state.timeInterval = ''; if (timeMode()) plotChanged(); else { markState.key = null; syncControls(); draw(); } };
-  $('timeInterval').onchange = () => { state.timeInterval = $('timeInterval').value.trim(); markState.key = null; draw(); };
+  $('timeColumn').onchange = () => { state.prefs.timeColumn = $('timeColumn').value; state.timeInterval = ''; if (timeMode()) plotChanged(); else { state.marks.key = null; syncControls(); draw(); } };
+  $('timeInterval').onchange = () => { state.timeInterval = $('timeInterval').value.trim(); state.marks.key = null; draw(); };
   $('apsisEvery').onchange = () => { state.prefs.apsisEvery = Math.max(1, Math.round(+$('apsisEvery').value) || 1); $('apsisEvery').value = state.prefs.apsisEvery; draw(); };
-  $('timeAuto').onclick = () => { state.timeInterval = ''; $('timeInterval').value = ''; markState.key = null; draw(); };
+  $('timeAuto').onclick = () => { state.timeInterval = ''; $('timeInterval').value = ''; state.marks.key = null; draw(); };
   $('speed').onchange = () => { state.prefs.replaySpeed = $('speed').value; };
   $('background').onchange = () => { state.background = $('background').value; showDescription(); showResults(); draw(); };
   $('fit').onclick = fit;
@@ -2882,12 +3964,24 @@ function setup() {
   $('rangeApply').onclick = applyRange;
   for (const id of RANGE_INPUTS) $(id).onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); applyRange(); $(id).blur(); } };
   setupJoystick();
-  $('legendsAll').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = true; markState.key = null; syncControls(); draw(); };
-  $('legendsNone').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = false; markState.key = null; syncControls(); draw(); };
+  $('follow').onchange = () => chooseFollow($('follow').value);
+  $('measure').onclick = () => { state.measure.on = !state.measure.on; canvas.style.cursor = state.measure.on ? 'crosshair' : ''; showMeasure(); };
+  $('measureClear').onclick = () => { state.measure.points = []; showMeasure(); draw(); };
+  $('measurePin').onclick = pinRowAt;
+  $('measureT').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); pinRowAt(); } };
+  $('exportPng').onclick = exportPng;
+  $('exportSvg').onclick = exportSvg;
+  $('exportCsv').onclick = exportCsv;
+  $('splitView').onclick = toggleSplit;
+  $('copyLink').onclick = () => copyLink(false);
+  $('copyEmbed').onclick = () => copyLink(true);
+  $('legendsAll').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = true; state.marks.key = null; syncControls(); draw(); };
+  $('legendsNone').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = false; state.marks.key = null; syncControls(); draw(); };
   $('showAll').onclick = () => { state.results.forEach(r => { r.visible = true; }); resultsChanged(); };
   $('showNone').onclick = () => { state.results.forEach(r => { r.visible = false; }); resultsChanged(); };
   $('showOnly').onclick = () => { state.results.forEach(r => { r.visible = r === state.selected; }); resultsChanged(); };
   $('closeResult').onclick = closeSelected;
+  $('addResult').onclick = openAddDialog;
   $('play').onclick = () => play('together');
   $('playInTurn').onclick = () => play('sequence');
   $('loop').onchange = () => { state.prefs.replayLoop = $('loop').checked; };
@@ -2900,64 +3994,6 @@ function setup() {
   $('addInput').onchange = () => openFiles([...$('addInput').files], true);
   $('reload').onclick = reload;
 
-  //the legend boxes' buttons, in the player too, and hover text over them, their rows, bodies and paths
-  if (PLAYER) canvas.onpointerdown = boxPress;
-  let hoverFrame = null, hoverEvent = null;
-  canvas.addEventListener('pointermove', e => {
-    hoverEvent = e;
-    if (hoverFrame === null) hoverFrame = requestAnimationFrame(() => { hoverFrame = null; hoverAt(hoverEvent); if (!PLAYER) showStatus(hoverEvent.offsetX, hoverEvent.offsetY); });
-  });
-  canvas.addEventListener('pointerleave', () => {
-    if (!tipFor) $('tip').style.display = 'none';
-    canvas.style.cursor = '';
-    if (frontPath) { frontPath = null; draw(); }
-    if (!PLAYER) showStatus();
-  });
-  //pan by dragging, zoom to a box with shift-drag, zoom with the wheel at the pointer, fit with a double click, and
-  //from the keys (not in the player, which stays fitted)
-  let dragging = null;
-  if (!PLAYER) {
-  canvas.onpointerdown = e => {
-    canvas.focus();
-    if (boxPress(e) || !state.view) return;
-    if (e.shiftKey) boxZoom = [e.offsetX, e.offsetY, e.offsetX, e.offsetY];
-    else dragging = [e.offsetX, e.offsetY, state.view.slice()];
-    canvas.setPointerCapture(e.pointerId);
-  };
-  canvas.onpointermove = e => {
-    if (boxZoom) { boxZoom[2] = e.offsetX; boxZoom[3] = e.offsetY; draw(); return; }
-    if (!dragging) return;
-    const {l, t, r, b} = plotRect(), [px, py, v] = dragging;
-    const dx = (e.offsetX - px) / (r - l) * (v[1] - v[0]) * (flipX() ? -1 : 1), dy = (e.offsetY - py) / (b - t) * (v[3] - v[2]);
-    state.view = [v[0] - dx, v[1] - dx, v[2] + dy, v[3] + dy];
-    draw();
-  };
-  canvas.onpointerup = () => {
-    dragging = null;
-    if (!boxZoom) return;
-    const [x0, y0, x1, y1] = boxZoom;
-    boxZoom = null;
-    if (Math.abs(x1 - x0) > 4 && Math.abs(y1 - y0) > 4) {
-      const [ax, ay] = toData(x0, y0), [bx, by] = toData(x1, y1);
-      state.view = [Math.min(ax, bx), Math.max(ax, bx), Math.min(ay, by), Math.max(ay, by)];
-      equalise();
-    }
-    draw();
-  };
-  canvas.ondblclick = e => { if (!boxButtons.some(h => inside(h, e.offsetX, e.offsetY))) fit(); };
-  canvas.addEventListener('wheel', e => {
-    if (!state.view) return;
-    e.preventDefault();
-    zoom(Math.exp(e.deltaY * 0.0015), toData(e.offsetX, e.offsetY));
-  }, {passive: false});
-  document.addEventListener('keydown', e => {
-    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
-    const keys = {'+': () => zoom(1 / ZOOM_STEP), '=': () => zoom(1 / ZOOM_STEP), '-': () => zoom(ZOOM_STEP), '0': fit,
-                  ArrowLeft: () => pan(-PAN_STEP, 0), ArrowRight: () => pan(PAN_STEP, 0), ArrowUp: () => pan(0, PAN_STEP), ArrowDown: () => pan(0, -PAN_STEP)};
-    if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
-  });
-  }
-
   //drop a run folder (or its files) on the plot
   const wrap = $('plotWrap');
   wrap.ondragover = e => { e.preventDefault(); $('drop').style.display = 'flex'; };
@@ -2966,16 +4002,43 @@ function setup() {
     e.preventDefault(); $('drop').style.display = 'none';
     openFiles(await droppedFiles(e.dataTransfer), e.shiftKey);
   };
-  window.onresize = () => { if (PLAYER) fit(); else { equalise(); draw(); } };
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  window.onresize = () => { for (const p of panes) withPane(p, () => { if (PLAYER && !state.keepView) fit(); else { equalise(); draw(); } }); };
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', drawAll);
+  if (REDUCED_MOTION.addEventListener) REDUCED_MOTION.addEventListener('change', drawAll);
+  document.addEventListener('keydown', e => {
+    if (PLAYER || /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!state.view) return;
+    const keys = {'+': () => zoom(1 / ZOOM_STEP), '=': () => zoom(1 / ZOOM_STEP), '-': () => zoom(ZOOM_STEP), '0': fit,
+                  ArrowLeft: () => pan(-PAN_STEP, 0), ArrowRight: () => pan(PAN_STEP, 0), ArrowUp: () => pan(0, PAN_STEP), ArrowDown: () => pan(0, -PAN_STEP),
+                  Escape: () => { state.measure.points = []; showMeasure(); draw(); }};
+    if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
+  });
 
-  const run = new URLSearchParams(location.search).get('run');
-  if (run) {
-    const url = new URL(run, location.href);
-    loadRun(urlSource(url), url.pathname.split('/').pop());
-  } else {
+  setupDone = true;
+  layoutPanes();
+  //what to open: a link's views (state=), or a run (run=). the player waits until it is near the page's view, so a page
+  //with several players doesn't load them all at once
+  const params = new URLSearchParams(location.search), run = params.get('run'), linked = params.get('state');
+  const open = async () => {
+    if (linked) {
+      try { await openLinked(await decodeState(linked)); }
+      catch (e) { message('could not open the link: ' + e.message); syncControls(); draw(); }
+    } else if (run) {
+      const url = new URL(run, location.href);
+      loadRun(urlSource(new URL('.', url)), url.pathname.split('/').pop());
+    } else {
+      syncControls(); draw();
+    }
+  };
+  if (PLAYER && (run || linked) && window.IntersectionObserver && window.top !== window) {
     syncControls(); draw();
-  }
+    active.loadingNote.hidden = false; active.loadingNote.textContent = 'waiting to load…'; emptyNote.style.display = 'none';
+    const watch = new IntersectionObserver(entries => {
+      if (!entries.some(e => e.isIntersecting)) return;
+      watch.disconnect(); open();
+    }, {rootMargin: '300px'});
+    watch.observe(document.body);
+  } else open();
 }
 
 /* remembered between visits, in this browser only (and not at all where storage is blocked) */
@@ -2993,10 +4056,12 @@ const SETTING_SLIDERS = {
     u: 'How long a full arrow is', g: 'How long a full arrow is', twist: 'How big the arcs are', cones: 'How big the cones are'}},
   width: {label: 'line width', min: 0.5, max: 4, step: 0.1, unit: ' px', tip: {}},
   strength: {label: 'strength', min: 0.2, max: 2, step: 0.05, unit: '\u00d7', tip: {scalar: 'How strong the colours are: above 1, weaker values show more'}},
+  speed: {label: 'speed', min: 0.1, max: 4, step: 0.05, unit: '\u00d7', tip: {
+    infallArrows: 'How fast the points move: the picture\'s speed, not the real one', infallRings: 'How fast the rings fall: the picture\'s speed, not the real one'}},
 };
 const COLOUR_NAMES = {colour: 'colour', plus: 'positive', minus: 'negative'};
 function setupLayerSettings() {
-  try { state.layers = JSON.parse(recall('layers') || '{}') || {}; } catch (e) { state.layers = {}; }
+  try { Object.assign(sharedLayers, JSON.parse(recall('layers') || '{}') || {}); } catch (e) { /* none kept */ }
   const save = () => remember('layers', JSON.stringify(state.layers));
   for (const [name, spec] of Object.entries(LAYERS)) {
     const label = $(spec.box).closest('label'), row = document.createElement('div'), fold = document.createElement('span');
@@ -3101,7 +4166,7 @@ function setupSplitter() {
 function setupHelp() {
   let timer = null, over = null;
   const leave = () => { clearTimeout(timer); timer = null; if (over) { over = null; hideTip(); } };
-  for (const area of [document.querySelector('header'), document.querySelector('aside'), $('splitter')]) {
+  for (const area of [document.querySelector('header'), document.querySelector('aside'), $('splitter'), $('addDialog')]) {
     area.addEventListener('pointerover', e => {
       const el = e.target.closest('[data-tip]');
       if (!el || el === over || !area.contains(el)) return;
@@ -3137,7 +4202,7 @@ function setupPlayer() {
   };
   $('pRestart').onclick = () => {
     //stopped shows the whole run, so back to the start is paused at the start, with nothing drawn yet
-    const range = replayRange();
+    const range = clockRange();
     if (!range) return;
     rp.state = 'paused'; rp.t = range[0]; showReplay();
   };

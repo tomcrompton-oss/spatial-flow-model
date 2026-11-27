@@ -22,7 +22,26 @@
   header h1 { font-size: 15px; margin: 0 8px 0 0; }
   #plotWrap { position: relative; min-height: 0; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-  #spinLayer { position: absolute; inset: 0; pointer-events: none; }
+  /* the views: one, or two side by side (Split view), each a pane with its plot and an overlay for what moves */
+  #panes { display: flex; gap: 6px; height: 100%; }
+  .pane { position: relative; flex: 1 1 0; min-width: 0; height: 100%; }
+  .pane .overlay { position: absolute; inset: 0; pointer-events: none; }
+  .paneTag { display: none; position: absolute; left: 6px; top: 2px; font-size: 11px; color: var(--ink2); padding: 0 6px;
+             border-radius: 4px; cursor: default; }
+  #panes.split .pane { outline: 1px solid var(--grid); }
+  #panes.split .pane.active { outline: 2px solid var(--accent); outline-offset: -2px; }
+  #panes.split .paneTag { display: block; }
+  #panes.split .pane.active .paneTag { background: var(--accent); color: #fff; }
+  #panes.split .pane:not(.active) { opacity: .92; }
+  body.player #panes.split .paneTag { display: none; }
+  body.player #panes.split .pane.active { outline: 1px solid var(--grid); outline-offset: 0; }
+  body.player #panes.split .pane:not(.active) { opacity: 1; }
+  .pane .loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: 6px;
+                   background: var(--surface); border: 1px solid var(--grid); color: var(--ink2); font-size: 12px; }
+  .pane .loading::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%;
+                           border: 2px solid var(--axis); border-top-color: var(--accent); vertical-align: -1px; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .pane .loading::before { animation: none; } }
   #plotWrap { grid-column: 1; grid-row: 2; }
   /* the panel's edge: drag it to make the panel wider or narrower */
   #splitter { grid-column: 2; grid-row: 2 / 4; cursor: col-resize; background: var(--page); border-left: 1px solid var(--grid); touch-action: none; }
@@ -64,13 +83,24 @@
   .result span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #message { color: var(--ink2); }
   #drop { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 2px dashed var(--accent); font-size: 16px; }
-  #empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink2); text-align: center; padding: 16px; }
+  .pane .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink2); text-align: center; padding: 16px; }
   .note { color: var(--muted); font-size: 12px; }
   aside .buttons { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
   aside .buttons button { padding: 2px 7px; }
   label.row { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
   label.row input { font: inherit; width: 7em; padding: 2px 4px; border: 1px solid var(--axis); border-radius: 4px; background: var(--surface); color: var(--ink); }
   .axisName { margin: 0 0 4px; }
+  #addDialog { border: 1px solid var(--axis); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 14px 18px; width: min(420px, 92vw); }
+  #addDialog::backdrop { background: rgba(0, 0, 0, .25); }
+  #addDialog h2 { margin: 0 0 4px; font-size: 15px; }
+  #addDialog label.row span { min-width: 3.5em; }
+  #addDialog select { max-width: 100%; }
+  #addValues { margin: 8px 0; padding: 6px 8px; border: 1px solid var(--grid); border-radius: 6px; }
+  #addDialog .buttons { display: flex; gap: 8px; justify-content: flex-end; }
+  #addDialog button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #measureOut { white-space: pre-wrap; font: 12px/1.45 -apple-system, Helvetica, Arial, sans-serif; margin: 4px 0; }
+  #measure[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #follow { max-width: 100%; }
   .zoomRow input[type=range] { flex: 1; min-width: 80px; width: auto; }
   .zoomRow output { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; }
   .joystickRow { display: flex; gap: 14px; align-items: center; margin: 6px 0; }
@@ -202,17 +232,27 @@
   <header>
     <h1>Flow Viewer</h1>
     <button id="openFolder" data-tip="Open a run folder (logs/&lt;study&gt;/&lt;run&gt;) in place of what is open; or drop one on the plot">Open run folder…</button>
-    <button id="addFolder" data-tip="Add a run folder's results to what is open, to compare them (or shift-drop one on the plot)">Add…</button>
+    <button id="addFolder" data-tip="Add a run folder's results to what is open, to compare them (or shift-drop one on the plot)">Add run folder…</button>
     <button id="reload" data-tip="Read everything open again from its files, keeping each result's settings">Reload</button>
+    <button id="splitView">Split view</button>
+    <button id="copyLink" data-tip="Copy a link to the views as they are now: their runs, settings, framing and each result's options (runs opened from a web address only)">Copy link</button>
+    <button id="copyEmbed" data-tip="Copy an iframe that embeds these views as a player in one of the site's pages, as they are now (for runs in the site's runs folder)">Copy player embed</button>
     <input id="folderInput" type="file" webkitdirectory multiple hidden>
     <input id="addInput" type="file" webkitdirectory multiple hidden>
     <span id="message"></span>
     <span id="status"></span>
   </header>
   <div id="plotWrap">
-    <canvas id="plot" tabindex="0"></canvas>
-    <canvas id="spinLayer"></canvas>
-    <div id="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
+    <div id="panes"></div>
+    <template id="paneTemplate">
+      <div class="pane">
+        <canvas class="plot" tabindex="0"></canvas>
+        <canvas class="overlay"></canvas>
+        <div class="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
+        <div class="paneTag" data-tip="Click a view to select it: the panel shows its settings"></div>
+        <div class="loading" hidden></div>
+      </div>
+    </template>
     <div id="drop">Drop a run folder</div>
   </div>
   <div id="splitter" data-tip="Drag to make the panel wider or narrower; double-click for its usual width"></div>
@@ -229,6 +269,7 @@
         <button id="showNone" data-tip="Hide every result">None</button>
         <button id="showOnly" data-tip="Show only the selected result (or double-click a result)">Only selected</button>
         <button id="closeResult" data-tip="Take the selected result out of the viewer (Reload brings it back)">Close</button>
+        <button id="addResult" data-tip="Add results worked out from those open, each a value against t: a difference between two results, each orbit's periapsis, apoapsis, period and so on, or values along a path">Add…</button>
       </div>
       <div id="results" class="tree"></div>
       <div id="treeSplit" data-tip="Drag to give the list or the selected result more room; double-click for the usual split"></div>
@@ -275,7 +316,15 @@
           <button id="rangeApply" data-tip="Show the x and y ranges typed in above">Apply ranges</button>
         </div>
       </div>
+      <label class="row" data-tip="Keep the view centred on a body, or on where a path is at the replay's time (its end when stopped). Zooming keeps it in the middle; moving the view by hand stops it"><span>Centre on</span> <select id="follow"></select></label>
       <p class="note">Drag to pan, scroll to zoom, shift-drag to zoom to a box, double-click to fit; arrow keys pan, + and − zoom.</p>
+      <h2>Measure</h2>
+      <div class="buttons">
+        <button id="measure" aria-pressed="false" data-tip="Measuring: click the plot to put point A, then B, and see the distance between them. A click near a path puts the point on its nearest row. A third click starts again; Esc clears">Measure</button>
+        <button id="measureClear" data-tip="Take the measured points away">Clear</button>
+      </div>
+      <label class="row" data-tip="Put a point on the selected result's row nearest this time (seconds of t)">row at t = <input id="measureT" size="9"> s <button id="measurePin">Put point</button></label>
+      <pre id="measureOut" class="note"></pre>
       <h2>Legends</h2>
       <label class="check" data-tip="The paths' names and colours, top right"><input type="checkbox" id="showPathLegend"> path legend</label>
       <label class="check" data-tip="What the background's arrows, lines and colours mean, bottom left"><input type="checkbox" id="showFieldKey"> background key</label>
@@ -283,6 +332,12 @@
       <label class="check" data-tip="The time beside each time marker"><input type="checkbox" id="showMarkLabels"> marker times</label>
       <label class="check" data-tip="Each body's mass (and spin) under it"><input type="checkbox" id="showBodyLabels"> body labels</label>
       <div class="buttons"><button id="legendsAll" data-tip="Show every legend and label">All</button><button id="legendsNone" data-tip="Hide every legend and label">None</button></div>
+      <h2>Export</h2>
+      <div class="buttons">
+        <button id="exportPng" data-tip="Save the selected view as a picture (PNG), as it is now">Image (PNG)</button>
+        <button id="exportSvg" data-tip="Save the selected view as a picture that can be scaled and edited (SVG), as it is now">Image (SVG)</button>
+        <button id="exportCsv" data-tip="Save the shown rows of the shown results as one csv, with a column naming each row's result (hidden orbits left out; while replaying, up to the replay's time)">Shown rows (CSV)</button>
+      </div>
     </section>
     <section data-panel="background">
       <label class="row" data-tip="The background drawn behind the paths: one from the run's backgrounds file, or the bodies of a result's environment"><span>Background</span> <select id="background"></select></label>
@@ -296,6 +351,8 @@
       <label class="check" data-tip="Lines where space flows at the same speed, labelled in km/s: from the background's u, else the bodies' escape speed"><input type="checkbox" id="showContours"> lines of equal |u|</label>
       <label class="check" data-tip="The paths space itself takes, out of each body against the flow. In distance / time, the flow line repeated up the time axis"><input type="checkbox" id="showFlowLines"> flow lines (the paths of space)</label>
       <label class="check" data-tip="Distance / time only: light's speed outwards and inwards at each point, u ± c, as a cone"><input type="checkbox" id="showCones"> light cones (distance / time)</label>
+      <label class="check" data-tip="Space falling in, drawn moving: points carried by the flow u, each an arrow along u. The speed is a picture's: faster where space falls faster"><input type="checkbox" id="showInfallArrows"> falling space (arrows)</label>
+      <label class="check" data-tip="Space falling in, drawn moving: rings of space carried by the flow u into the black bodies (out of white ones). The speed is a picture's: faster where space falls faster"><input type="checkbox" id="showInfallRings"> falling space (rings)</label>
       <h2>Bodies</h2>
       <label class="check" data-tip="Each body: black for a black hole, white otherwise"><input type="checkbox" id="showBodies"> bodies</label>
       <label class="check" data-tip="Each body's horizon, 2GM/c² (Kerr's r+ for a spinning hole), and a spinning hole's ergosphere and ring singularity"><input type="checkbox" id="showSchwarzschild"> horizons</label>
@@ -331,6 +388,26 @@
       <span id="pTime"></span>
     </div>
   </div>
+  <dialog id="addDialog" aria-labelledby="addTitle">
+    <form method="dialog">
+      <h2 id="addTitle">Add results</h2>
+      <p class="note">Each is worked out from a result that is open, and drawn as a line against t (in the x / y view).</p>
+      <label class="row" data-tip="What kind of result to add"><span>Kind</span>
+        <select id="addKind">
+          <option value="difference">Difference between two results</option>
+          <option value="orbits">Each orbit: periapsis, apoapsis, period…</option>
+          <option value="path">Along the path: distance, speed, angle…</option>
+        </select></label>
+      <label class="row" data-tip="The result the values come from"><span>From</span> <select id="addFrom"></select></label>
+      <label class="row" id="addOtherRow" data-tip="The result taken away from the first"><span>Minus</span> <select id="addOther"></select></label>
+      <div id="addValues"></div>
+      <p id="addNote" class="note"></p>
+      <div class="buttons">
+        <button id="addOk" class="primary" data-tip="Add a result for each value ticked">Add</button>
+        <button id="addCancel" type="button">Cancel</button>
+      </div>
+    </form>
+  </dialog>
   <div id="tip" role="tooltip"></div>
 </div>
 <script src="viewer.js"></script>

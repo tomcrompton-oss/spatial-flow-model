@@ -66,15 +66,30 @@ result has three tabs of its own: **Appearance** (with the markers), **Details**
 **Choose paths**. The list and the selected result scroll separately, and the line between them can be dragged to
 give either more room.
 
-The View tab has five parts:
+The View tab has these parts:
 
 - **Plot**: x / y or distance / time, the units, equal aspect (or time as ct), and the grid.
 - **X axis** and **Y axis**: what each axis shows, whether it is logarithmic, and its range, which can be typed in.
   Distance can also run right to left.
 - **Range**: a zoom slider, from a tenth of the fitted view to 10,000 times closer, and a joystick that moves the view.
   Dragging the stick moves the view fast, and faster the further it is pushed. The buttons round it move the view a
-  small, precise step, and keep going while held. **Fit** fits the view to the paths again.
+  small, precise step, and keep going while held. **Fit** fits the view to the paths again. **Centre on** keeps the
+  view centred on a body, or on where a path is at the replay's time (its end when stopped). Zooming keeps it in the
+  middle, and moving the view by hand stops it.
+- **Measure**: with Measure on, a click puts point A on the plot and a second click puts point B, and the distance
+  between them is shown on the plot and in the panel. A click near a path puts the point on the path's nearest row,
+  and shows that row's result and time. A point can also be put on the selected result's row at a time typed in.
 - **Legends**: which legends and labels are shown.
+- **Export**: the selected view as a picture (PNG, or SVG to scale and edit), or the shown rows of the shown results
+  as one csv, with a column naming each row's result.
+
+### Two views
+
+**Split view** shows two views side by side. The new one starts as a copy of the selected one, and from then on each
+has its own results and settings: a hole without spin in one and a spinning hole in the other, say, or the same run in
+x / y and in distance / time. A click on a view selects it, and the panel shows that view's settings. **Open run
+folder…**, **Add run folder…** and **Reload** act on the selected view. **Play** plays both views on one clock, so both are at
+the same time. **One view** goes back to the selected view alone.
 
 ### What it shows
 
@@ -91,6 +106,20 @@ The View tab has five parts:
     - **Choose paths**: which column pairs are plotted, any two columns as a pair, and one path per value of a
       column;
     - a **summary** of the run (calculator, step, orbits, distances, speeds) and its **log**.
+- **Added results**: **Add…** in the Results tab opens a dialog that makes new results from those open, each a value
+  drawn against t. Several values can be ticked at once, and each becomes its own result:
+    - **a difference between two results**: the first less the second at the first one's times (the second
+      interpolated to them), as the distance between them, the difference in their distances from the origin, or the
+      difference in x or in y;
+    - **each orbit**: one value for each whole orbit the result's log gives: its periapsis and apoapsis distances,
+      their directions (counted on round, so a precessing orbit's periapsis direction rises), the periapsis's shift
+      from the orbit before in seconds of arc, the period, the eccentricity and the semi-major axis. Each is drawn as
+      a line through a dot for each orbit;
+    - **along the path**: a value at each row: the distance from the origin or from the result's first body, the
+      speed, the radial speed, and the angle gone round the body.
+
+  Distances and angles are measured from the result's first body, or the origin if it has none. Added results are
+  made again on Reload, kept in a copied view, and in a link.
 - **Two views**: x / y, or **distance / time**, each path's distance from the origin against t or pt (as ct, with
   light at 45°, if wanted; distance can run right to left). Either axis can be **logarithmic**.
 - **Bodies and horizons**, with a spinning hole's ergosphere and ring singularity, labels with each body's mass and
@@ -105,11 +134,18 @@ The View tab has five parts:
 - **Drawn from the flow**: lines of equal $|u|$, and flow lines, the paths of space out of each body. Against time,
   the flow line repeated up the time axis, and **light cones**, light's speed $u \pm c$ outwards and inwards. They
   use the background's $u$, or the bodies' escape speed where a run has none.
+- **Falling space**, drawn moving: points carried by the flow $u$, each an arrow along $u$, or rings of space carried
+  by $u$ into the black bodies (or out of white ones). The speed is a picture's, not the real one: the view's typical
+  $|u|$ moves 30 pixels a second, so where space falls faster the points move faster. They use the same $u$ as the
+  lines of equal $|u|$.
 - **Each layer's look**: the triangle beside a background layer opens its settings: its colour (a colour map's two),
   and sliders for its density (arrows, arcs and cones closer together, more flow lines, more levels of $|u|$, finer
-  colour-map cells), size and line width. They are kept in the browser, not in the run's files.
+  colour-map cells), size and line width, and falling space's speed. They are kept in the browser, not in the run's
+  files, and are the same in both views.
 - **One hole's circular photon orbits and innermost stable circular orbits**, with the spin and against it.
 - **A background key** for the arrows' and colours' scale. Arrows are scaled from what is on screen.
+- The background's arrows, arcs, cones and colour-map cells sit on a grid fixed to the plot, so they move with it
+  when it is panned. Their spacing on the screen stays the same at any zoom.
 - **Markers**: where each path starts and ends; **time markers**, dots at every interval of t or pt (a round
   interval, or one typed in), labelled where there is room; and each whole orbit's **periapsis** and **apoapsis**,
   on every orbit or every Nth.
@@ -121,8 +157,15 @@ Drag to pan, scroll to zoom at the pointer, shift-drag to zoom to a box, and dou
 and + and − zoom. The status line gives the point under the pointer.
 Hovering on a path shows the nearest row's values.
 
-**Add…** adds another run folder's results to those open, to compare them, and **Reload** reads everything again,
-keeping each result's settings.
+**Add run folder…** adds another run folder's results to those open, to compare them, and **Reload** reads everything
+again, keeping each result's settings.
+
+**Copy link** copies a link to the views as they are: their runs, settings, framing and what they follow, and each
+result's options. **Copy player embed** copies an iframe that shows them as a player in one of the site's pages. Only
+runs opened from a web address can be linked, not a folder from your own computer.
+
+Where the browser asks for less motion, spinning bodies and falling space are drawn still, and the legends don't
+slide.
 
 ### Replay
 
@@ -144,6 +187,17 @@ A run's `.prefs.json` sets how the player starts: which backgrounds are drawn, w
 (x / y or distance / time, log axes), markers, and so on; its config sets each result's options (tangent, end
 arrows, apsides, hidden orbits, colours). The player shows only what these ask for: the desktop viewer's markers and
 time markers, on there by default, are off here unless a run's preferences turn them on.
+
+A player made with **Copy player embed** uses `state=` in place of `run=`: it opens the views as they were copied,
+two side by side if there were two, framed as they were.
+
+A player on a page waits until it is near the part of the page being read before it loads its run, so a page with
+several players doesn't load them all at once. While it loads, it says how many files it has read.
+
+After a change to the viewer, `scripts/check_players.py` checks that every player in the pages looks as it did. It
+draws each one with the viewer in `web/` and with the viewer at a git commit (`--base`, HEAD by default) in Chrome
+without a window, compares the two plots pixel by pixel, and lists the players that differ. With `--serve` it serves
+the comparison page instead, to open in a browser and see each pair side by side.
 
 ## Backgrounds that change with time
 
