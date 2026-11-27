@@ -22,8 +22,22 @@ const ARROW_SPACING = 40;   //pixels between background arrows
 const PLAYER = new URLSearchParams(location.search).has('player');   //the cut-down player, for embedding in pages
 const REPLAY_SECONDS = 20;  //a whole run at 1x
 const ALL = 'All environments', SELECTED = "Selected result's environment";
+//the display options, by the desktop viewer's names (a run's prefs.json sets them); the ones the desktop viewer has on
+//by default (markers, time markers) start off here, so a page's player shows only what its run's prefs ask for
 const PREFS = {unit: 0, equalAspect: true, showGrid: true, showFlow: true, showGravity: false, showScalar: true, showTwist: true, showSeam: true,
-               showBodies: true, showSchwarzschild: true, showSpin: false, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false};
+               showBodies: true, showSchwarzschild: true, showSpin: false, showPathLegend: true, graduateOrbits: false, showFieldKey: true, replaySpeed: '1', replayLoop: false,
+               mode: 'xy', logX: false, logY: false, ctTime: false, reverseX: true, showMarkers: false, showTimeMarks: false, timeColumn: 't',
+               showContours: false, showFlowLines: false, showCones: false, showSpecialOrbits: false, showMarkNote: true, showMarkLabels: true,
+               showBodyLabels: false};
+//the columns each time option matches, by name, any case (the desktop's TIME_COLUMNS)
+const TIME_OPTIONS = {t: ['t', 'time', 'coord_time'], pt: ['pt', 'tau', 'proper_time', 'proper_t']};
+const TIME_LABELS = {t: 'global time (t)', pt: 'proper time (pt)'};
+const MAX_TIME_MARKS = 5000;
+const ZOOM_STEP = 1.5, PAN_STEP = 0.2;
+const END_COLORS = ['#c2410c', '#0f766e', '#7c3aed', '#a16207'], END_LENGTH = 30;   //velocity arrows at path ends
+const CONE = '#8a7fd0', FLOW_LINE = '#c4a46e', ISCO_COLOUR = '#a16207';            //light cones, flow lines, ISCOs
+const WITH_DASH = [8, 4], AGAINST_DASH = [3, 3];   //circular orbits going round with a hole's spin, and against it
+const FLOW_LINES = 20, CONTOUR_SPACING = 10, CONE_SIZE = 12;
 
 const state = {
   results: [],         //{name, file, data, paths, log, env, visible, color}
@@ -33,6 +47,9 @@ const state = {
   prefs: {...PREFS},
   background: SELECTED,
   replay: {state: 'stopped', t: null, last: 0, mode: 'together'},   //mode 'together' or 'sequence' (in turn)
+  trailStart: null,    //replay: paths are drawn from this time (Clear trails), or from the start (null)
+  timeInterval: '',    //time markers: every this much of the marker column ('' = a round interval, about 10)
+  sources: [],         //what is open: [{source, fullName}], for Reload
 };
 
 const $ = id => document.getElementById(id);
@@ -59,16 +76,24 @@ function urlSource(base) {
   }};
 }
 
-/* a csv as columns of numbers (NaN where empty), split into rows; a row of empty cells ends a path */
+/* a csv as columns of numbers (NaN where empty or not a number), split into rows; a row of empty cells ends a path.
+   text(name) gives a column's cells as written, for a column of names (one path per value) */
 function parseCsv(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim() && !l.trimStart().startsWith('#'));
   const names = lines[0].split(',').map(s => s.trim());
   const columns = Object.fromEntries(names.map(n => [n, new Float64Array(lines.length - 1)]));
+  const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = lines[i].split(',');
+    rows.push(cells);
     names.forEach((n, j) => { const c = (cells[j] || '').trim(); columns[n][i - 1] = c === '' ? NaN : +c; });
   }
-  return {names, columns, rows: lines.length - 1};
+  const texts = new Map();
+  const textOf = n => {
+    if (!texts.has(n)) { const j = names.indexOf(n); texts.set(n, rows.map(cells => (cells[j] || '').trim())); }
+    return texts.get(n);
+  };
+  return {names, columns, rows: lines.length - 1, text: textOf};
 }
 
 /* the column pairs of a csv by name (pos_x with pos_y, posX with posY): [label, x, y] */
@@ -94,8 +119,14 @@ function parseLog(text) {
   const wave = (text.match(/^gravitational wave: (.+)$/m) || [])[1];
   const scalar = (text.match(/^background scalar: (.+)$/m) || [])[1];
   const backgrounds = (text.match(/^backgrounds: (.+)$/m) || [])[1];
+  //where each orbit ended (engine/run.py's OrbitCounter): 'orbit N: t ... s  periapsis ... m at (x, y)  apoapsis ...',
+  //or in older logs 'orbit <days> days' with no apsides
+  const clean = text.replace(/np\.float64\(([^()]*)\)/g, '$1');
+  let orbitEnds = [...clean.matchAll(/^orbit \d+: t (\S+) s\s+periapsis \S+ m at \((\S+), (\S+)\)\s+apoapsis \S+ m at \((\S+), (\S+)\)/gm)]
+    .map(m => ({t: +m[1], peri: [+m[2], +m[3]], apo: [+m[4], +m[5]]}));
+  if (!orbitEnds.length) orbitEnds = [...clean.matchAll(/^orbit\s+(\S+) days/gm)].map(m => ({t: +m[1] * 86400, peri: null, apo: null}));
   return {bodies, frames: frames ? files(frames) : null, direction, wave, scalar: scalar && scalar.trim(),
-          backgrounds: backgrounds && backgrounds.trim()};
+          backgrounds: backgrounds && backgrounds.trim(), orbitEnds, text};
 }
 
 /* a log's list of frames files, comma-separated (a colour map's, a flow's) */
@@ -181,20 +212,32 @@ function locate(list, v) {
   return lo + (hi > lo ? (v - list[lo]) / (list[hi] - list[lo]) : 0);
 }
 
-/* a run: its full.json (if any), prefs, config, results, logs and frames */
-async function loadRun(source, fullName) {
+/* a run: its full.json (if any), prefs, config, results, logs and frames. add: as well as what is open, not instead.
+   keep: for a reload, what each result (by file) had set - shown, styles, options, hidden orbits - kept over the
+   run's own config */
+async function loadRun(source, fullName, {add = false, keep = null} = {}) {
   message('loading…');
-  state.results = []; state.environments = []; state.selected = null; state.backgrounds = null; stopReplay();
+  if (!add) {
+    state.results = []; state.environments = []; state.selected = null; state.backgrounds = null; state.sources = [];
+    state.trailStart = null; state.timeInterval = '';
+  }
+  stopReplay();
   try {
     fullName = fullName || source.names().find(n => n.endsWith('.full.json'));
+    state.sources.push({source, fullName});
     let entries, chosen = null;
     if (fullName) {
       const full = JSON.parse(await source.read(fullName));
-      if (full.preferences) Object.assign(state.prefs, pickPrefs(JSON.parse(await source.read(full.preferences)).preferences || {}));
+      if (full.preferences && !keep) Object.assign(state.prefs, pickPrefs(JSON.parse(await source.read(full.preferences)).preferences || {}));
       const config = full.config ? JSON.parse(await source.read(full.config)) : {results: []};
       entries = config.results || [];
-      state.background = config.background === ALL ? ALL : SELECTED;
-      chosen = config.background;
+      if (!add) {
+        state.background = config.background === ALL ? ALL : SELECTED;
+        chosen = config.background;
+        if (config.timeInterval && !keep) state.timeInterval = String(config.timeInterval);
+        const view = config.view || {};
+        if (!keep) Object.assign(state.prefs, pickPrefs({mode: view.mode, logX: view.logX, logY: view.logY, unit: view.unit}));
+      }
     } else {
       entries = source.names().filter(n => n.endsWith('.csv') && !n.startsWith('background_')).sort().map(n => ({relative: n}));
     }
@@ -216,30 +259,66 @@ async function loadRun(source, fullName) {
       try { state.backgrounds = (state.backgrounds || []).concat(parseBackgrounds(await read(name))); }
       catch (e) { message('could not read the backgrounds file ' + name + ': ' + e.message); }
     }
-    if (state.backgrounds && state.backgrounds.length)
-      state.background = (state.backgrounds.find(b => b.name === chosen) || state.backgrounds[0]).name;
-    else state.backgrounds = null;
+    if (state.backgrounds && state.backgrounds.length) {
+      if (!add || !currentBackground()) state.background = (state.backgrounds.find(b => b.name === chosen) || state.backgrounds[0]).name;
+    } else state.backgrounds = null;
+    const first = state.results.length;
     entries.forEach((entry, i) => {
-      const file = files[i], log = logs[i];
-      const result = {name: studyName(file), file, data: parseCsv(texts[i][0]), log, visible: entry.visible !== false,
-                      color: SERIES[i % SERIES.length]};
-      result.paths = buildPaths(result, entry);
+      const file = files[i], log = logs[i], kept = keep && keep.get(file);
+      const settings = kept ? {...entry, ...kept} : entry;
+      const result = {name: studyName(file), file, data: parseCsv(texts[i][0]), log, visible: settings.visible !== false,
+                      color: SERIES[(first + i) % SERIES.length], source,
+                      straight: !!settings.straight, ends: !!settings.ends, peri: !!settings.periapsis, apo: !!settings.apoapsis};
+      result.paths = buildPaths(result, settings);
       result.env = environmentFor(log, frameCache);
+      result.orbits = buildOrbits(result, settings.hiddenOrbits || []);
       state.results.push(result);
     });
-    state.selected = state.results[0] || null;
+    if (!state.selected) state.selected = state.results[0] || null;
     message(fullName ? fullName : state.results.length + ' results');
   } catch (e) {
     message('could not open the run: ' + e.message);
   }
+  invalidatePlot();
   syncControls();
   fit();
 }
 
+/* the settings a result has now, as a config entry has them (for Reload, and Choose paths) */
+function resultSettings(r) {
+  return {visible: r.visible, straight: r.straight, ends: r.ends, periapsis: r.peri, apoapsis: r.apo,
+          styles: Object.fromEntries(r.paths.map(p => [p.name, [p.color || r.color, p.style, p.color2 || null]])),
+          selection: r.selection, group: r.group,
+          hiddenOrbits: (r.orbits || []).filter(o => !o.visible).map(o => o.name.split('  ')[0])};
+}
+
+/* read everything open again from where it came from, keeping each result's settings */
+async function reload() {
+  const sources = state.sources.slice(), keep = new Map(state.results.map(r => [r.file, resultSettings(r)]));
+  const selected = state.selected && state.selected.file, view = state.view && state.view.slice();
+  if (!sources.length) return;
+  for (const [i, {source, fullName}] of sources.entries()) await loadRun(source, fullName, {add: i > 0, keep});
+  state.selected = state.results.find(r => r.file === selected) || state.results[0] || null;
+  if (view) { state.view = view; draw(); }
+  syncControls();
+}
+
+/* the selected result taken out (the desktop's Close) */
+function closeSelected() {
+  const r = state.selected;
+  if (!r) return;
+  state.results = state.results.filter(x => x !== r);
+  state.environments = state.environments.filter(e => state.results.some(x => x.env === e));
+  state.selected = state.results[0] || null;
+  syncControls(); draw();
+}
+
 function pickPrefs(prefs) {
   const out = {};
-  for (const key of Object.keys(PREFS)) if (key in prefs) out[key] = prefs[key];
+  for (const key of Object.keys(PREFS)) if (key in prefs && prefs[key] !== undefined) out[key] = prefs[key];
   if (typeof prefs.unit === 'number') out.unit = Math.max(0, Math.min(UNITS.length - 1, prefs.unit - 1));   //the desktop's list starts with raw values
+  if (typeof prefs.timeColumn === 'string') out.timeColumn = /proper|pt/i.test(prefs.timeColumn) ? 'pt' : 't';   //'Global time (t)'
+  if (typeof prefs.replaySpeed === 'string') out.replaySpeed = prefs.replaySpeed.replace('×', '').replace('0.25', '0.2');
   return out;
 }
 
@@ -256,12 +335,106 @@ function buildPaths(result, entry) {
     selection = (position.length ? position : found.slice(0, 1)).map(p => [p[1], p[2]]);
   }
   const time = columns.t || columns.time || null;
-  return selection.map(([xc, yc]) => {
-    const label = (pairs(names).find(p => p[1] === xc && p[2] === yc) || [xc + ' / ' + yc])[0];
-    const style = (entry.styles || {})[label] || [];
-    return {name: label, xName: xc, yName: yc, x: columns[xc], y: columns[yc], t: time, color: style[0] || null,
-            style: style[1] || 'solid'};
-  });
+  result.selection = selection;
+  //one path per value of a column (the desktop's group): each path the rows with that value, the rest left empty
+  result.group = entry.group && names.includes(entry.group) ? entry.group : null;
+  const values = result.group ? [...new Set(result.data.text(result.group))] : [null];
+  const out = [];
+  for (const [xc, yc] of selection) {
+    const pairName = (pairs(names).find(p => p[1] === xc && p[2] === yc) || [xc + ' / ' + yc])[0];
+    for (const g of values) {
+      const label = g === null ? pairName : selection.length > 1 ? g + ' ' + pairName : String(g);
+      const style = (entry.styles || {})[label] || [];
+      let x = columns[xc], y = columns[yc];
+      if (g !== null) {
+        const keepRow = result.data.text(result.group).map(v => v === g);
+        x = x.map((v, i) => keepRow[i] ? v : NaN); y = y.map((v, i) => keepRow[i] ? v : NaN);
+      }
+      out.push({name: label, xName: xc, yName: yc, x, y, t: time, color: style[0] || null,
+                style: style[1] || 'solid', color2: style[2] && style[2] !== style[0] ? style[2] : null});
+    }
+  }
+  return out;
+}
+
+/* a result's column for a time option ('t' or 'pt'), matched by name in any case; null if it has none */
+function timeColumnOf(result, option) {
+  const names = result.data.names, lower = new Map(names.map(n => [n.toLowerCase(), n]));
+  for (const c of TIME_OPTIONS[option]) if (lower.has(c)) return lower.get(c);
+  return null;
+}
+
+/* a pair is a position unless its label looks like a velocity, acceleration or force (the desktop's isPositionLabel) */
+const isPositionLabel = label => !/^(v|u|w|a|vel|velocity|acc|accel|f|force)\d*$/i.test(label);
+
+/* the pairs drawn as arrows at the path ends (v, u, a ...): [label, x, y], four at most */
+function endPairs(result) {
+  return pairs(result.data.names).filter(p => !isPositionLabel(p[0])).slice(0, END_COLORS.length);
+}
+
+/* the result's velocity columns (v_x / v_y, vel_x ...), or null */
+function velocityPair(result) {
+  return pairs(result.data.names).find(p => /^(v|vel|velocity)\d*$/i.test(p[0])) || null;
+}
+
+/* a run split into its orbits, at the times its log says each orbit ended (any run that went round at least once: two
+   orbit lines, the part orbit at the start and a whole one); a fall or flyby has none. each orbit is its rows i0..i1
+   (and the first row of the next, so the line joins up), its times, periapsis and apoapsis ({x, y, t}) and whether it
+   is shown. the apsides are the log's, at the time of the nearest row, or (older logs) the closest and farthest rows */
+function buildOrbits(result, hidden) {
+  const ends = result.log.orbitEnds || [], tName = timeColumnOf(result, 't'), path = result.paths[0];
+  if (ends.length < 2 || !tName || !path) return [];
+  const t = result.data.columns[tName], x = path.x, y = path.y, n = t.length;
+  const part = i => { let k = 0; while (k < ends.length && t[i] >= ends[k].t) k++; return k; };
+  const orbits = [];
+  let i = 0;
+  while (i < n && !isFinite(t[i])) i++;
+  for (let k = 0; k <= ends.length && i < n; k++) {
+    let j = i;
+    while (j + 1 < n && (!isFinite(t[j + 1]) || part(j + 1) === k)) j++;
+    if (part(i) !== k) continue;
+    const t0 = k > 0 ? ends[k - 1].t : t[i], t1 = k < ends.length ? ends[k].t : t[j];
+    const name = k === 0 ? 'start (to the first crossing)' : k === ends.length ? 'end (part orbit)'
+               : 'orbit ' + k + '  (' + fmt((t1 - t0) / 86400) + ' days)';
+    const nearest = (qx, qy) => {
+      let best = i, bd = Infinity;
+      for (let r = i; r <= j; r++) { const d = Math.hypot(x[r] - qx, y[r] - qy); if (d < bd) { bd = d; best = r; } }
+      return {x: qx, y: qy, t: t[best]};
+    };
+    let peri = null, apo = null;
+    if (k < ends.length && ends[k].peri) { peri = nearest(...ends[k].peri); apo = nearest(...ends[k].apo); }
+    else {
+      let lo = Infinity, hi = -Infinity;
+      for (let r = i; r <= j; r++) {
+        const d = Math.hypot(x[r], y[r]);
+        if (d < lo) { lo = d; peri = {x: x[r], y: y[r], t: t[r]}; }
+        if (d > hi) { hi = d; apo = {x: x[r], y: y[r], t: t[r]}; }
+      }
+    }
+    orbits.push({name, i0: i, i1: Math.min(j + 1, n - 1), t0, t1, peri, apo, full: name.startsWith('orbit'),
+                 visible: !hidden.includes(name.split('  ')[0])});
+    i = j + 1;
+  }
+  result.rowOrbit = new Int32Array(n).fill(-1);   //the orbit each row is in (its own, not the one it closes)
+  orbits.forEach((o, k) => { for (let r = o.i0; r <= (k + 1 < orbits.length ? o.i1 - 1 : o.i1); r++) result.rowOrbit[r] = k; });
+  return orbits;
+}
+
+/* an orbit's colour on path p: the first shown whole orbit p's colour, the last its second colour, those between an
+   even mix; the parts before the first crossing and after the last take the first and last colours */
+function orbitColour(result, p, k) {
+  const first = p.color || result.color;
+  if (!p.color2 || !result.orbits.length) return first;
+  const o = result.orbits[k];
+  if (!o.full) return k === 0 ? first : p.color2;
+  const shown = result.orbits.filter(q => q.visible && q.full), f = shown.length > 1 ? shown.indexOf(o) / (shown.length - 1) : 0;
+  return mixColour(first, p.color2, Math.max(0, f));
+}
+
+function mixColour(a, b, f) {
+  const parse = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  const [x, y] = [parse(a), parse(b)];
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * f).toString(16).padStart(2, '0')).join('');
 }
 
 /* a result's environment (its bodies and background frames), shared by results with the same */
@@ -292,35 +465,121 @@ function describe(log, frames, files) {
 }
 
 //---------------------------------------------------------------- the view
+/* what is plotted: in x / y mode a path's own columns; in distance / time mode its distance from the origin against
+   the time column (t or pt), as ct if chosen. either axis can be logarithmic. state.view is in plotted values: metres
+   (or seconds, or the column's own values) on a linear axis, log10 of the value in the axis's unit on a log one */
 
-function plotRect() {
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  return {l: MARGIN.left, t: MARGIN.top, r: w - MARGIN.right, b: h - MARGIN.bottom};
+const timeMode = () => state.prefs.mode === 'time';
+let plotKey = 0;                    //bumped when what is plotted changes, so paths work their plotted values out again
+function invalidatePlot() { plotKey++; }
+
+/* each axis: its label, the scale that turns its values into the shown unit, whether it is logarithmic, and what it
+   holds ('position', 'distance', 'time' or 'other') */
+function axes() {
+  const [unit, scale] = UNITS[state.prefs.unit], logX = !!state.prefs.logX, logY = !!state.prefs.logY;
+  const tag = (a, log) => Object.assign(a, {log, label: a.label + (log ? '  [log]' : '')});
+  if (timeMode()) {
+    const option = state.prefs.timeColumn, shown = state.results.find(r => r.visible && timeColumnOf(r, option));
+    const name = shown ? timeColumnOf(shown, option) : option;
+    const time = state.prefs.ctTime ? {label: (name === 't' ? 'ct' : 'c·' + name) + ' (' + unit + ')', scale, kind: 'time'}
+                                    : {label: name + ' (s)', scale: 1, kind: 'time'};
+    return [tag({label: 'distance from origin (' + unit + ')', scale, kind: 'distance'}, logX), tag(time, logY)];
+  }
+  const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
+  const one = name => {
+    if (TIME_COLUMN.test(name || '')) return {label: name + ' (s)', scale: 1, kind: 'time'};
+    if (/\(.+\)\s*$/.test(name || '')) return {label: name, scale: 1, kind: 'other'};     //a column that names its own unit
+    return {label: ({pos_x: 'x', pos_y: 'y'}[name] || name || 'x') + ' (' + unit + ')', scale, kind: 'position'};
+  };
+  return [tag(one(path ? path.xName : 'pos_x'), logX), tag(one(path ? path.yName : 'pos_y'), logY)];
 }
 
+/* whether the plot is the plane itself (x / y, linear), where bodies and backgrounds are drawn as they are (against a
+   time column, bodies are drawn as lines, drawBodies) */
+function planeView() {
+  return !timeMode() && !state.prefs.logX && !state.prefs.logY;
+}
+
+/* a value on an axis as plotted: as it is, or log10 of it in the axis's unit (NaN for 0 and below) */
+const toAxis = (v, a) => a.log ? (v > 0 ? Math.log10(v / a.scale) : NaN) : v;
+const fromAxis = (v, a) => a.log ? Math.pow(10, v) * a.scale : v;
+
+/* positions (x, y in metres) at times (the global t, for ct) as plotted, by the result's columns: [X, Y] arrays */
+function plotValues(result, xs, ys, tAxis) {
+  const [ax, ay] = axes(), n = xs.length, X = new Float64Array(n), Y = new Float64Array(n);
+  const factor = state.prefs.ctTime ? C : 1;
+  for (let i = 0; i < n; i++) {
+    if (timeMode()) { X[i] = toAxis(Math.hypot(xs[i], ys[i]), ax); Y[i] = toAxis(tAxis ? tAxis[i] * factor : NaN, ay); }
+    else { X[i] = toAxis(xs[i], ax); Y[i] = toAxis(ys[i], ay); }
+  }
+  return [X, Y];
+}
+
+/* a path's plotted values, worked out once for each thing plotted */
+function plotted(result, p) {
+  if (p.plotKey !== plotKey) {
+    const tName = timeMode() ? timeColumnOf(result, state.prefs.timeColumn) : null;
+    [p.px, p.py] = plotValues(result, p.x, p.y, tName ? result.data.columns[tName] : null);
+    p.plotKey = plotKey;
+  }
+  return p;
+}
+
+/* one point (x, y in metres, at global time t) as plotted, for a result */
+function plotPoint(result, x, y, t) {
+  const tName = timeMode() ? timeColumnOf(result, state.prefs.timeColumn) : null;
+  let tAxis = t;
+  if (tName && tName !== timeColumnOf(result, 't')) tAxis = interpolate(result.data.columns[timeColumnOf(result, 't')], result.data.columns[tName], t);
+  const [X, Y] = plotValues(result, [x], [y], [tAxis]);
+  return [X[0], Y[0]];
+}
+
+/* y at x along the rising list xs (NaN outside it) */
+function interpolate(xs, ys, x) {
+  if (!xs || !ys) return NaN;
+  let lo = -1, hi = -1;
+  for (let i = 0; i < xs.length; i++) {
+    if (!isFinite(xs[i]) || !isFinite(ys[i])) continue;
+    if (xs[i] <= x) lo = i;
+    if (xs[i] >= x) { hi = i; break; }
+  }
+  if (lo < 0 || hi < 0) return NaN;
+  return hi === lo ? ys[lo] : ys[lo] + (ys[hi] - ys[lo]) * (x - xs[lo]) / (xs[hi] - xs[lo]);
+}
+
+function plotRect() {
+  const w = canvas.clientWidth, h = canvas.clientHeight, top = PLAYER ? MARGIN.top : MARGIN.top + 18;   //the viewer's title line
+  return {l: MARGIN.left, t: top, r: w - MARGIN.right, b: h - MARGIN.bottom};
+}
+
+/* distance runs right to left in distance / time mode with Reverse on, 0 on the right */
+const flipX = () => timeMode() && state.prefs.reverseX;
+
 function toScreen(x, y) {
-  const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view;
-  return [l + (x - x0) / (x1 - x0) * (r - l), b - (y - y0) / (y1 - y0) * (b - t)];
+  const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view, f = (x - x0) / (x1 - x0);
+  return [flipX() ? r - f * (r - l) : l + f * (r - l), b - (y - y0) / (y1 - y0) * (b - t)];
 }
 
 function toData(sx, sy) {
-  const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view;
-  return [x0 + (sx - l) / (r - l) * (x1 - x0), y0 + (b - sy) / (b - t) * (y1 - y0)];
+  const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view, f = flipX() ? (r - sx) / (r - l) : (sx - l) / (r - l);
+  return [x0 + f * (x1 - x0), y0 + (b - sy) / (b - t) * (y1 - y0)];
 }
 
 function fit() {
   let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
   for (const r of state.results.filter(r => r.visible))
-    for (const p of r.paths)
-      for (let i = 0; i < p.x.length; i++)
-        if (isFinite(p.x[i]) && isFinite(p.y[i])) {
-          x0 = Math.min(x0, p.x[i]); x1 = Math.max(x1, p.x[i]); y0 = Math.min(y0, p.y[i]); y1 = Math.max(y1, p.y[i]);
+    for (const p of r.paths) {
+      plotted(r, p);
+      for (let i = 0; i < p.px.length; i++)
+        if (isFinite(p.px[i]) && isFinite(p.py[i]) && shownRow(r, i)) {
+          x0 = Math.min(x0, p.px[i]); x1 = Math.max(x1, p.px[i]); y0 = Math.min(y0, p.py[i]); y1 = Math.max(y1, p.py[i]);
         }
+    }
   if (!isFinite(x0)) { state.view = [-1, 1, -1, 1]; draw(); return; }
   //against time, the bodies' lines are in view too
   const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
   const timeX = path && TIME_COLUMN.test(path.xName || ''), timeY = path && TIME_COLUMN.test(path.yName || '');
-  if (state.prefs.showBodies && (timeX || timeY))
+  if (!timeMode() && !state.prefs.logX && !state.prefs.logY && state.prefs.showBodies && (timeX || timeY))
     for (const env of fieldEnvironments())
       for (const body of env.bodies) {
         const at = bodyCoordinate(timeY ? path.xName : path.yName, body);
@@ -328,7 +587,7 @@ function fit() {
         if (timeY) { x0 = Math.min(x0, at); x1 = Math.max(x1, at); } else { y0 = Math.min(y0, at); y1 = Math.max(y1, at); }
       }
   //in x / y, a body just off the paths (light near a hole) is brought into view; one far away is left out
-  else if (state.prefs.showBodies && /^(pos_)?x$/.test(path.xName || '') && /^(pos_)?y$/.test(path.yName || '')) {
+  else if (state.prefs.showBodies && planeView() && /^(pos_)?x$/.test(path.xName || '') && /^(pos_)?y$/.test(path.yName || '')) {
     const size = Math.max(x1 - x0, y1 - y0);
     for (const env of fieldEnvironments())
       for (const body of env.bodies)
@@ -342,15 +601,34 @@ function fit() {
   draw();
 }
 
-/* with equal aspect, widen whichever axis needs it so a metre is as long across as up */
+/* a unit as long across as up: equal aspect in x / y, time as ct in distance / time; not with a log axis */
+const aspectActive = () => (timeMode() ? state.prefs.ctTime : state.prefs.equalAspect) && !state.prefs.logX && !state.prefs.logY;
+
+/* with the aspect on, widen whichever axis needs it so a metre is as long across as up */
 function equalise() {
-  if (!state.prefs.equalAspect || !state.view) return;
+  if (!aspectActive() || !state.view) return;
   const {l, t, r, b} = plotRect();
   let [x0, x1, y0, y1] = state.view;
   const perX = (x1 - x0) / (r - l), perY = (y1 - y0) / (b - t);
   if (perX > perY) { const half = perX * (b - t) / 2, mid = (y0 + y1) / 2; y0 = mid - half; y1 = mid + half; }
   else { const half = perY * (r - l) / 2, mid = (x0 + x1) / 2; x0 = mid - half; x1 = mid + half; }
   state.view = [x0, x1, y0, y1];
+}
+
+/* zoom by a factor about the view's centre (or a plotted point), keeping the aspect */
+function zoom(factor, at) {
+  if (!state.view) return;
+  const v = state.view, [x, y] = at || [(v[0] + v[1]) / 2, (v[2] + v[3]) / 2];
+  state.view = [x + (v[0] - x) * factor, x + (v[1] - x) * factor, y + (v[2] - y) * factor, y + (v[3] - y) * factor];
+  draw();
+}
+
+/* pan by fractions of the view (a fraction across the screen: reversed distance moves the other way) */
+function pan(fx, fy) {
+  if (!state.view) return;
+  const v = state.view, dx = (v[1] - v[0]) * fx * (flipX() ? -1 : 1), dy = (v[3] - v[2]) * fy;
+  state.view = [v[0] + dx, v[1] + dx, v[2] + dy, v[3] + dy];
+  draw();
 }
 
 function niceStep(span, count) {
@@ -363,6 +641,28 @@ function ticks(v0, v1, count) {
   const step = niceStep(v1 - v0, count), out = [];
   for (let v = Math.ceil(v0 / step) * step; v <= v1 + step * 1e-9; v += step) out.push(Math.abs(v) < step * 1e-9 ? 0 : v);
   return {values: out, step};
+}
+
+/* an axis's ticks as [plotted value, label]: on a linear axis round values in its unit; on a log one powers of ten,
+   or 1, 2, 5 in each decade over a few decades, or round values within one */
+function axisTicks(v0, v1, a, count) {
+  if (!a.log) return ticks(v0 / a.scale, v1 / a.scale, count).values.map(v => [v * a.scale, fmt(v)]);
+  count = Math.max(2, Math.floor(count));
+  if (v1 - v0 >= count / 2) {
+    const step = Math.max(1, Math.ceil((v1 - v0) / count)), out = [];
+    for (let e = Math.ceil(v0 / step) * step; e <= Math.floor(v1); e += step) out.push([e, '1e' + e]);
+    return out;
+  }
+  if (v1 - v0 >= 0.5) {
+    let vals = [];
+    for (const mults of [[1], [1, 2, 5], [1, 2, 3, 4, 5, 6, 7, 8, 9]]) {
+      vals = [];
+      for (let e = Math.floor(v0); e <= Math.ceil(v1); e++) for (const m of mults) { const v = m * 10 ** e; if (Math.log10(v) >= v0 && Math.log10(v) <= v1) vals.push(v); }
+      if (vals.length >= 4 || mults.length === 9) break;
+    }
+    return vals.map(v => [Math.log10(v), fmt(v)]);
+  }
+  return ticks(10 ** v0, 10 ** v1, count).values.filter(v => v > 0).map(v => [Math.log10(v), fmt(v)]);
 }
 
 function fmt(v) {
@@ -389,70 +689,113 @@ function draw() {
   ctx.beginPath(); ctx.rect(l, t, r - l, b - t); ctx.clip();
   drawAxes(true);
   const keys = [];
-  const background = currentBackground();
-  if (background) keys.push(...drawBackground(background));
-  else for (const env of fieldEnvironments()) keys.push(...drawField(env));
-  for (const result of state.results.filter(r => r.visible)) {
+  prepareTimeMarks();
+  if (planeView() || timeMode()) keys.push(...drawOverlaysUnder());
+  if (planeView()) {
+    const background = currentBackground();
+    if (background) keys.push(...drawBackground(background));
+    else for (const env of fieldEnvironments()) keys.push(...drawField(env));
+  }
+  if (timeMode()) keys.push(...drawTimeBackground());
+  const shown = state.results.filter(r => r.visible);
+  for (const result of shown) {
     const until = drawUntil(result);
-    if (until !== false) for (const p of result.paths) if (!frontPath || frontPath.p !== p) drawPath(result, p, until);
+    if (until === false) continue;
+    for (const p of result.paths) {
+      if (result.straight && state.replay.state === 'stopped') drawStraight(result, p);
+      if (!frontPath || frontPath.p !== p) drawPath(result, p, until);
+    }
   }
   if (frontPath && frontPath.result.visible) {
     const until = drawUntil(frontPath.result);
     if (until !== false) drawPath(frontPath.result, frontPath.p, until, 2.8);
   }
+  labelCells.clear();
+  for (const result of shown) {
+    const until = drawUntil(result);
+    if (until === false) continue;
+    for (const p of result.paths) {
+      drawTimeMarks(result, p, until);
+      if (result.ends && planeView() && state.replay.state === 'stopped') drawEndArrows(result, p);
+      if (result.orbits.length && (result.peri || result.apo)) drawApsides(result, p, until);
+      if (state.prefs.showMarkers) drawEnds(result, p, until);
+    }
+  }
   flushDots();
   spinning.length = 0;
-  for (const env of fieldEnvironments()) drawBodies(env);
+  if (!state.prefs.logX && !state.prefs.logY) for (const env of fieldEnvironments()) drawBodies(env);
   drawSpinning();
+  if (boxZoom) {
+    ctx.strokeStyle = css('--accent'); ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+    ctx.strokeRect(Math.min(boxZoom[0], boxZoom[2]), Math.min(boxZoom[1], boxZoom[3]), Math.abs(boxZoom[2] - boxZoom[0]), Math.abs(boxZoom[3] - boxZoom[1]));
+    ctx.setLineDash([]);
+  }
   ctx.restore();
   ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1; ctx.strokeRect(l, t, r - l, b - t);
   drawAxes(false);
+  keys.push(...pathKeys());
   boxButtons = []; boxRows = [];
   if (state.prefs.showPathLegend) drawLegend();
   if (state.prefs.showFieldKey && keys.length) drawKey(keys);
 }
 
-/* each axis's label and scale, from the columns the first shown path plots: time in seconds, distances in the unit */
-function axes() {
-  const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
-  const one = name => {
-    if (TIME_COLUMN.test(name || '')) return {label: name + ' (s)', scale: 1};
-    if (/\(.+\)\s*$/.test(name || '')) return {label: name, scale: 1};     //a column that names its own unit
-    const [unit, scale] = UNITS[state.prefs.unit];
-    return {label: ({pos_x: 'x', pos_y: 'y'}[name] || name || 'x') + ' (' + unit + ')', scale};
-  };
-  return [one(path ? path.xName : 'pos_x'), one(path ? path.yName : 'pos_y')];
-}
-
 function drawAxes(grid) {
   const {l, t, r, b} = plotRect(), [x0, x1, y0, y1] = state.view, [ax, ay] = axes();
-  const xt = ticks(x0 / ax.scale, x1 / ax.scale, (r - l) / 100), yt = ticks(y0 / ay.scale, y1 / ay.scale, (b - t) / 60);
+  const xt = axisTicks(x0, x1, ax, (r - l) / 100), yt = axisTicks(y0, y1, ay, (b - t) / 60);
   ctx.font = '11px -apple-system, Helvetica, Arial, sans-serif';
   if (grid) {
     if (!state.prefs.showGrid) return;
     ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1;
-    for (const v of xt.values) { const [sx] = toScreen(v * ax.scale, 0); line(sx, t, sx, b); }
-    for (const v of yt.values) { const [, sy] = toScreen(0, v * ay.scale); line(l, sy, r, sy); }
+    for (const [v] of xt) { const [sx] = toScreen(v, y0); line(sx, t, sx, b); }
+    for (const [v] of yt) { const [, sy] = toScreen(x0, v); line(l, sy, r, sy); }
     return;
   }
   ctx.fillStyle = css('--ink2'); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for (const v of xt.values) { const [sx] = toScreen(v * ax.scale, 0); ctx.fillText(fmt(v), sx, b + 6); }
+  for (const [v, label] of xt) { const [sx] = toScreen(v, y0); if (sx >= l - 1 && sx <= r + 1) ctx.fillText(label, sx, b + 6); }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  for (const v of yt.values) { const [, sy] = toScreen(0, v * ay.scale); ctx.fillText(fmt(v), l - 6, sy); }
+  for (const [v, label] of yt) { const [, sy] = toScreen(x0, v); if (sy >= t - 1 && sy <= b + 1) ctx.fillText(label, l - 6, sy); }
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   ctx.fillText(ax.label, (l + r) / 2, canvas.clientHeight - 6);
   ctx.save(); ctx.translate(16, (t + b) / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'top';
   ctx.fillText(ay.label, 0, 0); ctx.restore();
+  if (!PLAYER) {
+    //the title: the file, or how many results are shown; and the time markers' note, if there is no key for it
+    const shown = state.results.filter(x => x.visible);
+    const title = state.results.length === 1 ? state.results[0].file + (state.results[0].paths.length === 1 ? '  \u2014  ' + state.results[0].paths[0].name : '')
+                : shown.length + ' of ' + state.results.length + ' results shown';
+    ctx.fillStyle = css('--ink'); ctx.font = 'bold 13px -apple-system, Helvetica, Arial, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(title, l, t - 6);
+    if (markState.note) {
+      ctx.fillStyle = css('--ink2'); ctx.font = '11px -apple-system, Helvetica, Arial, sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText(markState.note, r, t - 6);
+    }
+  }
 }
 
 function line(x0, y0, x1, y1) { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
 
-/* a path: up to the replay time while replaying (with a dot where it is), else all of it; broken at empty rows. with
-   graduated orbits on, a path that goes round its body is drawn orbit by orbit: the current one (at the replay time, or
-   the last) in full colour, each earlier one fainter, so the orbits' build-up shows */
+/* whether a result's row is shown: not in a hidden orbit */
+function shownRow(result, i) {
+  if (!result.orbits || !result.orbits.length) return true;
+  const k = result.rowOrbit[i];
+  return k < 0 || result.orbits[k].visible;
+}
+
+/* a row's colour: its orbit's (first to last orbit, for a path with two colours), else the path's */
+function rowColour(result, p, i) {
+  if (p.color2 && result.orbits.length && result.rowOrbit[i] >= 0) return orbitColour(result, p, result.rowOrbit[i]);
+  return p.color || result.color;
+}
+
+/* a path: up to the replay time while replaying (with a dot where it is), from the trails' start (Clear trails), else
+   all of it; broken at empty rows and hidden orbits. a path with two colours goes from the first to the last through
+   its orbits. with graduated orbits on, a path that goes round its body is drawn orbit by orbit: the current one (at
+   the replay time, or the last) in full colour, each earlier one fainter, so the orbits' build-up shows */
 function drawPath(result, p, until = replayTime(), width = 1.6) {
-  const colour = p.color || result.color;
-  ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.setLineDash(DASHES[p.style] || []);
+  plotted(result, p);
+  const from = until !== null && state.trailStart !== null && p.t ? state.trailStart : null;
+  ctx.lineWidth = width; ctx.setLineDash(DASHES[p.style] || []);
   const orbit = state.prefs.graduateOrbits ? orbitsOf(result, p) : null;
   let current = 0;
   if (orbit) {
@@ -460,36 +803,245 @@ function drawPath(result, p, until = replayTime(), width = 1.6) {
     if (until !== null && p.t) for (let i = 0; i < p.x.length; i++) { if (p.t[i] > until) break; current = orbit[i]; }
   }
   const shade = k => k <= 0 ? 1 : Math.max(0.12, 0.55 * Math.pow(0.8, k - 1));
-  let stretch = orbit ? orbit[0] : 0;
-  ctx.globalAlpha = orbit ? shade(current - stretch) : 1;
-  ctx.beginPath();
-  let pen = false;
-  for (let i = 0; i < p.x.length; i++) {
-    if (!(isFinite(p.x[i]) && isFinite(p.y[i]))) { pen = false; continue; }
+  //a new stroke for each orbit (its shade), and each change of colour
+  let pen = false, colour = null, stretch = null, open = false, last = -1;
+  const begin = (c, k) => {
+    if (open) ctx.stroke();
+    ctx.beginPath(); ctx.strokeStyle = colour = c; stretch = k; ctx.globalAlpha = orbit ? shade(current - k) : 1; open = true;
+  };
+  for (let i = 0; i < p.px.length; i++) {
+    if (!(isFinite(p.px[i]) && isFinite(p.py[i])) || !shownRow(result, i) || (from !== null && p.t[i] < from)) { pen = false; continue; }
     if (until !== null && p.t && p.t[i] > until) {
       //into the future: finish this stretch at the replay time, then skip to the next one
-      if (pen && i > 0 && isFinite(p.x[i - 1])) {
+      if (pen && last === i - 1) {
         const f = (until - p.t[i - 1]) / (p.t[i] - p.t[i - 1]);
-        const [sx, sy] = toScreen(p.x[i - 1] + f * (p.x[i] - p.x[i - 1]), p.y[i - 1] + f * (p.y[i] - p.y[i - 1]));
+        const [sx, sy] = toScreen(p.px[i - 1] + f * (p.px[i] - p.px[i - 1]), p.py[i - 1] + f * (p.py[i] - p.py[i - 1]));
         ctx.lineTo(sx, sy); dot(sx, sy, colour);
       }
       pen = false;
-      while (i + 1 < p.x.length && isFinite(p.x[i + 1])) i++;
+      while (i + 1 < p.px.length && isFinite(p.px[i + 1])) i++;
       continue;
     }
-    const [sx, sy] = toScreen(p.x[i], p.y[i]);
-    if (orbit && orbit[i] !== stretch) {
-      //a new orbit: finish the last one at this point, then carry on in the new one's shade
-      if (pen) ctx.lineTo(sx, sy);
-      ctx.stroke();
-      stretch = orbit[i]; ctx.globalAlpha = shade(current - stretch);
-      ctx.beginPath(); ctx.moveTo(sx, sy); pen = true;
-      continue;
-    }
+    const [sx, sy] = toScreen(p.px[i], p.py[i]);
+    const c = rowColour(result, p, i), k = orbit ? orbit[i] : 0;
+    if (pen && (c !== colour || k !== stretch)) { ctx.lineTo(sx, sy); begin(c, k); ctx.moveTo(sx, sy); }
+    else if (pen) ctx.lineTo(sx, sy);
+    else { if (!open || c !== colour || k !== stretch) begin(c, k); ctx.moveTo(sx, sy); }
+    pen = true; last = i;
+  }
+  if (open) ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+}
+
+/* the path with no gravity, dashed under it: its first point carried on at its first velocity (the velocity columns,
+   else the first step), against time if the result has t, else a step a row */
+function drawStraight(result, p) {
+  const n = p.x.length, ok = [];
+  for (let i = 0; i < n && ok.length < 2; i++) if (isFinite(p.x[i]) && isFinite(p.y[i])) ok.push(i);
+  if (ok.length < 2) return;
+  const [i0, i1] = ok, tName = timeColumnOf(result, 't'), t = tName ? result.data.columns[tName] : null, v = velocityPair(result);
+  let vx, vy, time;
+  if (t && v) { vx = result.data.columns[v[1]][i0]; vy = result.data.columns[v[2]][i0]; time = t; }
+  else if (t && t[i1] !== t[i0]) { vx = (p.x[i1] - p.x[i0]) / (t[i1] - t[i0]); vy = (p.y[i1] - p.y[i0]) / (t[i1] - t[i0]); time = t; }
+  else { time = Float64Array.from({length: n}, (_, i) => i); vx = (p.x[i1] - p.x[i0]) / (i1 - i0); vy = (p.y[i1] - p.y[i0]) / (i1 - i0); }
+  const step = Math.max(1, Math.floor(n / 2000)), xs = [], ys = [], ts = [];
+  for (let i = 0; i < n; i += step) { xs.push(p.x[i0] + vx * (time[i] - time[i0])); ys.push(p.y[i0] + vy * (time[i] - time[i0])); ts.push(t ? t[i] : NaN); }
+  const tAxisName = timeMode() ? timeColumnOf(result, state.prefs.timeColumn) : null;
+  const tAxis = tAxisName ? ts.map((_, k) => result.data.columns[tAxisName][k * step]) : null;
+  const [X, Y] = plotValues(result, xs, ys, tAxis);
+  ctx.strokeStyle = p.color || result.color; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  let pen = false;
+  for (let k = 0; k < X.length; k++) {
+    if (!isFinite(X[k]) || !isFinite(Y[k])) { pen = false; continue; }
+    const [sx, sy] = toScreen(X[k], Y[k]);
     if (pen) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
     pen = true;
   }
-  ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+  ctx.stroke(); ctx.setLineDash([]);
+}
+
+/* the start (open) and end (filled) of each stretch of a path that is shown; replaying, the start only */
+function drawEnds(result, p, until) {
+  plotted(result, p);
+  const {l, t, r, b} = plotRect(), from = until !== null && state.trailStart !== null && p.t ? state.trailStart : null;
+  const inside = i => isFinite(p.px[i]) && isFinite(p.py[i]) && shownRow(result, i) && (from === null || p.t[i] >= from)
+                      && (until === null || !p.t || p.t[i] <= until);
+  let first = -1, lastI = -1;
+  for (let i = 0; i < p.px.length; i++) if (inside(i)) { if (first < 0) first = i; lastI = i; }
+  if (first < 0) return;
+  for (const [i, filled] of [[first, false], ...(until === null ? [[lastI, true]] : [])]) {
+    const [sx, sy] = toScreen(p.px[i], p.py[i]);
+    if (sx < l - 6 || sx > r + 6 || sy < t - 6 || sy > b + 6) continue;
+    const c = rowColour(result, p, i);
+    ctx.fillStyle = css('--surface'); ctx.beginPath(); ctx.arc(sx, sy, 6, 0, 2 * Math.PI); ctx.fill();
+    ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.fillStyle = filled ? c : css('--surface');
+    ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, 2 * Math.PI); ctx.fill(); ctx.stroke();
+  }
+}
+
+/* each shown whole orbit's periapsis (an open square) and apoapsis (an open diamond), as picked, in the orbit's
+   colour; replaying, only those already passed */
+function drawApsides(result, p, until) {
+  const {l, t, r, b} = plotRect();
+  result.orbits.forEach((o, k) => {
+    if (!o.visible || !o.full) return;
+    const colour = p.color2 ? orbitColour(result, p, k) : p.color || result.color;
+    for (const [on, point, kind] of [[result.peri, o.peri, 'peri'], [result.apo, o.apo, 'apo']]) {
+      if (!on || !point) continue;
+      if (until !== null && !(point.t <= until && (state.trailStart === null || point.t >= state.trailStart))) continue;
+      const [sx, sy] = toScreen(...plotPoint(result, point.x, point.y, point.t));
+      if (!(sx >= l - 6 && sx <= r + 6 && sy >= t - 6 && sy <= b + 6)) continue;
+      apsisMarker(ctx, sx, sy, kind, colour);
+    }
+  });
+}
+
+function apsisMarker(c, sx, sy, kind, colour) {
+  c.strokeStyle = colour; c.lineWidth = 2; c.setLineDash([]);
+  c.beginPath();
+  if (kind === 'peri') c.rect(sx - 4.5, sy - 4.5, 9, 9);
+  else { c.moveTo(sx, sy - 6); c.lineTo(sx + 6, sy); c.lineTo(sx, sy + 6); c.lineTo(sx - 6, sy); c.closePath(); }
+  c.stroke();
+}
+
+/* the rows that end a stretch of the path (a row of empty cells in the csv ends a stretch) */
+function stretchEnds(p) {
+  const out = [];
+  for (let i = 0; i < p.x.length; i++)
+    if (isFinite(p.x[i]) && isFinite(p.y[i]) && !(i + 1 < p.x.length && isFinite(p.x[i + 1]) && isFinite(p.y[i + 1]))) out.push(i);
+  return out;
+}
+
+/* the largest of a result's end vectors, which gets the longest arrow */
+function endReference(result) {
+  let most = 0;
+  for (const p of result.paths) for (const i of stretchEnds(p)) for (const [, vx, vy] of endPairs(result)) {
+    const size = Math.hypot(result.data.columns[vx][i], result.data.columns[vy][i]);
+    if (isFinite(size)) most = Math.max(most, size);
+  }
+  return most;
+}
+
+/* an arrow at the end of each stretch of the path for each velocity-like pair, all to one scale (x / y only) */
+function drawEndArrows(result, p) {
+  const reference = endReference(result);
+  if (!(reference > 0)) return;
+  endPairs(result).forEach(([, vx, vy], k) => {
+    ctx.strokeStyle = ctx.fillStyle = END_COLORS[k]; ctx.lineWidth = 1.5;
+    for (const i of stretchEnds(p)) {
+      const ax = result.data.columns[vx][i], ay = result.data.columns[vy][i];
+      if (!isFinite(ax) || !isFinite(ay)) continue;
+      const [sx, sy] = toScreen(p.x[i], p.y[i]);
+      arrow(sx, sy, sx + ax / reference * END_LENGTH, sy - ay / reference * END_LENGTH);
+    }
+  });
+}
+
+/* key entries for the paths' extras: end arrows, apsides, time markers (in the player, whose title line isn't drawn) */
+function pathKeys() {
+  const keys = [], shown = state.results.filter(r => r.visible);
+  if (planeView() && state.replay.state === 'stopped')
+    for (const r of shown.filter(r => r.ends)) {
+      const reference = endReference(r);
+      endPairs(r).forEach(([label], k) => {
+        const text = label + ' at the path ends  ' + speed(reference);
+        if (!keys.some(e => e[1] === text)) keys.push([END_COLORS[k], text]);
+      });
+    }
+  if (shown.some(r => r.orbits.length && r.peri)) keys.push([css('--ink2'), 'periapsis of each orbit', null, null, 'peri']);
+  if (shown.some(r => r.orbits.length && r.apo)) keys.push([css('--ink2'), 'apoapsis of each orbit', null, null, 'apo']);
+  if (PLAYER && markState.note) keys.push(['transparent', markState.note]);
+  return keys;
+}
+
+//---------------------------------------------------------------- time markers
+/* dots along each path at every interval of a time column (the desktop's time markers): the column chosen under Time
+   markers, or in distance / time mode the other one (the chosen one is on the axis). the interval is a round one giving
+   about ten, unless one is typed in. a note says the interval, or why there are none */
+const markState = {note: '', column: null, interval: null, key: null};
+const labelCells = new Set();   //screen cells already holding a marker's time, so labels don't overlap
+
+function markerOption() {
+  if (!timeMode()) return state.prefs.timeColumn;
+  return state.prefs.timeColumn === 't' ? 'pt' : 't';
+}
+
+/* a round interval giving about ten markers over the shown results' marker column, or null */
+function autoInterval() {
+  let lo = Infinity, hi = -Infinity;
+  for (const r of state.results.filter(r => r.visible)) {
+    const c = timeColumnOf(r, markerOption());
+    if (c) for (const v of r.data.columns[c]) if (isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  }
+  return hi > lo ? niceStep(hi - lo, 10) : null;
+}
+
+function prepareTimeMarks() {
+  const option = markerOption(), typed = String(state.timeInterval).trim();
+  const key = [plotKey, option, typed, state.prefs.showTimeMarks, state.results.filter(r => r.visible).map(r => r.file).join()].join('|');
+  if (markState.key === key) return;
+  markState.key = key; markState.note = ''; markState.interval = null; markState.column = null;
+  for (const r of state.results) for (const p of r.paths) p.marks = null;
+  if (!state.prefs.showTimeMarks || !state.results.length) return;
+  if (!state.results.some(r => r.visible && timeColumnOf(r, option))) {
+    markState.note = timeMode() ? 'no second time column for markers' : 'no ' + option + ' column for markers';
+    return;
+  }
+  const interval = typed === '' ? autoInterval() : +typed;
+  if (!(interval > 0)) { markState.note = typed === '' ? '' : 'the time markers\' interval must be a number above 0'; return; }
+  markState.interval = interval;
+  for (const r of state.results.filter(r => r.visible)) {
+    const c = timeColumnOf(r, option), g = timeColumnOf(r, 't');
+    if (!c) continue;
+    markState.column = c;
+    const tc = r.data.columns[c], gc = g ? r.data.columns[g] : null;
+    const axisName = timeMode() ? timeColumnOf(r, state.prefs.timeColumn) : null, axis = axisName ? r.data.columns[axisName] : null;
+    for (const p of r.paths) {
+      //the path's rows in order, where its time rises; a gap (a hidden orbit, an empty row) gets no markers
+      const rows = [];
+      for (let i = 0; i < tc.length; i++) if (isFinite(tc[i]) && isFinite(p.x[i]) && isFinite(p.y[i]) && shownRow(r, i)) rows.push(i);
+      if (rows.length < 2) continue;
+      if (rows.some((row, k) => k && tc[row] < tc[rows[k - 1]])) { markState.note = c + ' does not always increase along ' + p.name; continue; }
+      const T = [], xs = [], ys = [], at = [], G = [];
+      const first = Math.ceil(tc[rows[0]] / interval - 1e-9), last = Math.floor(tc[rows[rows.length - 1]] / interval + 1e-9);
+      if (last - first > MAX_TIME_MARKS) { markState.note = 'interval too small (' + (last - first + 1) + ' markers): try a larger one'; continue; }
+      let k = 0;
+      for (let m = first; m <= last; m++) {
+        const v = m * interval;
+        while (k + 1 < rows.length && tc[rows[k + 1]] < v) k++;
+        const i = rows[k], j = rows[Math.min(k + 1, rows.length - 1)];
+        if (j !== i + 1 && tc[i] !== v && tc[j] !== v) continue;   //across a gap
+        const f = tc[j] === tc[i] ? 0 : (v - tc[i]) / (tc[j] - tc[i]), mix = col => col ? col[i] + f * (col[j] - col[i]) : NaN;
+        T.push(v); xs.push(p.x[i] + f * (p.x[j] - p.x[i])); ys.push(p.y[i] + f * (p.y[j] - p.y[i])); at.push(mix(axis)); G.push(mix(gc));
+      }
+      const [X, Y] = plotValues(r, xs, ys, at);
+      p.marks = {T, X, Y, G};
+    }
+  }
+  if (!markState.note && markState.interval && state.prefs.showMarkNote && markState.column)
+    markState.note = '\u25cf  every ' + fmt(markState.interval) + ' of ' + markState.column;
+}
+
+/* a path's markers: dots, each labelled with its time where no other label is near; replaying, only along the trail */
+function drawTimeMarks(result, p, until) {
+  if (!p.marks) return;
+  const {l, t, r, b} = plotRect(), colour = p.color || result.color, {T, X, Y, G} = p.marks;
+  ctx.font = '10px -apple-system, Helvetica, Arial, sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  for (let k = 0; k < T.length; k++) {
+    if (until !== null && !(G[k] <= until && (state.trailStart === null || G[k] >= state.trailStart))) continue;
+    const [sx, sy] = toScreen(X[k], Y[k]);
+    if (!(sx >= l - 5 && sx <= r + 5 && sy >= t - 5 && sy <= b + 5)) continue;
+    ctx.fillStyle = css('--surface'); ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, 2 * Math.PI); ctx.fill();
+    ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(sx, sy, 3, 0, 2 * Math.PI); ctx.fill();
+    if (!state.prefs.showMarkLabels) continue;
+    const cx = Math.floor(sx / 48), cy = Math.floor(sy / 16);
+    let near = false;
+    for (let dx = -1; dx <= 1 && !near; dx++) for (let dy = -1; dy <= 1; dy++) if (labelCells.has((cx + dx) + ',' + (cy + dy))) { near = true; break; }
+    if (near) continue;
+    ctx.fillStyle = css('--ink2'); ctx.fillText(fmt(T[k]), sx + 8, sy - 1);
+    labelCells.add(cx + ',' + cy);
+  }
 }
 
 /* which orbit each point of a position path is in, counting whole turns round the result's first body from where it
@@ -553,8 +1105,42 @@ function bodyCoordinate(name, body) {
   return null;
 }
 
+/* a body's horizon (the Schwarzschild radius, or a spinning hole's r+ at flat distance sqrt(r+^2 + a^2)), its
+   ergosphere's edge (r = 2M, flat distance sqrt(4M^2 + a^2)) and ring singularity (r = 0, flat distance a), in metres:
+   [radius, label, dash, width] */
+function bodyCircles(body) {
+  const M = G * body.mass / C / C, a = (body.spin || 0) * M, rPlus = M + Math.sqrt(Math.max(M * M - a * a, 0));
+  const out = [[Math.hypot(rPlus, a), a ? 'r+' : 'Rs', [2, 3], 1]];
+  if (a) out.push([Math.hypot(2 * M, a), 'ergo', [7, 5], 1], [Math.abs(a), 'ring', [], 1]);
+  return out;
+}
+
+/* a body's name for its label: its mass in solar masses, and its spin */
+function bodyLabel(body) {
+  return (+(body.mass / MS).toPrecision(4)) + ' MS' + (body.spin ? ', spin ' + (+body.spin.toPrecision(3)) : '');
+}
+
 function drawBodies(env) {
   if (!state.prefs.showBodies && !state.prefs.showSchwarzschild) return;
+  if (timeMode()) {
+    //distance / time: a body is a line up the time axis at its distance, its circles lines either side, labelled
+    const {t: top, b, l, r} = plotRect();
+    ctx.font = '10px -apple-system, Helvetica, Arial, sans-serif'; ctx.textBaseline = 'top';
+    const up = (d, dash, colour, width, label) => {
+      if (d < 0) return;
+      const [sx] = toScreen(toAxis(d, axes()[0]), 0);
+      if (!(sx >= l && sx <= r)) return;
+      ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.setLineDash(dash); line(sx, top, sx, b); ctx.setLineDash([]);
+      if (label) { ctx.fillStyle = css('--ink2'); ctx.textAlign = flipX() ? 'right' : 'left'; ctx.fillText(label, sx + (flipX() ? -4 : 4), top + 4); }
+    };
+    for (const body of env.bodies) {
+      const d = Math.hypot(body.x, body.y);
+      if (state.prefs.showSchwarzschild) for (const [R, label, dash, width] of bodyCircles(body)) for (const side of [-1, 1]) up(d + side * R, dash, css('--ink2'), width, side > 0 ? label : '');
+      if (state.prefs.showBodies) up(d, [], body.black ? '#111' : css('--ink'), 2.5, state.prefs.showBodyLabels ? bodyLabel(body) : '');
+    }
+    ctx.lineWidth = 1;
+    return;
+  }
   const path = state.results.filter(r => r.visible).flatMap(r => r.paths)[0];
   const timeX = path && TIME_COLUMN.test(path.xName || ''), timeY = path && TIME_COLUMN.test(path.yName || '');
   if (timeX || timeY) {
@@ -580,17 +1166,15 @@ function drawBodies(env) {
   const scale = (toScreen(1, 0)[0] - toScreen(0, 0)[0]);
   for (const body of env.bodies) {
     const [sx, sy] = toScreen(body.x, body.y);
-    if (state.prefs.showSchwarzschild) {
-      //the horizon; a spinning hole's (Kerr, r+ = M + sqrt(M^2 - a^2)) at the flat distance R = sqrt(r^2 + a^2),
-      //with its ergosphere, r = 2M in the equatorial plane, dashed outside it
-      const M = G * body.mass / C / C, a = (body.spin || 0) * M;
-      const ring = (R, dash) => {
-        if (R * scale <= 2) return;
-        ctx.strokeStyle = css('--ink2'); ctx.setLineDash(dash); ctx.beginPath(); ctx.arc(sx, sy, R * scale, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
-      };
-      const rPlus = M + Math.sqrt(Math.max(M * M - a * a, 0));
-      ring(Math.hypot(rPlus, a), [2, 3]);
-      if (a) ring(Math.hypot(2 * M, a), [7, 5]);
+    if (state.prefs.showSchwarzschild)
+      //the horizon, and a spinning hole's ergosphere (dashed outside it) and ring singularity
+      for (const [R, , dash] of bodyCircles(body)) {
+        if (R * scale <= 2) continue;
+        ctx.strokeStyle = css('--ink2'); ctx.lineWidth = 1.6; ctx.setLineDash(dash); ctx.beginPath(); ctx.arc(sx, sy, R * scale, 0, 2 * Math.PI); ctx.stroke(); ctx.setLineDash([]);
+      }
+    if (state.prefs.showBodies && state.prefs.showBodyLabels) {
+      ctx.fillStyle = css('--ink2'); ctx.font = '10px -apple-system, Helvetica, Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(bodyLabel(body), sx, sy + (state.prefs.showSpin && body.spin ? 18 : 10));
     }
     if (state.prefs.showBodies && state.prefs.showSpin && body.spin) { spinning.push({sx, sy, body}); continue; }
     if (state.prefs.showBodies) {
@@ -668,9 +1252,349 @@ function drawField(env) {
     drawArrows((x, y) => frameSample(frames.layer[field], field, x, y, t), colour, frames.reference[field], offset);
     const ref = frames.reference[field];
     const moment = when(frames.layer[field]);
-    keys.push([colour, label + '  ' + (field === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment + named]);
+    keys.push([colour, label + '  ' + (field === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment + named, null, null, 'arrow']);
   }
   return keys;
+}
+
+//---------------------------------------------------------------- overlays: equal-u lines, flow lines, special orbits, light cones
+/* drawn from the background's u where it has one (else an older run's frames), and otherwise, as the desktop viewer
+   does, from the bodies: |u| = sqrt(sum 2GM/d), the escape speed from them all (d from a spinning hole's ring), in
+   towards a black body and out of a white one, along g where there are several. the photon orbits and innermost
+   stable orbits are Kerr's (Bardeen, Press & Teukolsky) */
+
+/* the environment the overlays are for: the first one drawn */
+const overlayEnv = () => fieldEnvironments()[0] || null;
+
+/* the flow u at (x, y), time t, as [ux, uy], or null where there is none */
+function flowAt(x, y, t) {
+  const background = currentBackground();
+  if (background) return backgroundHas(background, 'u') ? sampleBackground(background, 'u', x, y, t) : null;
+  const env = overlayEnv();
+  if (!env) return null;
+  if (env.frames && env.frames.layer.u) return frameSample(env.frames.layer.u, 'u', x, y, t ?? env.frames.layer.u.times[0]);
+  if (!env.bodies.length) return null;
+  let square = 0, gx = 0, gy = 0;
+  for (const body of env.bodies) {
+    const ring = ((body.spin || 0) * G * body.mass / C / C) ** 2, dx = x - body.x, dy = y - body.y, d2 = dx * dx + dy * dy;
+    if (!(d2 > ring)) return null;
+    const d = Math.sqrt(d2 - ring);
+    square += 2 * G * body.mass / d;
+    const pull = G * body.mass / (d2 * Math.sqrt(d2)) * (body.black ? 1 : -1);
+    gx -= pull * dx; gy -= pull * dy;
+  }
+  const size = Math.sqrt(square), g = Math.hypot(gx, gy);
+  return g > 0 ? [gx / g * size, gy / g * size] : null;
+}
+
+/* where u comes from, for the key */
+function flowSource() {
+  const background = currentBackground(), env = overlayEnv();
+  if (background) return 'background: ' + background.name;
+  if (env && env.frames && env.frames.layer.u) return "the run's flow frames";
+  return env && env.bodies.length > 1 ? 'the escape speed from the bodies, along g' : 'the escape speed';
+}
+
+/* a distance for the key: in M = GM/c^2 too when there is one hole */
+function inM(R) {
+  const env = overlayEnv(), hole = env && env.bodies.length === 1 && env.bodies[0].black ? env.bodies[0] : null;
+  const metres = fmt(+R.toPrecision(4)) + ' m';
+  return hole ? fmt(+(R / (G * hole.mass / C / C)).toPrecision(3)) + ' M (' + metres + ')' : metres;
+}
+
+/* the one hole's circular photon orbits and innermost stable circular orbits, at flat distance sqrt(r^2 + a^2):
+   [kind, 'with' / 'against' the spin or null, R in metres] */
+function specialOrbits() {
+  const env = overlayEnv();
+  if (!env || env.bodies.length !== 1 || !env.bodies[0].black) return [];
+  const body = env.bodies[0], M = G * body.mass / C / C, spin = Math.min(Math.abs(body.spin || 0), 1), a = spin * M;
+  const photon = pro => 2 * M * (1 + Math.cos(2 / 3 * Math.acos((pro ? -1 : 1) * spin)));
+  const isco = pro => {
+    const z1 = 1 + Math.cbrt(1 - spin * spin) * (Math.cbrt(1 + spin) + Math.cbrt(1 - spin)), z2 = Math.sqrt(3 * spin * spin + z1 * z1);
+    return M * (3 + z2 - (pro ? 1 : -1) * Math.sqrt((3 - z1) * (3 + z1 + 2 * z2)));
+  };
+  const out = [];
+  for (const [kind, radius] of [['photon', photon], ['isco', isco]]) {
+    if (spin) for (const pro of [true, false]) out.push([kind, pro === (body.spin > 0) ? 'with' : 'against', Math.hypot(radius(pro), a)]);
+    else out.push([kind, null, radius(true)]);
+  }
+  return out;
+}
+
+/* overlays drawn under the paths, in the plane or against time: equal-u lines, photon orbits and ISCOs, flow lines
+   (the plane's), and the horizons' key; returns key entries */
+function drawOverlaysUnder() {
+  const keys = [], env = overlayEnv(), t = fieldTime() ?? 0;
+  if (state.prefs.showContours && drawContours(t)) keys.push([css('--axis'), 'lines of equal |u|, km/s (' + flowSource() + ')']);
+  if (state.prefs.showSpecialOrbits) {
+    const orbits = specialOrbits();
+    for (const [kind, sense, R] of orbits) {
+      const colour = kind === 'photon' ? CONE : ISCO_COLOUR, dash = sense === 'against' ? AGAINST_DASH : WITH_DASH;
+      const label = (kind === 'photon' ? 'photon' : 'ISCO') + ({with: ' +', against: ' \u2212'}[sense] || '');
+      drawCircleAround(env.bodies[0], R, colour, dash, 1.5, timeMode() ? label : '');
+    }
+    for (const [kind, colour, name] of [['photon', CONE, 'circular photon orbit'], ['isco', ISCO_COLOUR, 'innermost stable circular orbit']]) {
+      const found = orbits.filter(o => o[0] === kind);
+      if (found.length) keys.push([colour, name + ': ' + found.map(([, sense, R]) => (sense ? sense + ' the spin ' : '') + inM(R)).join(', '), WITH_DASH]);
+    }
+    if (orbits.some(o => o[1] === 'against')) keys.push([css('--muted'), 'short dashes: going round against the spin', AGAINST_DASH]);
+  }
+  if (planeView() && state.prefs.showFlowLines && drawFlowLines(t)) {
+    const one = env && env.bodies.length === 1;
+    keys.push([FLOW_LINE, one ? 'flow lines: the paths of space, straight ' + (env.bodies[0].black ? 'in to the hole' : 'out of the body')
+                              : 'flow lines: ' + FLOW_LINES + ' per body, out against the flow (' + flowSource() + ')']);
+  }
+  if (!PLAYER && state.prefs.showSchwarzschild && env && env.bodies.length) {
+    const radii = [...new Set(env.bodies.map(b => bodyCircles(b)[0][0]))].sort((a, b) => a - b);
+    keys.push([css('--ink2'), (env.bodies.some(b => b.spin) ? 'horizon (Kerr r+, at flat distance \u221a(r+\u00b2 + a\u00b2))' : 'Schwarzschild radius 2GM/c\u00b2')
+               + ': ' + radii.map(inM).join(', '), [2, 3]]);
+    const spun = env.bodies.find(b => b.spin);
+    if (spun) {
+      const [, ergo, ring] = bodyCircles(spun);
+      keys.push([css('--ink2'), 'ergosphere edge, r = 2M, where the river reaches c: ' + inM(ergo[0]), [7, 5]]);
+      keys.push([css('--ink2'), 'ring singularity, r = 0: ' + inM(ring[0]) + ' (no river inside)']);
+    }
+  }
+  return keys;
+}
+
+/* a circle of radius R round a body: in the plane, round it; against time, a line up the time axis either side */
+function drawCircleAround(body, R, colour, dash, width, label) {
+  ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.setLineDash(dash);
+  if (timeMode()) {
+    const {t: top, b, l, r} = plotRect(), d = Math.hypot(body.x, body.y);
+    ctx.font = '10px -apple-system, Helvetica, Arial, sans-serif'; ctx.textBaseline = 'top';
+    for (const edge of [d - R, d + R]) {
+      if (edge < 0) continue;
+      const [sx] = toScreen(toAxis(edge, axes()[0]), 0);
+      if (!(sx >= l && sx <= r)) continue;
+      line(sx, top, sx, b);
+      if (label) { ctx.fillStyle = css('--ink2'); ctx.textAlign = flipX() ? 'right' : 'left'; ctx.fillText(label, sx + (flipX() ? -4 : 4), top + 4); }
+    }
+  } else {
+    const [sx, sy] = toScreen(body.x, body.y), radius = Math.abs(toScreen(body.x + R, body.y)[0] - sx);
+    if (radius > 1) { ctx.beginPath(); ctx.arc(sx, sy, radius, 0, 2 * Math.PI); ctx.stroke(); }
+  }
+  ctx.setLineDash([]); ctx.lineWidth = 1;
+}
+
+/* |u| on a screen grid, the plane's or along the distance axis (at (d, 0)); [xs, ys, rows of speeds] */
+function speedGrid(t) {
+  const {l, t: top, r, b} = plotRect(), xs = [], ys = [], grid = [];
+  for (let sx = l; sx <= r + CONTOUR_SPACING; sx += CONTOUR_SPACING) xs.push(sx);
+  for (let sy = top; sy <= b + CONTOUR_SPACING; sy += CONTOUR_SPACING) ys.push(sy);
+  const along = timeMode() ? new Map() : null;
+  for (const sy of ys) {
+    const row = [];
+    for (const sx of xs) {
+      const [X, Y] = toData(sx, sy);
+      let u;
+      if (along) {
+        const d = fromAxis(X, axes()[0]);
+        if (!along.has(sx)) { const v = d > 0 ? flowAt(d, 0, t) : null; along.set(sx, v ? Math.hypot(v[0], v[1]) : NaN); }
+        u = along.get(sx);
+      } else { const v = flowAt(X, Y, t); u = v ? Math.hypot(v[0], v[1]) : NaN; }
+      row.push(u);
+    }
+    grid.push(row);
+  }
+  return [xs, ys, grid];
+}
+
+/* lines of equal |u|, traced by marching squares, each level labelled once (in km/s); whether any were drawn */
+function drawContours(t) {
+  const [xs, ys, grid] = speedGrid(t), finite = grid.flat().filter(isFinite).sort((a, b) => a - b);
+  if (finite.length < 4) return false;
+  const lo = finite[Math.floor(0.02 * finite.length)], hi = finite[Math.floor(0.98 * finite.length)];
+  if (!(hi > lo)) return false;
+  const step = niceStep(hi - lo, 8), labelled = [];
+  ctx.lineWidth = 1.5; ctx.strokeStyle = css('--axis');
+  let drawn = false;
+  for (let level = Math.ceil(lo / step) * step; level < hi; level += step) {
+    const segments = [];
+    for (let j = 0; j + 1 < ys.length; j++)
+      for (let i = 0; i + 1 < xs.length; i++) {
+        const a = grid[j][i], bb = grid[j][i + 1], cc = grid[j + 1][i + 1], d = grid[j + 1][i];
+        const cross = (p, q) => isFinite(p) && isFinite(q) && (p >= level) !== (q >= level), f = (p, q) => (level - p) / (q - p);
+        const hits = [];
+        if (cross(a, bb)) hits.push([xs[i] + f(a, bb) * (xs[i + 1] - xs[i]), ys[j]]);
+        if (cross(bb, cc)) hits.push([xs[i + 1], ys[j] + f(bb, cc) * (ys[j + 1] - ys[j])]);
+        if (cross(d, cc)) hits.push([xs[i] + f(d, cc) * (xs[i + 1] - xs[i]), ys[j + 1]]);
+        if (cross(a, d)) hits.push([xs[i], ys[j] + f(a, d) * (ys[j + 1] - ys[j])]);
+        if (hits.length === 2) segments.push([...hits[0], ...hits[1]]);
+        if (hits.length === 4) segments.push([...hits[0], ...hits[3]], [...hits[1], ...hits[2]]);
+      }
+    if (!segments.length) continue;
+    drawn = true;
+    ctx.beginPath();
+    for (const [x0, y0, x1, y1] of segments) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); }
+    ctx.stroke();
+    //label it at the segment furthest right that is clear of the other labels
+    for (const [x0, y0, x1, y1] of segments.sort((p, q) => (q[0] + q[2]) - (p[0] + p[2]))) {
+      const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+      if (!labelled.every(([lx, ly]) => Math.hypot(mx - lx, my - ly) > 40)) continue;
+      const text = fmt(+(level / 1000).toPrecision(3));
+      ctx.font = '9px -apple-system, Helvetica, Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(text).width;
+      ctx.fillStyle = css('--surface'); ctx.fillRect(mx - w / 2 - 2, my - 6, w + 4, 12);
+      ctx.fillStyle = css('--muted'); ctx.fillText(text, mx, my);
+      labelled.push([mx, my]);
+      break;
+    }
+  }
+  return drawn;
+}
+
+/* flow lines in the plane: for one body straight lines from it (from a spinning hole's ring) out past the view; for
+   several, each body's lines followed out against the flow (with it, from a white body), until they leave the view,
+   meet the flow coming the other way (a seam), or the flow has no value; worked out once for each view */
+let flowLineCache = {key: null, lines: []};
+function drawFlowLines(t) {
+  const env = overlayEnv();
+  if (!env || !env.bodies.length) return false;
+  const v = state.view, {l, r} = plotRect(), perPixel = (v[1] - v[0]) / (r - l);
+  const key = [env.key, v.join(), r - l, currentBackground() && currentBackground().name, t].join('|');
+  if (flowLineCache.key !== key) {
+    const lines = [], span = Math.max(v[1] - v[0], v[3] - v[2]);
+    const inReach = (x, y) => x > v[0] - span && x < v[1] + span && y > v[2] - span && y < v[3] + span;
+    if (env.bodies.length === 1) {
+      const body = env.bodies[0], start = Math.abs((body.spin || 0) * G * body.mass / C / C);
+      const reach = Math.max(...[[v[0], v[2]], [v[0], v[3]], [v[1], v[2]], [v[1], v[3]]].map(([x, y]) => Math.hypot(x - body.x, y - body.y)));
+      for (let n = 0; n < FLOW_LINES; n++) {
+        const a = 2 * Math.PI * n / FLOW_LINES, c = Math.cos(a), s = Math.sin(a);
+        lines.push([[body.x + start * c, body.y + start * s], [body.x + reach * c, body.y + reach * s]]);
+      }
+    } else for (const body of env.bodies) {
+      const sense = body.black ? -1 : 1;
+      for (let n = 0; n < FLOW_LINES; n++) {
+        const a = 2 * Math.PI * n / FLOW_LINES;
+        let x = body.x + 4 * perPixel * Math.cos(a), y = body.y + 4 * perPixel * Math.sin(a), last = null;
+        const points = [[x, y]];
+        for (let k = 0; k < 4000; k++) {
+          const u = flowAt(x, y, t);
+          if (!u) break;
+          const size = Math.hypot(u[0], u[1]);
+          if (!(size > 0)) break;
+          const dx = sense * u[0] / size, dy = sense * u[1] / size;
+          if (last && dx * last[0] + dy * last[1] < 0) break;     //turned back: the seam
+          const near = Math.min(...env.bodies.map(o => Math.hypot(x - o.x, y - o.y)));
+          const ds = Math.max(perPixel, Math.min(8 * perPixel, 0.01 * near));
+          x += dx * ds; y += dy * ds; last = [dx, dy];
+          points.push([x, y]);
+          if (!inReach(x, y)) break;
+        }
+        if (points.length > 1) lines.push(points);
+      }
+    }
+    flowLineCache = {key, lines};
+  }
+  ctx.strokeStyle = FLOW_LINE; ctx.lineWidth = 1;
+  for (const points of flowLineCache.lines) {
+    ctx.beginPath();
+    points.forEach(([x, y], i) => { const [sx, sy] = toScreen(x, y); if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+    ctx.stroke();
+  }
+  return flowLineCache.lines.length > 0;
+}
+
+/* distance / time mode's backgrounds: the flow line, repeated up the time axis, and light cones; both need global time
+   (t) on the time axis. returns key entries */
+function drawTimeBackground() {
+  const keys = [], t = fieldTime() ?? 0;
+  if (!state.prefs.showFlowLines && !state.prefs.showCones) return keys;
+  if (state.prefs.logX || state.prefs.logY) return keys;
+  if (state.prefs.timeColumn !== 't') {
+    keys.push(['transparent', 'flow lines and light cones need global time (t) on the time axis']);
+    return keys;
+  }
+  if (state.prefs.showFlowLines) {
+    const every = drawFlowLinesTime(t);
+    if (every) keys.push([FLOW_LINE, 'flow line: space moving at u (dd/dt = u), repeated every ' + fmt(every) + ' s']);
+  }
+  if (state.prefs.showCones && drawCones(t)) keys.push([CONE, 'light cones: the local speed of light outwards and inwards, u \u00b1 c', null, null, 'cone']);
+  return keys;
+}
+
+/* u along the distance axis at distance d (at (d, 0)): the flow's x part, or NaN */
+function uAlong(d, t) {
+  const u = d > 0 ? flowAt(d, 0, t) : null;
+  return u ? u[0] : NaN;
+}
+
+/* the flow line across the screen: space moving at u, dd/dt = u, so t(d) = integral of dd / u (the same line from
+   any start time), in runs where u keeps its sign; copies at whole multiples of a round time step, so they stay put
+   as the view pans. returns the step, or null if none was drawn */
+function drawFlowLinesTime(t) {
+  const v = state.view, tf = state.prefs.ctTime ? C : 1, n = 600, d = [], u = [];
+  for (let i = 0; i <= n; i++) { const x = Math.max(v[0], 0) + (v[1] - Math.max(v[0], 0)) * i / n; d.push(x); u.push(uAlong(x, t)); }
+  const runs = [];
+  let start = 0;
+  for (let i = 1; i <= d.length; i++)
+    if (i === d.length || !(isFinite(u[i]) && u[i] !== 0 && Math.sign(u[i]) === Math.sign(u[i - 1]))) {
+      if (i - start >= 2 && u.slice(start, i).every(w => isFinite(w) && w !== 0)) {
+        const ts = [0];
+        for (let k = start + 1; k < i; k++) ts.push(ts[ts.length - 1] + (d[k] - d[k - 1]) * (1 / u[k] + 1 / u[k - 1]) / 2);
+        runs.push([d.slice(start, i), ts]);
+      }
+      start = i;
+    }
+  if (!runs.length) return null;
+  const y0 = v[2] / tf, y1 = v[3] / tf, every = niceStep(y1 - y0, 8);
+  ctx.strokeStyle = FLOW_LINE; ctx.lineWidth = 1;
+  let drawn = false;
+  for (const [xs, ts] of runs) {
+    const lo = Math.min(...ts), hi = Math.max(...ts);
+    let first = Math.floor((y0 - hi) / every), last = Math.ceil((y1 - lo) / every);
+    if (last - first > 320) { first = Math.max(first, Math.floor((y0 - lo) / every) - 16); last = Math.min(last, first + 32); }
+    for (let k = first; k <= last; k++) {
+      ctx.beginPath();
+      let pen = false;
+      for (let i = 0; i < xs.length; i++) {
+        const tt = k * every + ts[i];
+        if (tt < y0 - (y1 - y0) || tt > y1 + (y1 - y0)) { pen = false; continue; }
+        const [sx, sy] = toScreen(xs[i], tt * tf);
+        if (pen) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy);
+        pen = true; drawn = true;
+      }
+      ctx.stroke();
+    }
+  }
+  return drawn ? every : null;
+}
+
+/* a light cone at each point of a grid: light sent outwards and inwards by something moving with the flow, at u + c and
+   u - c along the distance axis; each side runs along that light's path, the same length on screen, and an ellipse
+   joins their ends, like a cone's cap in perspective. whether any were drawn */
+function drawCones(t) {
+  const {l, t: top, r, b} = plotRect(), v = state.view, tf = state.prefs.ctTime ? C : 1;
+  const kd = (flipX() ? -1 : 1) * (r - l) / (v[1] - v[0]), kt = (b - top) * tf / (v[3] - v[2]);   //pixels per metre, per second
+  const side = 2.2 * CONE_SIZE, shift = ARROW_SPACING * 0.25;
+  ctx.strokeStyle = ctx.fillStyle = CONE; ctx.lineWidth = 1;
+  let drawn = false;
+  for (let sy = top + shift; sy < b; sy += ARROW_SPACING)
+    for (let sx = l + shift; sx < r; sx += ARROW_SPACING) {
+      const [X] = toData(sx, sy), u = uAlong(X, t);
+      if (!isFinite(u)) continue;
+      let [[ox, oy], [ix, iy]] = [u + C, u - C].map(speed => {
+        const dx = speed * kd, dy = -kt, n = Math.hypot(dx, dy);
+        return [sx + side * dx / n, sy + side * dy / n];
+      });
+      let a = Math.hypot(ox - ix, oy - iy) / 2;
+      if (a > 0.45 * ARROW_SPACING) {
+        const f = 0.45 * ARROW_SPACING / a;
+        [ox, oy, ix, iy] = [sx + (ox - sx) * f, sy + (oy - sy) * f, sx + (ix - sx) * f, sy + (iy - sy) * f];
+        a = Math.hypot(ox - ix, oy - iy) / 2;
+      }
+      if (a > 0) {
+        ctx.beginPath();
+        ctx.ellipse((ox + ix) / 2, (oy + iy) / 2, a, Math.max(2, 0.3 * a), Math.atan2(oy - iy, ox - ix), 0, 2 * Math.PI);
+        ctx.stroke();
+      }
+      ctx.beginPath(); ctx.moveTo(ix, iy); ctx.lineTo(sx, sy); ctx.lineTo(ox, oy); ctx.stroke();
+      ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, 2 * Math.PI); ctx.fill();
+      drawn = true;
+    }
+  return drawn;
 }
 
 //---------------------------------------------------------------- backgrounds files (engine/backgrounds.py)
@@ -828,14 +1752,14 @@ function drawBackground(background) {
     const ref = backgroundReference(background, key);
     if (!ref) continue;
     drawArrows((x, y) => sampleBackground(background, key, x, y, t), colour, ref, offset);
-    keys.push([colour, label + '  ' + (key === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment]);
+    keys.push([colour, label + '  ' + (key === 'u' ? speed(ref) : fmt(ref) + ' m/s²') + moment, null, null, 'arrow']);
   }
   if (state.prefs.showTwist && backgroundHas(background, 't')) {
     const ref = backgroundReference(background, 't');
     if (ref) {
       drawTwist((x, y) => sampleBackground(background, 't', x, y, t), ref);
       const label = background.layers.find(l => l.type === 'field' && l.values.t).label;
-      keys.push([TWIST, label + ': a full arc ' + fmt(ref) + ' rad/s' + moment]);
+      keys.push([TWIST, label + ': a full arc ' + fmt(ref) + ' rad/s' + moment, null, null, 'twist']);
     }
   }
   if (state.prefs.showSeam)
@@ -1013,10 +1937,18 @@ function drawBox(lines, anchor, name) {
     ctx.beginPath(); ctx.rect(x, y, width, height); ctx.clip();
     //the rows slide with the box's inner edge: from hidden to the lines, they come out from the edge
     const lx = x - Math.max(0, slim - width) * (right ? 0 : 1);
-    lines.forEach(([colour, text, dash, path], i) => {
-      const ry = y + 4 + rowH * i, cy = ry + rowH / 2;
-      ctx.strokeStyle = colour; ctx.lineWidth = 1.6; ctx.setLineDash(dash || []);
-      line(lx + 8, cy, lx + 8 + swatch, cy); ctx.setLineDash([]);
+    lines.forEach(([colour, text, dash, path, shape], i) => {
+      const ry = y + 4 + rowH * i, cy = ry + rowH / 2, mid = lx + 8 + swatch / 2;
+      ctx.strokeStyle = ctx.fillStyle = colour; ctx.lineWidth = 1.6; ctx.setLineDash(dash || []);
+      //the swatch: a line, or the mark itself (an apsis, an arrow, a light cone, a time marker)
+      if (shape === 'peri' || shape === 'apo') apsisMarker(ctx, mid, cy, shape, colour);
+      else if (shape === 'arrow') { ctx.lineWidth = 1; arrow(lx + 8, cy, lx + 8 + swatch, cy); }
+      else if (shape === 'cone') { ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(lx + 8 + swatch, cy - 6); ctx.lineTo(lx + 8, cy); ctx.lineTo(lx + 8 + swatch, cy + 6); ctx.stroke();
+                                   ctx.beginPath(); ctx.ellipse(lx + 8 + swatch, cy, 2, 6, 0, 0, 2 * Math.PI); ctx.stroke(); }
+      else if (shape === 'dot') { ctx.beginPath(); ctx.arc(mid, cy, 3, 0, 2 * Math.PI); ctx.fill(); }
+      else if (shape === 'twist') { ctx.lineWidth = 1; twistArc(ctx, mid, cy, 6, 300 / 180 * Math.PI, true, 5); }
+      else line(lx + 8, cy, lx + 8 + swatch, cy);
+      ctx.setLineDash([]);
       ctx.fillStyle = css('--ink2'); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
       ctx.globalAlpha = 0.25 + 0.75 * Math.max(0, f - 1);
       ctx.fillText(text, lx + swatch + 14, cy);
@@ -1055,12 +1987,12 @@ function hoverText(sx, sy) {
   if (row) return {lines: [row.tip], path: row.path};
   const {l, t, r, b} = plotRect();
   if (sx < l || sx > r || sy < t || sy > b || !state.view) return null;
-  if (state.prefs.showBodies) for (const env of fieldEnvironments()) for (const body of env.bodies || []) {
+  if (state.prefs.showBodies && planeView()) for (const env of fieldEnvironments()) for (const body of env.bodies || []) {
     const [bx, by] = toScreen(body.x, body.y);
     if (Math.hypot(sx - bx, sy - by) <= 8) {
       const m = body.mass / MS;
       return {lines: [body.black ? 'a black hole' : 'a body', 'mass: ' + (+m.toPrecision(4)) + ' solar mass' + (m === 1 ? '' : 'es'),
-                      ...positionLines(body.x, body.y)]};
+                      ...(body.spin ? ['spin: ' + (+body.spin.toPrecision(3))] : []), ...positionLines(body.x, body.y)]};
     }
   }
   let best = null, bestD = 6;
@@ -1068,21 +2000,24 @@ function hoverText(sx, sy) {
     const until = drawUntil(result);
     if (until === false) continue;
     for (const p of result.paths) {
+      plotted(result, p);
       let last = null;
-      for (let i = 0; i < p.x.length; i++) {
+      for (let i = 0; i < p.px.length; i++) {
         if (until !== null && p.t && p.t[i] > until) break;
-        if (!(isFinite(p.x[i]) && isFinite(p.y[i]))) { last = null; continue; }
-        const [px, py] = toScreen(p.x[i], p.y[i]);
+        if (!(isFinite(p.px[i]) && isFinite(p.py[i])) || !shownRow(result, i)) { last = null; continue; }
+        const [px, py] = toScreen(p.px[i], p.py[i]);
         if (last) {
           const [qx, qy] = last, dx = px - qx, dy = py - qy, len2 = dx * dx + dy * dy;
           const f = len2 ? Math.max(0, Math.min(1, ((sx - qx) * dx + (sy - qy) * dy) / len2)) : 0;
           const d = Math.hypot(sx - qx - f * dx, sy - qy - f * dy);
           if (d < bestD) {
             bestD = d;
-            const at = k => p[k][i - 1] + f * (p[k][i] - p[k][i - 1]);
-            best = [result.name + (result.paths.length > 1 ? ' ' + p.name : '')];
-            if (p.t && isFinite(at('t'))) best.push('t: ' + fmt(at('t')) + ' s');
-            best.push(...positionLines(at('x'), at('y')));
+            //the nearer row's values, column by column (the first twelve), as the desktop shows them
+            const row = f < 0.5 ? i - 1 : i, names = result.data.names;
+            best = [result.name + (result.paths.length > 1 ? ' ' + p.name : '') + (result.orbits.length && result.rowOrbit[row] >= 0
+                    ? '  (' + result.orbits[result.rowOrbit[row]].name.split('  ')[0] + ')' : '')];
+            for (const n of names.slice(0, 12)) { const v = result.data.columns[n][row]; best.push(n + ': ' + (isFinite(v) ? fmt(v) : result.data.text(n)[row])); }
+            if (names.length > 12) best.push('\u2026 ' + (names.length - 12) + ' more columns');
           }
         }
         last = [px, py];
@@ -1390,13 +2325,32 @@ function hideTip() { tipFor = null; $('tip').style.display = 'none'; }
 
 function message(text) { $('message').textContent = text; }
 
+//the checkboxes that are just a display option, by the option's name
+const OPTION_BOXES = ['showFlow', 'showGravity', 'showScalar', 'showTwist', 'showSeam', 'showBodies', 'showSchwarzschild', 'showSpin',
+                      'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey', 'showMarkers', 'showTimeMarks', 'showContours',
+                      'showFlowLines', 'showSpecialOrbits', 'showCones', 'showMarkNote', 'showMarkLabels', 'showBodyLabels', 'reverseX'];
+//those that change what is plotted (the paths' plotted values), or the aspect
+const PLOT_BOXES = ['logX', 'logY', 'ctTime', 'equalAspect'];
+const LEGEND_BOXES = ['showPathLegend', 'showFieldKey', 'showMarkNote', 'showMarkLabels', 'showBodyLabels'];
+
 function syncControls() {
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showTwist', 'showSeam', 'showBodies', 'showSchwarzschild', 'showSpin', 'equalAspect', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
-    $(id).checked = !!state.prefs[id];
+  for (const id of [...OPTION_BOXES, ...PLOT_BOXES]) $(id).checked = !!state.prefs[id];
   $('unit').value = state.prefs.unit;
+  $('mode').value = timeMode() ? 'time' : 'xy';
+  document.body.classList.toggle('time', timeMode());
   $('loop').checked = !!state.prefs.replayLoop;
   $('speed').value = SPEEDS.includes(String(state.prefs.replaySpeed)) ? String(state.prefs.replaySpeed) : '1';
   $('pSpeed').value = $('speed').value;
+  //time columns: only those the open results have
+  const options = Object.keys(TIME_OPTIONS).filter(o => state.results.some(r => timeColumnOf(r, o)));
+  const column = $('timeColumn');
+  column.innerHTML = '';
+  for (const o of options.length ? options : ['t']) column.add(new Option(TIME_LABELS[o], o));
+  if (options.length && !options.includes(state.prefs.timeColumn)) state.prefs.timeColumn = options[0];
+  column.value = state.prefs.timeColumn;
+  $('timeColumnLabel').textContent = timeMode() ? 'Time axis (markers use the other)' : 'Markers use';
+  $('timeInterval').value = state.timeInterval;
+  $('timeInterval').placeholder = autoInterval() ? 'auto (' + fmt(autoInterval()) + ')' : 'auto';
   const background = $('background');
   background.innerHTML = '';
   const names = state.backgrounds ? state.backgrounds.map(b => b.name)
@@ -1404,23 +2358,207 @@ function syncControls() {
   for (const name of names) background.add(new Option(name, name));
   background.value = state.background;
   showDescription();
+  showResults();
+  showDetails();
+  showReplay();
+}
+
+/* the results list: grouped by environment when there are several, each result with its rows and end time, and its
+   orbits folded under it */
+const unfolded = new Set();
+function showResults() {
   const list = $('results');
   list.innerHTML = '';
-  for (const r of state.results) {
-    const row = document.createElement('div');
-    row.className = 'result' + (r === state.selected ? ' selected' : '');
-    row.title = r.file + '\n' + r.env.name;
-    const box = document.createElement('input');
-    box.type = 'checkbox'; box.checked = r.visible;
-    box.onclick = e => { e.stopPropagation(); r.visible = box.checked; showReplay(); };
-    const swatch = document.createElement('div');
-    swatch.className = 'swatch'; swatch.style.background = (r.paths[0] && r.paths[0].color) || r.color;
-    const name = document.createElement('span'); name.textContent = r.name;
-    row.append(box, swatch, name);
-    row.onclick = () => { state.selected = r; syncControls(); draw(); };
-    list.append(row);
+  const envs = [...new Set(state.results.map(r => r.env))], drawn = fieldEnvironments();
+  for (const env of envs) {
+    if (envs.length > 1) {
+      const head = document.createElement('div');
+      head.className = 'envHead'; head.textContent = env.name + (drawn.includes(env) ? '   ◆ background' : '');
+      list.append(head);
+    }
+    for (const r of state.results.filter(x => x.env === env)) {
+      const row = document.createElement('div');
+      row.className = 'result' + (r === state.selected ? ' selected' : '');
+      row.title = r.file + '\n' + r.env.name;
+      const fold = document.createElement('span');
+      fold.className = 'fold'; fold.textContent = r.orbits.length ? (unfolded.has(r.file) ? '▾' : '▸') : '';
+      fold.title = r.orbits.length ? 'Show or hide its ' + r.orbits.length + ' orbits' : '';
+      fold.onclick = e => { e.stopPropagation(); if (unfolded.has(r.file)) unfolded.delete(r.file); else unfolded.add(r.file); showResults(); };
+      const box = document.createElement('input');
+      box.type = 'checkbox'; box.checked = r.visible;
+      box.indeterminate = r.visible && r.orbits.some(o => !o.visible);
+      box.onclick = e => { e.stopPropagation(); r.visible = box.checked; resultsChanged(); };
+      const swatch = document.createElement('div');
+      swatch.className = 'swatch'; swatch.style.background = r.paths.length > 1 || r.paths.some(p => p.color2)
+        ? 'linear-gradient(90deg,' + r.paths.flatMap(p => [p.color || r.color, p.color2 || p.color || r.color]).join(',') + ')'
+        : (r.paths[0] && r.paths[0].color) || r.color;
+      const name = document.createElement('span'); name.textContent = r.name;
+      const count = document.createElement('span'); count.className = 'count';
+      const end = endTime(r);
+      count.textContent = r.data.rows + ' rows' + (end !== null ? ', t ' + fmt(end) + ' s' : '');
+      row.append(fold, box, swatch, name, count);
+      row.onclick = () => { state.selected = r; showResults(); showDetails(); draw(); };
+      row.ondblclick = () => { for (const x of state.results) x.visible = x === r; resultsChanged(); };
+      list.append(row);
+      if (unfolded.has(r.file)) r.orbits.forEach((o, k) => {
+        const orow = document.createElement('label');
+        orow.className = 'result orbit';
+        const obox = document.createElement('input');
+        obox.type = 'checkbox'; obox.checked = o.visible;
+        obox.onchange = () => { o.visible = obox.checked; orbitsChanged(r); };
+        const sw = document.createElement('div'); sw.className = 'swatch';
+        sw.style.background = r.paths[0] ? orbitColour(r, r.paths[0], k) : r.color;
+        const text = document.createElement('span'); text.textContent = o.name;
+        const c = document.createElement('span'); c.className = 'count'; c.textContent = 't ' + fmt(o.t1) + ' s';
+        orow.append(obox, sw, text, c);
+        list.append(orow);
+      });
+    }
   }
-  showReplay();
+  if (!state.results.length) list.innerHTML = '<p class="note">No results open.</p>';
+}
+
+function endTime(r) {
+  const c = timeColumnOf(r, 't');
+  if (!c) return null;
+  const col = r.data.columns[c];
+  for (let i = col.length - 1; i >= 0; i--) if (isFinite(col[i])) return col[i];
+  return null;
+}
+
+function resultsChanged() { invalidatePlot(); markState.key = null; showResults(); showDetails(); showReplay(); }
+function orbitsChanged(r) { invalidatePlot(); markState.key = null; showResults(); showDetails(); draw(); }
+
+/* the selected result: its options, its paths' colours and styles, which paths it plots, a summary and its log */
+function showDetails() {
+  const box = $('details'), r = state.selected;
+  box.innerHTML = '';
+  if (!r || !state.results.includes(r)) return;
+  const el = (tag, props = {}, ...children) => { const e = Object.assign(document.createElement(tag), props); e.append(...children); return e; };
+  const check = (label, value, change, tip) => {
+    const input = el('input', {type: 'checkbox', checked: value});
+    input.onchange = () => change(input.checked);
+    return el('label', {className: 'check', title: tip || ''}, input, ' ' + label);
+  };
+  box.append(el('h3', {textContent: r.name}));
+  box.append(check('straight line', r.straight, v => { r.straight = v; draw(); }, 'The path with no gravity, dashed: its start carried on at its first velocity'));
+  if (endPairs(r).length) box.append(check('end arrows', r.ends, v => { r.ends = v; draw(); }, 'An arrow at the end of each stretch of the path for each velocity-like pair (x / y only)'));
+  if (r.orbits.length) {
+    const whole = r.orbits.filter(o => o.full).length;
+    const row = el('div', {className: 'buttons'}, el('span', {className: 'note', textContent: whole + ' orbits'}));
+    const all = el('button', {textContent: 'All', title: 'Show every orbit'}), none = el('button', {textContent: 'None', title: 'Hide every orbit'});
+    all.onclick = () => { r.orbits.forEach(o => { o.visible = true; }); orbitsChanged(r); };
+    none.onclick = () => { r.orbits.forEach(o => { o.visible = false; }); orbitsChanged(r); };
+    row.append(all, none);
+    box.append(row);
+    box.append(check('periapsis', r.peri, v => { r.peri = v; draw(); }, 'An open square at each shown whole orbit\'s closest point'));
+    box.append(check('apoapsis', r.apo, v => { r.apo = v; draw(); }, 'An open diamond at each shown whole orbit\'s farthest point'));
+  }
+  for (const p of r.paths) {
+    const row = el('div', {className: 'pathRow'});
+    const first = el('input', {type: 'color', value: p.color || r.color, title: r.orbits.length ? 'First orbit\'s colour' : 'Line colour'});
+    first.oninput = () => { p.color = first.value; showResults(); draw(); };
+    row.append(first);
+    if (r.orbits.length) {
+      const second = el('input', {type: 'color', value: p.color2 || p.color || r.color, title: 'Last orbit\'s colour; the orbits between are a mix of the two'});
+      second.oninput = () => { p.color2 = second.value; showResults(); draw(); };
+      row.append('→', second);
+    }
+    const style = el('select', {title: 'Line style'});
+    for (const s of Object.keys(DASHES)) style.add(new Option(s, s));
+    style.value = p.style;
+    style.onchange = () => { p.style = style.value; draw(); };
+    row.append(style, el('span', {textContent: p.name}));
+    box.append(row);
+  }
+  //which column pairs it plots, and one path per value of a column
+  const choose = el('details');
+  choose.append(el('summary', {textContent: 'Choose paths…'}));
+  const found = pairs(r.data.names).map(p => [p[1], p[2]]);
+  const options = [...found, ...r.selection.filter(s => !found.some(f => f[0] === s[0] && f[1] === s[1]))];
+  const picks = options.map(([x, y]) => {
+    const input = el('input', {type: 'checkbox', checked: r.selection.some(s => s[0] === x && s[1] === y)});
+    choose.append(el('label', {className: 'check'}, input, ' ' + y + '  vs  ' + x));
+    return [[x, y], input];
+  });
+  const numeric = r.data.names.filter(n => Array.from(r.data.columns[n]).some(isFinite));
+  const xs = el('select'), ys = el('select');
+  for (const n of numeric) { xs.add(new Option(n, n)); ys.add(new Option(n, n)); }
+  if (numeric.length > 1) ys.selectedIndex = 1;
+  const add = el('button', {textContent: 'Add pair'});
+  const group = el('select');
+  group.add(new Option('(none)', ''));
+  for (const n of r.data.names) group.add(new Option(n, n));
+  group.value = r.group || '';
+  const apply = el('button', {textContent: 'Apply'});
+  add.onclick = () => {
+    const selection = picks.filter(([, i]) => i.checked).map(([s]) => s);
+    if (!selection.some(s => s[0] === xs.value && s[1] === ys.value)) selection.push([xs.value, ys.value]);
+    rebuildPaths(r, selection, group.value || null);
+  };
+  apply.onclick = () => {
+    const selection = picks.filter(([, i]) => i.checked).map(([s]) => s);
+    if (!selection.length) { message('choose at least one pair'); return; }
+    rebuildPaths(r, selection, group.value || null);
+  };
+  choose.append(el('label', {className: 'row'}, 'x ', xs, ' y ', ys, add));
+  choose.append(el('label', {className: 'row'}, 'one path per value of ', group));
+  choose.append(apply);
+  box.append(choose);
+  //the summary, and the log
+  const table = el('table');
+  for (const [label, value] of summaryRows(r)) table.append(el('tr', {}, el('td', {textContent: label}), el('td', {textContent: value})));
+  box.append(table, el('div', {className: 'file', textContent: r.file}));
+  const log = el('details');
+  log.append(el('summary', {textContent: 'Log'}), el('pre', {textContent: r.log.text || '(no log)'}));
+  box.append(log);
+}
+
+/* a result's paths built again from a selection of column pairs (and a column to split them by), keeping styles */
+function rebuildPaths(r, selection, group) {
+  const settings = resultSettings(r);
+  r.paths = buildPaths(r, {...settings, selection, group});
+  r.orbits = buildOrbits(r, settings.hiddenOrbits);
+  invalidatePlot(); markState.key = null;
+  showResults(); showDetails(); fit();
+}
+
+/* facts about a result, from its data and log (the desktop's summary) */
+function summaryRows(r) {
+  const rows = [['Environment', r.env.name]], log = r.log.text || '';
+  const whole = r.orbits.filter(o => o.full);
+  if (whole.length) {
+    const periods = whole.map(o => (o.t1 - o.t0) / 86400);
+    rows.push(['Orbits', whole.length + ', mean period ' + fmt(periods.reduce((a, b) => a + b) / periods.length) + ' days (' +
+               fmt(Math.min(...periods)) + ' to ' + fmt(Math.max(...periods)) + ')']);
+  }
+  const calc = log.match(/^calc:\s*(.*)$/m);
+  if (calc) rows.push(['Calculator', (calc[1].match(/<[\w.]*?(\w+) object/) || [])[1] || calc[1]]);
+  const dt = log.match(/^dt:?\s+(\S+)/m);
+  if (dt) rows.push(['dt', dt[1] + ' s']);
+  rows.push(['Rows', r.data.rows + ' in ' + r.paths.length + ' path' + (r.paths.length === 1 ? '' : 's')]);
+  for (const o of Object.keys(TIME_OPTIONS)) {
+    const c = timeColumnOf(r, o);
+    if (!c) continue;
+    const v = Array.from(r.data.columns[c]).filter(isFinite);
+    if (v.length) rows.push([c, fmt(v[0]) + ' → ' + fmt(v[v.length - 1]) + ' s']);
+  }
+  const p = r.paths[0];
+  if (p) {
+    const d = [];
+    for (let i = 0; i < p.x.length; i++) { const v = Math.hypot(p.x[i], p.y[i]); if (isFinite(v)) d.push(v); }
+    const both = v => fmt(v) + ' m (' + fmt(+(v / AU).toPrecision(4)) + ' AU)';
+    if (d.length) rows.push(['Distance', both(d[0]) + ' → ' + both(d[d.length - 1])], ['Closest', both(Math.min(...d))]);
+    const v = velocityPair(r);
+    if (v) {
+      const sp = [];
+      for (let i = 0; i < p.x.length; i++) { const s = Math.hypot(r.data.columns[v[1]][i], r.data.columns[v[2]][i]); if (isFinite(s)) sp.push(s); }
+      if (sp.length) rows.push(['Speed |v|', (sp[0] / C).toPrecision(4) + ' → ' + (sp[sp.length - 1] / C).toPrecision(4) + ' c']);
+    }
+  }
+  for (const line of log.split('\n').filter(l => /accuracy|predicted/i.test(l)).slice(0, 6))
+    rows.push(['Result', line.trim().length <= 110 ? line.trim() : line.trim().slice(0, 107) + '...']);
+  return rows;
 }
 
 /* the chosen background's description, under the Background menu */
@@ -1430,17 +2568,86 @@ function showDescription() {
   $('bgDescription').style.display = background && background.description ? '' : 'none';
 }
 
+/* the status line: what is shown, and the plotted point under the pointer in the axes' units */
+function showStatus(sx, sy) {
+  const shown = state.results.filter(r => r.visible);
+  let text = state.results.length ? shown.length + ' of ' + state.results.length + ' results shown, ' +
+             shown.reduce((n, r) => n + r.data.rows, 0) + ' rows, ' + shown.reduce((n, r) => n + r.paths.length, 0) + ' paths' : '';
+  const rect = plotRect();
+  if (sx !== undefined && state.view && sx >= rect.l && sx <= rect.r && sy >= rect.t && sy <= rect.b) {
+    const [X, Y] = toData(sx, sy), [ax, ay] = axes();
+    const show = (v, a) => a.log ? fmt(Math.pow(10, v)) : fmt(v / a.scale);
+    text += '    ' + ax.label.replace('  [log]', '') + ' ' + show(X, ax) + ',  ' + ay.label.replace('  [log]', '') + ' ' + show(Y, ay);
+  }
+  $('status').textContent = text;
+}
+
+/* the mode or a log axis changed: work the plotted values out again, and fit */
+function plotChanged() {
+  invalidatePlot(); markState.key = null;
+  document.body.classList.toggle('time', timeMode());
+  syncControls();
+  fit();
+}
+
+let boxZoom = null;     //a box being dragged out (shift-drag): [x0, y0, x1, y1] on screen
+
 function setup() {
   UNITS.forEach(([name], i) => $('unit').add(new Option(name, i)));
   SPEEDS.forEach(s => { $('speed').add(new Option(speedName(s), s)); $('pSpeed').add(new Option(speedName(s), s)); });
   setupPlayer();
-  for (const id of ['showFlow', 'showGravity', 'showScalar', 'showTwist', 'showSeam', 'showBodies', 'showSchwarzschild', 'showSpin', 'showGrid', 'showPathLegend', 'graduateOrbits', 'showFieldKey'])
-    $(id).onchange = () => { state.prefs[id] = $(id).checked; draw(); };
+  for (const id of OPTION_BOXES)
+    $(id).onchange = () => { state.prefs[id] = $(id).checked; if (id === 'showTimeMarks' || id === 'showMarkNote') markState.key = null; draw(); };
+  for (const id of ['logX', 'logY', 'ctTime'])
+    $(id).onchange = () => { state.prefs[id] = $(id).checked; plotChanged(); };
   $('equalAspect').onchange = () => { state.prefs.equalAspect = $('equalAspect').checked; equalise(); draw(); };
-  $('unit').onchange = () => { state.prefs.unit = +$('unit').value; draw(); };
+  $('mode').onchange = () => {
+    if ($('mode').value === 'time' && !state.results.some(r => timeColumnOf(r, state.prefs.timeColumn) || timeColumnOf(r, 't'))) {
+      message('these results have no t or pt column to plot against'); $('mode').value = 'xy'; return;
+    }
+    state.prefs.mode = $('mode').value; plotChanged();
+  };
+  $('unit').onchange = () => {
+    //a log axis is in the unit's values: keep the same stretch of the plot in view
+    const [ax0, ay0] = axes();
+    state.prefs.unit = +$('unit').value;
+    const [ax1, ay1] = axes();
+    if (state.view) {
+      const v = state.view, dx = ax0.log ? Math.log10(ax0.scale / ax1.scale) : 0, dy = ay0.log ? Math.log10(ay0.scale / ay1.scale) : 0;
+      state.view = [v[0] + dx, v[1] + dx, v[2] + dy, v[3] + dy];
+    }
+    invalidatePlot(); markState.key = null; draw();
+  };
+  $('timeColumn').onchange = () => { state.prefs.timeColumn = $('timeColumn').value; state.timeInterval = ''; if (timeMode()) plotChanged(); else { markState.key = null; syncControls(); draw(); } };
+  $('timeInterval').onchange = () => { state.timeInterval = $('timeInterval').value.trim(); markState.key = null; draw(); };
+  $('timeAuto').onclick = () => { state.timeInterval = ''; $('timeInterval').value = ''; markState.key = null; draw(); };
   $('speed').onchange = () => { state.prefs.replaySpeed = $('speed').value; };
-  $('background').onchange = () => { state.background = $('background').value; showDescription(); draw(); };
+  $('background').onchange = () => { state.background = $('background').value; showDescription(); showResults(); draw(); };
   $('fit').onclick = fit;
+  $('zoomIn').onclick = () => zoom(1 / ZOOM_STEP);
+  $('zoomOut').onclick = () => zoom(ZOOM_STEP);
+  $('rangeButton').onclick = () => {
+    const form = $('range');
+    form.hidden = !form.hidden;
+    if (!form.hidden && state.view) {
+      const [ax, ay] = axes(), show = (v, a) => a.log ? fmt(Math.pow(10, v)) : fmt(v / a.scale);
+      [$('rangeX0').value, $('rangeX1').value, $('rangeY0').value, $('rangeY1').value] = [show(state.view[0], ax), show(state.view[1], ax), show(state.view[2], ay), show(state.view[3], ay)];
+    }
+  };
+  $('rangeApply').onclick = () => {
+    const [ax, ay] = axes(), read = (id, a) => { const v = +$(id).value; return a.log ? (v > 0 ? Math.log10(v) : NaN) : v * a.scale; };
+    const v = [read('rangeX0', ax), read('rangeX1', ax), read('rangeY0', ay), read('rangeY1', ay)];
+    if (v.some(x => !isFinite(x)) || v[1] <= v[0] || v[3] <= v[2]) { message('each range needs two numbers, the second larger (above 0 on a log axis)'); return; }
+    state.view = v; draw();
+  };
+  $('legendsAll').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = true; markState.key = null; syncControls(); draw(); };
+  $('legendsNone').onclick = () => { for (const id of LEGEND_BOXES) state.prefs[id] = false; markState.key = null; syncControls(); draw(); };
+  $('showAll').onclick = () => { state.results.forEach(r => { r.visible = true; }); resultsChanged(); };
+  $('showNone').onclick = () => { state.results.forEach(r => { r.visible = false; }); resultsChanged(); };
+  $('showOnly').onclick = () => { state.results.forEach(r => { r.visible = r === state.selected; }); resultsChanged(); };
+  $('closeResult').onclick = closeSelected;
+  $('clearTrails').onclick = () => { if (state.replay.state !== 'stopped') { state.trailStart = state.replay.t; draw(); } else message('play the run first: Clear trails keeps what is drawn from the replay\'s time on'); };
+  $('restoreTrails').onclick = () => { state.trailStart = null; draw(); };
   $('play').onclick = () => play('together');
   $('playInTurn').onclick = () => play('sequence');
   $('loop').onchange = () => { state.prefs.replayLoop = $('loop').checked; };
@@ -1449,39 +2656,66 @@ function setup() {
   $('seek').oninput = () => seek($('seek').value / 1000);
   $('openFolder').onclick = () => $('folderInput').click();
   $('folderInput').onchange = () => openFiles([...$('folderInput').files]);
+  $('addFolder').onclick = () => $('addInput').click();
+  $('addInput').onchange = () => openFiles([...$('addInput').files], true);
+  $('reload').onclick = reload;
 
   //the legend boxes' buttons, in the player too, and hover text over them, their rows, bodies and paths
   if (PLAYER) canvas.onpointerdown = boxPress;
   let hoverFrame = null, hoverEvent = null;
   canvas.addEventListener('pointermove', e => {
     hoverEvent = e;
-    if (hoverFrame === null) hoverFrame = requestAnimationFrame(() => { hoverFrame = null; hoverAt(hoverEvent); });
+    if (hoverFrame === null) hoverFrame = requestAnimationFrame(() => { hoverFrame = null; hoverAt(hoverEvent); if (!PLAYER) showStatus(hoverEvent.offsetX, hoverEvent.offsetY); });
   });
   canvas.addEventListener('pointerleave', () => {
     if (!tipFor) $('tip').style.display = 'none';
     canvas.style.cursor = '';
     if (frontPath) { frontPath = null; draw(); }
+    if (!PLAYER) showStatus();
   });
-  //pan by dragging, zoom with the wheel at the pointer, fit with a double click (not in the player, which stays fitted)
+  //pan by dragging, zoom to a box with shift-drag, zoom with the wheel at the pointer, fit with a double click, and
+  //from the keys (not in the player, which stays fitted)
   let dragging = null;
   if (!PLAYER) {
-  canvas.onpointerdown = e => { if (boxPress(e)) return; if (state.view) { dragging = [e.offsetX, e.offsetY, state.view.slice()]; canvas.setPointerCapture(e.pointerId); } };
+  canvas.onpointerdown = e => {
+    canvas.focus();
+    if (boxPress(e) || !state.view) return;
+    if (e.shiftKey) boxZoom = [e.offsetX, e.offsetY, e.offsetX, e.offsetY];
+    else dragging = [e.offsetX, e.offsetY, state.view.slice()];
+    canvas.setPointerCapture(e.pointerId);
+  };
   canvas.onpointermove = e => {
+    if (boxZoom) { boxZoom[2] = e.offsetX; boxZoom[3] = e.offsetY; draw(); return; }
     if (!dragging) return;
     const {l, t, r, b} = plotRect(), [px, py, v] = dragging;
-    const dx = (e.offsetX - px) / (r - l) * (v[1] - v[0]), dy = (e.offsetY - py) / (b - t) * (v[3] - v[2]);
+    const dx = (e.offsetX - px) / (r - l) * (v[1] - v[0]) * (flipX() ? -1 : 1), dy = (e.offsetY - py) / (b - t) * (v[3] - v[2]);
     state.view = [v[0] - dx, v[1] - dx, v[2] + dy, v[3] + dy];
     draw();
   };
-  canvas.onpointerup = () => { dragging = null; };
+  canvas.onpointerup = () => {
+    dragging = null;
+    if (!boxZoom) return;
+    const [x0, y0, x1, y1] = boxZoom;
+    boxZoom = null;
+    if (Math.abs(x1 - x0) > 4 && Math.abs(y1 - y0) > 4) {
+      const [ax, ay] = toData(x0, y0), [bx, by] = toData(x1, y1);
+      state.view = [Math.min(ax, bx), Math.max(ax, bx), Math.min(ay, by), Math.max(ay, by)];
+      equalise();
+    }
+    draw();
+  };
   canvas.ondblclick = e => { if (!boxButtons.some(h => inside(h, e.offsetX, e.offsetY))) fit(); };
   canvas.addEventListener('wheel', e => {
     if (!state.view) return;
     e.preventDefault();
-    const factor = Math.exp(e.deltaY * 0.0015), [x, y] = toData(e.offsetX, e.offsetY), v = state.view;
-    state.view = [x + (v[0] - x) * factor, x + (v[1] - x) * factor, y + (v[2] - y) * factor, y + (v[3] - y) * factor];
-    draw();
+    zoom(Math.exp(e.deltaY * 0.0015), toData(e.offsetX, e.offsetY));
   }, {passive: false});
+  document.addEventListener('keydown', e => {
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName) || e.metaKey || e.ctrlKey || e.altKey) return;
+    const keys = {'+': () => zoom(1 / ZOOM_STEP), '=': () => zoom(1 / ZOOM_STEP), '-': () => zoom(ZOOM_STEP), '0': fit,
+                  ArrowLeft: () => pan(-PAN_STEP, 0), ArrowRight: () => pan(PAN_STEP, 0), ArrowUp: () => pan(0, PAN_STEP), ArrowDown: () => pan(0, -PAN_STEP)};
+    if (keys[e.key]) { e.preventDefault(); keys[e.key](); }
+  });
   }
 
   //drop a run folder (or its files) on the plot
@@ -1490,7 +2724,7 @@ function setup() {
   wrap.ondragleave = () => { $('drop').style.display = 'none'; };
   wrap.ondrop = async e => {
     e.preventDefault(); $('drop').style.display = 'none';
-    openFiles(await droppedFiles(e.dataTransfer));
+    openFiles(await droppedFiles(e.dataTransfer), e.shiftKey);
   };
   window.onresize = () => { if (PLAYER) fit(); else { equalise(); draw(); } };
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
@@ -1544,14 +2778,14 @@ function setupPlayer() {
   };
 }
 
-function openFiles(files) {
+function openFiles(files, add = false) {
   if (!files.length) return;
   //a chosen folder may hold several runs: take the folder of the first full.json (else of the first csv)
   const first = files.find(f => f.name.endsWith('.full.json')) || files.find(f => f.name.endsWith('.csv'));
   if (!first) { message('no .full.json or .csv files there'); return; }
   const folder = (first.webkitRelativePath || first.relativePath || '').split('/').slice(0, -1).join('/');
   const same = files.filter(f => (f.webkitRelativePath || f.relativePath || '').split('/').slice(0, -1).join('/') === folder);
-  loadRun(folderSource(same));
+  loadRun(folderSource(same), null, {add: add && state.results.length > 0});
 }
 
 async function droppedFiles(transfer) {

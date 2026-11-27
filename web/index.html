@@ -47,6 +47,28 @@
   #drop { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 2px dashed var(--accent); font-size: 16px; }
   #empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink2); text-align: center; padding: 16px; }
   .note { color: var(--muted); font-size: 12px; }
+  aside .buttons { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+  aside .buttons button { padding: 2px 7px; }
+  label.row { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+  label.row input { font: inherit; width: 7em; padding: 2px 4px; border: 1px solid var(--axis); border-radius: 4px; background: var(--surface); color: var(--ink); }
+  body:not(.time) .timeOnly, body.time .xyOnly { display: none; }
+  #status { margin-left: auto; color: var(--ink2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result .count { margin-left: auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; flex: none; }
+  .result .fold { width: 12px; flex: none; color: var(--ink2); cursor: pointer; user-select: none; }
+  .orbit { padding-left: 26px; font-size: 12px; }
+  .envHead { font-size: 11px; color: var(--ink2); margin: 6px 0 2px; }
+  #details { margin-top: 8px; border-top: 1px solid var(--grid); padding-top: 6px; }
+  #details:empty { display: none; }
+  #details h3 { font-size: 13px; margin: 0 0 4px; }
+  #details .pathRow { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+  #details input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--axis); border-radius: 3px; background: none; }
+  #details table { border-collapse: collapse; font-size: 12px; margin: 6px 0; width: 100%; }
+  #details td { padding: 1px 4px; vertical-align: top; }
+  #details td:first-child { color: var(--muted); white-space: nowrap; }
+  #details pre { font-size: 11px; max-height: 240px; overflow: auto; background: var(--surface); border: 1px solid var(--grid); padding: 6px; margin: 4px 0; }
+  #details .file { color: var(--muted); font-size: 11px; word-break: break-all; }
+  #paths .pair { display: block; }
+  canvas:focus { outline: none; }
   /* the player (?player in the address): the plot and a music-player bar only, for pages that embed a run */
   /* the play controls: one line under the plot, in the full viewer and the player alike */
   #replay { display: none; }
@@ -100,19 +122,60 @@
 <div id="app">
   <header>
     <h1>Flow Viewer</h1>
-    <button id="openFolder" title="Choose a run folder (logs/&lt;study&gt;/&lt;run&gt;)">Open run folder…</button>
+    <button id="openFolder" title="Open a run folder (logs/&lt;study&gt;/&lt;run&gt;) in place of what is open">Open run folder…</button>
+    <button id="addFolder" title="Add a run folder's results to what is open, to compare them">Add…</button>
+    <button id="reload" title="Read everything open again, keeping each result's settings">Reload</button>
     <input id="folderInput" type="file" webkitdirectory multiple hidden>
+    <input id="addInput" type="file" webkitdirectory multiple hidden>
     <span id="message"></span>
+    <span id="status"></span>
   </header>
   <div id="plotWrap">
-    <canvas id="plot"></canvas>
+    <canvas id="plot" tabindex="0"></canvas>
     <canvas id="spinLayer"></canvas>
     <div id="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
     <div id="drop">Drop a run folder</div>
   </div>
   <aside>
     <h2>Results</h2>
+    <div class="buttons">
+      <button id="showAll" title="Show every result">All</button>
+      <button id="showNone" title="Hide every result">None</button>
+      <button id="showOnly" title="Show only the selected result">Only selected</button>
+      <button id="closeResult" title="Take the selected result out">Close</button>
+    </div>
     <div id="results"></div>
+    <div id="details"></div>
+
+    <h2>View</h2>
+    <label class="row">Plot <select id="mode"><option value="xy">X / Y path</option><option value="time">Distance / time</option></select></label>
+    <label class="row">Units <select id="unit"></select></label>
+    <label class="check xyOnly" title="A metre as long across as up"><input type="checkbox" id="equalAspect"> equal aspect</label>
+    <label class="check timeOnly" title="Time as ct, in the distance unit, on a 1:1 scale: light with no gravity is at 45°"><input type="checkbox" id="ctTime"> time as ct (light at 45°)</label>
+    <label class="check timeOnly" title="Distance runs right to left, 0 on the right"><input type="checkbox" id="reverseX"> reverse distance (0 on the right)</label>
+    <label class="check"><input type="checkbox" id="logX"> log x</label>
+    <label class="check"><input type="checkbox" id="logY"> log y</label>
+    <label class="check"><input type="checkbox" id="showGrid"> grid</label>
+    <label class="check" title="The current orbit in full colour, each earlier one fainter"><input type="checkbox" id="graduateOrbits"> shade earlier orbits</label>
+    <div class="buttons">
+      <button id="zoomIn" title="Zoom in (+)">Zoom in</button>
+      <button id="zoomOut" title="Zoom out (−)">Zoom out</button>
+      <button id="fit" title="Fit to the paths (0, or double click)">Fit</button>
+      <button id="rangeButton" title="Type in the range of each axis">Range…</button>
+    </div>
+    <div id="range" hidden>
+      <label class="row">x from <input id="rangeX0" size="9"> to <input id="rangeX1" size="9"></label>
+      <label class="row">y from <input id="rangeY0" size="9"> to <input id="rangeY1" size="9"></label>
+      <button id="rangeApply">Apply</button> <span class="note">in the axes' units</span>
+    </div>
+    <p class="note">Drag to pan, scroll to zoom, shift-drag to zoom to a box, double-click to fit; arrow keys pan, + and − zoom.</p>
+
+    <h2>Markers</h2>
+    <label class="check" title="An open circle where each path starts, a filled one where it ends"><input type="checkbox" id="showMarkers"> start / end markers</label>
+    <label class="check" title="Dots along each path at every interval of a time column"><input type="checkbox" id="showTimeMarks"> time markers</label>
+    <label class="row"><span id="timeColumnLabel">Markers use</span> <select id="timeColumn"></select></label>
+    <label class="row">every <input id="timeInterval" size="8" placeholder="auto"> <button id="timeAuto" title="A round interval giving about ten markers">Auto</button></label>
+
     <h2>Background</h2>
     <select id="background"></select>
     <p id="bgDescription" class="note"></p>
@@ -121,19 +184,28 @@
     <label class="check"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
     <label class="check"><input type="checkbox" id="showTwist"> twist arcs (how fast space turns things, round a spinning hole)</label>
     <label class="check"><input type="checkbox" id="showSeam"> lines (the seam, where the bodies' regions of flow meet)</label>
+    <label class="check"><input type="checkbox" id="showContours"> lines of equal |u|</label>
+    <label class="check"><input type="checkbox" id="showFlowLines"> flow lines (the paths of space)</label>
+    <label class="check"><input type="checkbox" id="showSpecialOrbits"> photon orbits and ISCO (one hole)</label>
+    <label class="check"><input type="checkbox" id="showCones"> light cones (distance / time)</label>
     <label class="check"><input type="checkbox" id="showBodies"> bodies</label>
-    <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons</label>
+    <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons (and a spinning hole's ergosphere and ring)</label>
     <label class="check"><input type="checkbox" id="showSpin"> spinning bodies (turning the way they spin, not at their real speed)</label>
-    <p class="note">Arrows, colour maps and seams come from a run's background frames; options greyed out have no data for the background shown.</p>
-    <h2>View</h2>
-    <select id="unit"></select>
-    <label class="check"><input type="checkbox" id="equalAspect"> equal aspect</label>
-    <label class="check"><input type="checkbox" id="showGrid"> grid</label>
-    <label class="check" title="The current orbit in full colour, each earlier one fainter"><input type="checkbox" id="graduateOrbits"> shade earlier orbits</label>
+    <p class="note">Arrows, colour maps and seams come from a run's backgrounds; equal-|u| lines and flow lines from its u, or the bodies' escape speed. Options greyed out have no data for the background shown.</p>
+
+    <h2>Legends</h2>
     <label class="check"><input type="checkbox" id="showPathLegend"> path legend</label>
     <label class="check"><input type="checkbox" id="showFieldKey"> background key</label>
-    <button id="fit">Fit to paths</button>
-    <p class="note">Drag to pan, scroll to zoom, double-click to fit.</p>
+    <label class="check"><input type="checkbox" id="showMarkNote"> marker interval</label>
+    <label class="check"><input type="checkbox" id="showMarkLabels"> marker times</label>
+    <label class="check"><input type="checkbox" id="showBodyLabels"> body labels</label>
+    <div class="buttons"><button id="legendsAll">All</button><button id="legendsNone">None</button></div>
+
+    <h2>Replay</h2>
+    <div class="buttons">
+      <button id="clearTrails" title="Draw the paths only from here on">Clear trails</button>
+      <button id="restoreTrails" title="Draw the paths from the start again">Restore trails</button>
+    </div>
   </aside>
   <div id="replay">
     <button id="play">Play</button>

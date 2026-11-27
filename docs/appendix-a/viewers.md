@@ -1,13 +1,21 @@
 # Viewers
 
 There are two viewers. Both read the files a study writes ([File Formats](formats.md)), and neither does any physics
-beyond drawing what those files hold. The one formula either uses is a horizon's radius, $2GM/c^2$.
+beyond drawing what those files hold. The formulas they use are a few closed forms: a horizon's radius, $2GM/c^2$
+(Kerr's $r_+$ for a spinning hole), the escape speed $\sqrt{2GM/r}$ where a run has no flow of its own to draw from,
+and a spinning hole's photon orbits and innermost stable orbits.
+
+The browser viewer is the one being developed. It is to come in three forms of the same page: the **player**, which
+replays a run as its page set it up; the **viewer**, the player full screen with every display option; and later a
+**studio**, which also saves and loads settings and sets up and runs new simulations. The desktop viewer stays for
+now for what only it does: working backgrounds out live from the engine, and its Sim tab.
 
 | | Desktop viewer | Browser viewer |
 | --- | --- | --- |
 | Code | `viewer/` (Python, tkinter) | `web/` (static HTML and JavaScript) |
-| Opens | any run in `logs/` | a run published to the website, or a folder from your own computer |
+| Opens | any run in `logs/` | a run published to the website, or folders from your own computer |
 | Backgrounds | worked out live from the bodies | read from the run's backgrounds file |
+| Saves settings | yes: preferences and configs | no, it reads a run's |
 | Runs simulations | yes, from its Sim tab | no |
 
 ## Desktop viewer
@@ -48,8 +56,19 @@ when it is built.
 
 ### What it shows
 
-- **Paths**, in the run's own colours and line styles, with a legend. Each result can be shown or hidden.
-- **Bodies and horizons**, and spinning bodies turning the way they spin (not at their real speed).
+- **Paths**, in the run's own colours and line styles, with a legend. Each result can be shown or hidden, and has
+  its own options in the results panel:
+    - **straight line**: the path with no gravity, dashed, its start carried on at its first velocity;
+    - **end arrows**: each velocity-like pair (v, u, a) as an arrow where a path ends;
+    - **orbits**: a run that goes round is split into orbits where its log says each ended. Each can be shown or
+      hidden, its periapsis and apoapsis marked, and the path coloured from a first colour to a last through them;
+    - each path's **colour and line style**, and **Choose paths…**: which column pairs are plotted, and one path per
+      value of a column;
+    - a **summary** of the run (calculator, step, orbits, distances, speeds) and its **log**.
+- **Two views**: x / y, or **distance / time**, each path's distance from the origin against t or pt (as ct, with
+  light at 45°, if wanted; distance can run right to left). Either axis can be **logarithmic**.
+- **Bodies and horizons**, with a spinning hole's ergosphere and ring singularity, labels with each body's mass and
+  spin, and spinning bodies turning the way they spin (not at their real speed).
 - **Backgrounds** from the run's backgrounds file. The Background menu lists them; picking one draws its layers and
   shows its written description. A background can have:
     - $\mathbf u$ arrows, the flow of space;
@@ -57,17 +76,30 @@ when it is built.
     - a colour map of a field, such as a wave's strain;
     - twist arcs, how fast space turns things round a spinning hole;
     - lines, such as the seam where the bodies' regions of flow meet.
+- **Drawn from the flow**: lines of equal $|u|$, and flow lines, the paths of space out of each body. Against time,
+  the flow line repeated up the time axis, and **light cones**, light's speed $u \pm c$ outwards and inwards. They
+  use the background's $u$, or the bodies' escape speed where a run has none.
+- **One hole's circular photon orbits and innermost stable circular orbits**, with the spin and against it.
 - **A background key** for the arrows' and colours' scale. Arrows are scaled from what is on screen.
+- **Markers**: where each path starts and ends, and **time markers**, dots at every interval of t or pt (a round
+  interval, or one typed in), labelled where there is room.
+- **Legends**: the paths' legend, the background key, the markers' interval and times, and body labels, each of
+  which can be turned off.
 - **Units**: metres, kilometres, astronomical units or light-seconds, with equal aspect and a grid if wanted.
-- **Orbits**: the current orbit in full colour, each earlier one fainter.
+- **Orbits shaded**: the current orbit in full colour, each earlier one fainter.
 
-Drag to pan, scroll to zoom at the pointer, and double-click to fit.
+Drag to pan, scroll to zoom at the pointer, shift-drag to zoom to a box, and double-click to fit; the arrow keys pan
+and + and − zoom. **Range…** takes each axis's range typed in, and the status line gives the point under the pointer.
+Hovering on a path shows the nearest row's values.
+
+**Add…** adds another run folder's results to those open, to compare them, and **Reload** reads everything again,
+keeping each result's settings.
 
 ### Replay
 
 A run replays over 20 seconds at ×1, at speeds from ×0.1 to ×10. **Play** runs the shown results together; **play in
 turn** runs them one after another, each drawn over the last. The replay can pause, restart, loop, and be dragged to
-any moment.
+any moment. **Clear trails** draws the paths only from the replay's time on; **Restore trails** draws them whole again.
 
 ### The player
 
@@ -79,7 +111,10 @@ button to open the run full screen. It stays fitted to the run and doesn't pan o
         loading="lazy" title="What the run shows"></iframe>
 ```
 
-A run's `.prefs.json` sets how the player starts: which backgrounds are drawn, whether the legend shows, and so on.
+A run's `.prefs.json` sets how the player starts: which backgrounds are drawn, whether the legend shows, the view
+(x / y or distance / time, log axes), markers, and so on; its config sets each result's options (straight line, end
+arrows, apsides, hidden orbits, colours). The player shows only what these ask for: the desktop viewer's markers and
+time markers, on there by default, are off here unless a run's preferences turn them on.
 
 ## Backgrounds that change with time
 
