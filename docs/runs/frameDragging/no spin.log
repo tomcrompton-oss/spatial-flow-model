@@ -1,0 +1,4 @@
+bodies: 1
+body 1: mass 7.956000e+36 kg (4e+06 MS)  x 0.000000e+00 m  y 0.000000e+00 m  black
+an orbit from 100 M (M = GM/c^2), round the same body with no spin (chi 0); the flow: the river plus 2GJ x r/c^2 r^3, N = 1, flat space
+backgrounds: frameDragging.backgrounds.json

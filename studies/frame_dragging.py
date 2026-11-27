@@ -14,8 +14,12 @@ measured: the precession with and against the spin, its odd part (half the diffe
 against exact Kerr's odd part for the same apsides (engine/exact.py), and with no spin against exact Schwarzschild.
 the twist of Part 1's river model of a Kerr hole (engine/kerr.py) isn't used: this is 4.3's flow, not 1.3's
 
+also writes a player: the orbits from 100 M with the spin, against it and with no spin (chi 0.5), over the flow -
+the river and the swirl of the body's rotation - as a backgrounds file (engine/backgrounds.py)
+
 run: python3 studies/frame_dragging.py     (a few minutes; prints, and writes
-     logs/modelChecks/frameDragging_<datetime>/summary.log)
+     logs/modelChecks/frameDragging_<datetime>/ - summary.log and the player, frameDragging.full.json; then
+     python3 scripts/publish_run.py logs/modelChecks/frameDragging_<datetime> frameDragging)
 """
 import math
 import os
@@ -53,8 +57,22 @@ class SpinningBody(Spacetime):
     return river + 2*G*self.J/(C*C*r**3)*np.array([-x[1], x[0]])
 
 
-def precession(chi, rStart, speed, prograde):
-  """precession per orbit at its periapses, and its mean periapsis and apoapsis distances"""
+class FlowOf:
+  """a spacetime's flow as the backgrounds want it, flow(pos, region, t), with its bodies"""
+
+  def __init__(self, spacetime):
+    self.spacetime, self.bodies = spacetime, spacetime.bodies
+
+  def flow(self, pos, region=None, t=0.0):
+    return self.spacetime.flow(np.asarray(pos, float), t)
+
+  def region(self, pos, t=0.0):
+    return None
+
+
+def precession(chi, rStart, speed, prograde, path=None):
+  """precession per orbit at its periapses, and its mean periapsis and apoapsis distances; path, a list, gets the
+  orbit's (t, x, y)"""
   calc = MetricCalculator(SpinningBody(chi))
   p = Particle()
   p.pos = np.array([0.0, rStart])
@@ -66,6 +84,8 @@ def precession(chi, rStart, speed, prograde):
     angle = math.atan2(p.pos[1], p.pos[0])
     turned += abs((angle - prev + math.pi) % (2*math.pi) - math.pi)
     prev = angle
+    if path is not None:
+      path.append((p.t, p.pos[0], p.pos[1]))
     last = (last + [(p.t, np.linalg.norm(p.pos), p.pos.copy())])[-3:]
     if len(last) == 3:
       (_, x0, _), (_, x1, _), (_, x2, _) = last
@@ -88,14 +108,17 @@ def main():
   say('step 4.3 for one body: the river plus 2GJ x r/c^2 r^3, N = 1, flat space; a %g solar-mass body, sizes in M = GM/c^2' % (MASS/MS))
   say('precession per orbit (rad): with the spin, against it; the odd part, half the difference, against Lense-Thirring')
   say("and against exact Kerr's odd part for each orbit's own apsides")
+  paths = {}
   for rStart, speed in ((100, 0.085), (400, 0.043)):
-    p0, rp0, ra0 = precession(0.0, rStart*M, speed*C, True)
+    paths[(rStart, 0.0, True)] = []
+    p0, rp0, ra0 = precession(0.0, rStart*M, speed*C, True, paths[(rStart, 0.0, True)])
     say('')
     say('from %d M at %.3f c; no spin: %.6e, exact Schwarzschild for its apsides %.6e (peri %.1f M, apo %.1f M)'
         % (rStart, speed, p0, grPrecessionExact(rp0, ra0, MASS), rp0/M, ra0/M))
     for chi in (0.1, 0.5):
-      pw, rpw, raw = precession(chi, rStart*M, speed*C, True)
-      pa, rpa, raa = precession(chi, rStart*M, speed*C, False)
+      paths[(rStart, chi, True)], paths[(rStart, chi, False)] = [], []
+      pw, rpw, raw = precession(chi, rStart*M, speed*C, True, paths[(rStart, chi, True)])
+      pa, rpa, raa = precession(chi, rStart*M, speed*C, False, paths[(rStart, chi, False)])
       odd = (pw - pa)/2
       kerr = (kerrPrecessionExact(rpw, raw, MASS, chi, True) - kerrPrecessionExact(rpa, raa, MASS, chi, False))/2
       a = (rpw + raw)/2/M
@@ -105,7 +128,38 @@ def main():
           % (chi, pw, pa, odd, lt, odd/lt, kerr, odd/kerr))
   with open(os.path.join(folder, 'summary.log'), 'w') as f:
     f.write('\n'.join(lines) + '\n')
+  writePlayer(folder, paths)
   print('written to', folder)
+
+
+def writePlayer(folder, paths, chi=0.5, rStart=100):
+  """the orbits from rStart M, with the spin, against it and with none, over the spinning body's flow"""
+  sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+  from two_body_escapes import writeViewerFiles
+  made = []
+  for key, name, colour, style, words in (((rStart, chi, True), 'with the spin', '#2a78d6', 'solid', 'going round with the spin'),
+                                          ((rStart, chi, False), 'against the spin', '#d64c7a', 'solid', 'going round against the spin'),
+                                          ((rStart, 0.0, True), 'no spin', '#7a7a74', 'dashed', 'round the same body with no spin')):
+    rows = paths[key]
+    rows = rows[::max(1, len(rows)//4000)]
+    path = os.path.join(folder, name + '.csv')
+    with open(path, 'w') as f:
+      f.write('t,pos_x,pos_y\n')
+      for t, x, y in rows:
+        f.write('%.9g,%.9g,%.9g\n' % (t, x, y))
+    with open(path[:-4] + '.log', 'w') as f:
+      f.write('bodies: 1\nbody 1: mass %.6e kg (%.6g MS)  x 0.000000e+00 m  y 0.000000e+00 m  black\n' % (MASS, MASS/MS))
+      f.write('an orbit from %d M (M = GM/c^2), %s (chi %g); the flow: the river plus 2GJ x r/c^2 r^3, N = 1, flat space\n'
+              % (rStart, words, chi if key[1] else 0.0))
+    made.append((path, colour, style))
+  writeViewerFiles(folder, 'frameDragging', made, preferences={'showFlow': True, 'unit': 3, 'replaySpeed': '2'},
+                   frames=FlowOf(SpinningBody(chi)),
+                   background=('the flow round a spinning body',
+                               'The flow round a body of 4 million solar masses spinning at half the most a black hole'
+                               ' can: space falls straight in, as in Part 1, and the body\'s rotation adds a swirl round'
+                               ' it, 2GJ x r/c^2 r^3, anticlockwise here, the way the body spins. It falls off as 1/r^2,'
+                               ' much faster than the inflow, so only close in does it show. Arrows show the flow u; the'
+                               ' colour its speed.'))
 
 
 if __name__ == '__main__':

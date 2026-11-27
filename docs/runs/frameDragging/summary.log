@@ -1,0 +1,11 @@
+step 4.3 for one body: the river plus 2GJ x r/c^2 r^3, N = 1, flat space; a 4e+06 solar-mass body, sizes in M = GM/c^2
+precession per orbit (rad): with the spin, against it; the odd part, half the difference, against Lense-Thirring
+and against exact Kerr's odd part for each orbit's own apsides
+
+from 100 M at 0.085 c; no spin: 2.834846e-01, exact Schwarzschild for its apsides 2.834846e-01 (peri 55.1 M, apo 100.0 M)
+  chi 0.1: with 2.785219e-01, against 2.884705e-01; odd part -4.9743e-03; Lense-Thirring -4.1929e-03 (odd/LT 1.1864); Kerr -4.9744e-03 (odd/Kerr 1.0000)
+  chi 0.5: with 2.588988e-01, against 3.086499e-01; odd part -2.4876e-02; Lense-Thirring -2.0890e-02 (odd/LT 1.1908); Kerr -2.4884e-02 (odd/Kerr 0.9997)
+
+from 400 M at 0.043 c; no spin: 6.494170e-02, exact Schwarzschild for its apsides 6.494174e-02 (peri 233.4 M, apo 400.0 M)
+  chi 0.1: with 6.442544e-02, against 6.545821e-02; odd part -5.1639e-04; Lense-Thirring -4.9654e-04 (odd/LT 1.0400); Kerr -5.1639e-04 (odd/Kerr 1.0000)
+  chi 0.5: with 6.236297e-02, against 6.752684e-02; odd part -2.5819e-03; Lense-Thirring -2.4817e-03 (odd/LT 1.0404); Kerr -2.5820e-03 (odd/Kerr 1.0000)

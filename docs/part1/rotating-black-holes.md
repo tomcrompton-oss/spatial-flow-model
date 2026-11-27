@@ -90,4 +90,8 @@ the same rays past a hole with no spin (grey, dashed).
 *Light going round with the spin bends less than past a non-spinning hole; light going against it bends more.*
 [Open full screen](../../viewer/index.html?run=../runs/kerrPaths/kerrPaths_light.full.json){ target=_blank }
 
+The twist is built for one hole at rest. When several bodies move each other, spin comes in another way, as a swirl in
+the flow from the body's own rotating matter, and gives the same frame dragging: see
+[Spinning Bodies](../part4/spinning-bodies.md) in Part 4.
+
 *The code: studies/kerr_paths.py (the players) and studies/kerr_comparison.py (the comparison with exact Kerr).*

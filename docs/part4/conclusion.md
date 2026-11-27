@@ -21,6 +21,10 @@ the Earth, and round either body of a binary on any orbit tried, the averaged sp
 circular binary the rule gives general relativity's orbit exactly, as long as the flow keeps one correction the Moon
 hardly needed: each body's potential carried at its velocity.
 
+[Spinning Bodies](spinning-bodies.md) added spin, through the same moving potentials applied to a body's own
+rotating matter: a swirl in the flow round it. Orbits with and against the spin turn by exact Kerr's amount, the same
+frame dragging Part 1's river model gave with its twist.
+
 ## The scorecard
 
 | Test | Each body in the others' flow | … space curved | Moving with its own space, without the moving potentials | Moving with its own space |
@@ -30,6 +34,7 @@ hardly needed: each body's potential carried at its velocity.
 | Nordtvedt's $\eta$ (lunar laser ranging: under 10⁻⁴) | ❌ −0.76 | ❌ −1.56 | | ✅ argued |
 | Each body moving with its own space, any orbit (the rule's own check) | | | | ✅ to 3 × 10⁻⁸ of its speed |
 | A light body: the Moon's de Sitter turn, $k$ (measured: under 0.01) | ❌ +0.47 | | | ✅ +0.01 (Part 3) |
+| Orbits with and against a spinning body's spin, in its equator (exact Kerr: 1) | | | | ✅ 1.0000, one body at rest |
 
 *(The orbit's turning for the last two columns is worked out exactly for circular orbits, not run; for the last, its
 equality with general relativity's spacetime is argued. "Argued": it follows from general relativity's two-body

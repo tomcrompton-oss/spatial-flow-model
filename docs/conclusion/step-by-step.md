@@ -89,7 +89,8 @@ moves with the space round it, averaged over a small sphere: Hadamard's finite p
 flow alone instead fails a binary of comparable masses three ways. With this rule a circular binary's orbit is
 general relativity's exactly; without step 3.3's moving potentials it turns a third as fast at equal masses.
 
-**4.2 Spinning bodies.** Spin for bodies that move each other enters through step 3.3's moving potentials: each body's
+**4.2 Spinning bodies** ([Spinning Bodies](../part4/spinning-bodies.md)). Spin for bodies that move each other
+enters through step 3.3's moving potentials: each body's
 own rotating matter, which far from it is a swirl in the flow, $2G\,\mathbf J\times\mathbf x/c^2r^3$. Run round one
 spinning body with this swirl alone, no twist, clocks slowed only by their speed and flat space
 (`studies/frame_dragging.py`), orbits going with the spin and against it differ by exact Kerr's amount:
@@ -100,8 +101,8 @@ spinning body with this swirl alone, no twist, clocks slowed only by their speed
 | 55–100 M | 0.5 | −2.488 × 10⁻² | 0.9997 |
 | 233–400 M | 0.1 | −5.164 × 10⁻⁴ | 1.0000 |
 
-With no spin the orbits precess as exact Schwarzschild's, to 10⁻⁶. This step isn't in Parts 1 to 4: it shows that
-step 1.3's twist and the many-body model agree for one body.
+With no spin the orbits precess as exact Schwarzschild's, to 10⁻⁶. Step 1.3's twist and the many-body model agree for
+one body.
 
 ## 5. Waves
 

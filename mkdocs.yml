@@ -60,6 +60,7 @@ nav:
       - Bodies Moved by the Flow: part4/bodies-moved-by-the-flow.md
       - Each Body in the Others' Flow: part4/each-body-in-the-others-flow.md
       - Moving With Its Own Space: part4/moving-with-its-own-space.md
+      - Spinning Bodies: part4/spinning-bodies.md
       - Conclusion: part4/conclusion.md
   - Part 5 – Gravitational Waves: part5.md
   - Part 6 – Hawking and Unruh Radiation: part6/index.md
@@ -74,41 +75,18 @@ nav:
       - Viewers: appendix-a/viewers.md
       - Results: appendix-a/results.md
       - File Formats: appendix-a/formats.md
-  - Appendix B – Rabbit Holes: appendix-b.md
+  - Appendix B – Rabbit Holes:
+      - appendix-b/index.md
+      - How Much Gravity Can Go in the Clocks?: appendix-b/clocks.md
+      - Each Body Separately: appendix-b/each-body-separately.md
+      - Two Checks on Every Model: appendix-b/two-checks.md
+      - Flows With Curl: appendix-b/flows-with-curl.md
+      - One Time or Many: appendix-b/one-time-or-many.md
+      - The Step and the Geodesic: appendix-b/step-and-geodesic.md
   - Appendix C – References:
       - appendix-c/index.md
       - References: appendix-c/references.md
       - Prior Work: appendix-c/prior-work.md
-  - Archive:
-      - Overview: archive/index.md
-      - Preface: archive/preface.md
-      - The model, step by step: archive/evolution.md
-      - What comes from outside: archive/from-outside.md
-      - Part 1 – The Flow of Space:
-          - 1.1 Hypothesis: archive/part1/hypothesis.md
-          - 1.2 Mechanics of spatial flow: archive/part1/mechanics.md
-          - 1.3 The four tests: archive/part1/tests.md
-          - 1.4 Conclusion: archive/part1/conclusion.md
-      - Part 2 – More than one body:
-          - Part 2 in brief: archive/part2.md
-          - Two bodies:
-              - Introduction: archive/two-bodies/index.md
-              - Vector addition: archive/two-bodies/vectors.md
-              - Along g: archive/two-bodies/along-g.md
-              - The eikonal flow: archive/two-bodies/eikonal.md
-              - Each body carrying its flow: archive/two-bodies/turning.md
-              - Each body separately: archive/two-bodies/split.md
-              - Two checks on every model: archive/two-bodies/checks.md
-          - Gravitational waves: archive/waves.md
-          - Many bodies: archive/many-bodies.md
-          - Lapse and curved space: archive/lapse-curved-space.md
-          - Scorecard: archive/scorecard.md
-      - Simulations:
-          - Viewers: archive/viewers.md
-          - Results: archive/results.md
-          - File formats: archive/formats.md
-      - Prior work: archive/prior-work.md
-      - References: archive/references.md
 
 markdown_extensions:
   - admonition
