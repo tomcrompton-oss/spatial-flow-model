@@ -134,20 +134,15 @@ is within a few times the one that doesn't.
 
 ### Round and round
 
-An orbit round both bodies crosses the seam twice a time round. Over 20,000 seconds it crosses 27 times:
+An orbit round both bodies crosses the seam twice a time round. Over 20,000 seconds it crosses 27 times. The seam
+should take nothing from the orbit and give it nothing, so the orbit's energy should stay the same at every crossing:
 
-<iframe src="../../viewer/index.html?player&run=../runs/seams/orbit.full.json" width="100%" height="560" loading="lazy" title="An orbit round both bodies, crossing the seam"></iframe>
+<iframe src="../../viewer/index.html?player&state=zzVNNbxMxEP0rljnQSu7G9n7nBlKROHHosSrIyXoTg2MvtndDVOW_M3Y-KC2qoOJQ5RDv2PPmzZs393jCc0bwpOTW4_ntPXajiYdbnGWzeJ55KTZ-Zt1Chawftc6-emswwY8jd3cED072kH2PR6MCnucEOzlosbsZpOzwHDOK9zHmRx3SuwSCLsJaoo3tpL7Mln6KF5PyaqElngc3SoJ9cEKt1oDZC-0hEIRZSRMShvkVxXMDhAheWm3d6cOHXUTCnfBroAEMpOn8OSlxuJ6k2yUp0utEbrBRCfyGi7rpKmjZW606TI6oyqwA9g7gvNRyGVQkAsJB2pcf8Dr-75IsK2fH4cRmrbpOmk-xaISP-UcVoCHphEZOahHUpMLuVcpRC_gV0OAR4H_rsT_YEc5XFaW0zIu8yhjlBecFqSijTV4xmtVtydqCXOVt0xaMFTxr6oY1dVmQvK05hHiTcdrwnFdQcyGW32JdE30Y_TbYAIop0LvXdovSFQpbixa2U9AxyKc28qMJ0k1CQxJEeqvh7VnI1GYy9p99DBKpvpdOmqU8zvr5BbsGA6x2T9fsSfy3ZZPfR6Hf-QHInKfo13b7IXF9EHh_6OwU-qvdlIfSr8iHcSzowl-i2ZEcWq5jWXQxCBc8UgYx-rm6fMnunrBxJPMc9j_ZmIGPM0pbRmkBx6quCU8xxnlTVpzBFTiZ1VnJaFHmtGxqxsuWsKzhbdWUBWurnOYtrx87-eboQXQY3FsPmkzKWbOJY3iBhx_M-6l9oboAsSYYGyUYzCNdHMl-_xM" width="100%" height="560" loading="lazy" title="An orbit round both bodies, crossing the seam, and its energy"></iframe>
 
-*An orbit round both bodies: the model, space curved (blue), and general relativity (dashed).*
-[Open full screen](../../viewer/index.html?run=../runs/seams/orbit.full.json){ target=_blank }
-
-The seam should take nothing from the orbit and give it nothing, so its energy should stay the same at every crossing:
-
-<iframe src="../../viewer/index.html?player&run=../runs/seams/orbitEnergy.full.json" width="100%" height="400" loading="lazy" title="The orbit's energy over the run"></iframe>
-
-*The orbit's energy, its change from the start in parts in a million, over the run. It wanders by a few parts in 10⁷
-as the orbit goes round, and drifts by 16 parts in a million over the run, from the arithmetic's steps.*
-[Open full screen](../../viewer/index.html?run=../runs/seams/orbitEnergy.full.json){ target=_blank }
+*On the left, an orbit round both bodies: the model, space curved (blue), and general relativity (dashed). On the
+right, the orbit's energy, its change from the start in parts in a million, which builds up as the orbit goes round.
+The energy wanders by a few parts in 10⁷ as the orbit goes round, and drifts by 16 parts in a million over the run,
+from the arithmetic's steps.* [Open full screen](../../viewer/index.html?state=zzVNNbxMxEP0rljnQSu7G9n7nBlKROHHosSrIyXoTg2MvtndDVOW_M3Y-KC2qoOJQ5RDv2PPmzZs393jCc0bwpOTW4_ntPXajiYdbnGWzeJ55KTZ-Zt1Chawftc6-emswwY8jd3cED072kH2PR6MCnucEOzlosbsZpOzwHDOK9zHmRx3SuwSCLsJaoo3tpL7Mln6KF5PyaqElngc3SoJ9cEKt1oDZC-0hEIRZSRMShvkVxXMDhAheWm3d6cOHXUTCnfBroAEMpOn8OSlxuJ6k2yUp0utEbrBRCfyGi7rpKmjZW606TI6oyqwA9g7gvNRyGVQkAsJB2pcf8Dr-75IsK2fH4cRmrbpOmk-xaISP-UcVoCHphEZOahHUpMLuVcpRC_gV0OAR4H_rsT_YEc5XFaW0zIu8yhjlBecFqSijTV4xmtVtydqCXOVt0xaMFTxr6oY1dVmQvK05hHiTcdrwnFdQcyGW32JdE30Y_TbYAIop0LvXdovSFQpbixa2U9AxyKc28qMJ0k1CQxJEeqvh7VnI1GYy9p99DBKpvpdOmqU8zvr5BbsGA6x2T9fsSfy3ZZPfR6Hf-QHInKfo13b7IXF9EHh_6OwU-qvdlIfSr8iHcSzowl-i2ZEcWq5jWXQxCBc8UgYx-rm6fMnunrBxJPMc9j_ZmIGPM0pbRmkBx6quCU8xxnlTVpzBFTiZ1VnJaFHmtGxqxsuWsKzhbdWUBWurnOYtrx87-eboQXQY3FsPmkzKWbOJY3iBhx_M-6l9oboAsSYYGyUYzCNdHMl-_xM){ target=_blank }
 
 Some of its wiggles fall at crossings, so the steps were measured one by one:
 
@@ -169,11 +164,13 @@ What if nothing changed at the seam: the crosser simply kept its velocity throug
 in the other side's flow? Then its velocity $\mathbf v = \mathbf u + \mathbf w$ would jump by the jump in the flow,
 which between two bodies is up to twice the flow's speed. The path would kink.
 
-<iframe src="../../viewer/index.html?player&run=../runs/seams/without.full.json" width="100%" height="560" loading="lazy" title="Crossing the seam without the rule"></iframe>
+<iframe src="../../viewer/index.html?player&state=z7Vffb5swEP5XLO9lkyiFJEDI2x72MKnSpr1NVTQ5cCRejI1sQxZl-d93JjStlFWrkqYlWhUpmON-fvYdHxva0Eno0YbDytDJ7YbqWrrFLfX9a7e-NsBKc73idqFq6xe1EP5PoyT16KFsOvVopaFADxtaS27pZLj1qAZTC9sKGamYtjwTQJglQy8IArIsSQWaGMiUzMn7OUjQTBANglnecLv-4GemcdYNN3wmgE6srsGjxmrG5wuMUjBhUGCZRGvrVDGbvZROJKbo0UwJpe9ujF07TzRnZgE5xTRB5mZvpPSM208N6HULUKvdVlAphw99lzD8jRCGzoHXueVyjn6n6M-AgMxylwniiXY_fqG6u65bpOZa1dVdOgue5yC_uKjOv7N_AlZ2ASTTyrioRNcCegnVgCXjPMbajRL8lZCSqsXHIw6yUpVYe12SJVS2l5Dl8ShL2ItBFgaHmHlEAtOEkZnK129teTxyl9Gk4YwV_TpxF9eybBDC2QDc7t7SuL4aJuE4HYaDgR-FcRqPx5EXJ0EUJWE09NMkDZLUu0qjcZAORuPIj4fDQTBKvTBIw1ESJHHqjyNUDwYYdMaypQsscyzdAV0pi4hx7PRCqBVpHxG7Um5TOFaM8PESPksLumECjVBSKIG6eyDbOsE5POF1jx3MiwI0yAy6I3QGduJRoebf9-dnoVZfmV3cAGaVd1t_FgLTHao3BvOE4dgHrC6NwvQBs8vkMP9jZz4PiekDcpfNYvrRtS9DY3bPz0w_MHg-IfdEgvwmz72Bx7h8ZA45V87TAffZ0CVvEboXow57GsF6pHMR-1MJGp67upTOS5e1AWsxijmg5ltH3k6o4V9N1Ndijh-sf6vohDfc69V3zNa9WKHTLQ4shtOsQVGAHwNsDbpVnOOfG3YZE0zv1nbFje3E-NmxW2FqVtWtDd65mXXDJZj9w7tlvbtwiXNYfNRarcxDybcuwe12-wc" width="100%" height="560" loading="lazy" title="Crossing the seam without the rule"></iframe>
 
-*Two particles crossing the seam: with the crossing rule (blue, green), without it (pink, amber), and general
-relativity (grey, dashed). Without the rule, each kinks at the seam and leaves general relativity's path.*
-[Open full screen](../../viewer/index.html?run=../runs/seams/without.full.json){ target=_blank }
+*On the left, two particles crossing the seam: with the crossing rule (blue, green), without it (pink, amber), and
+general relativity (grey, dashed). Without the rule, each kinks at the seam and leaves general relativity's path. On
+the right, how far each particle is from general relativity's path as time goes on, in the same colours and on a log
+scale. With the rule, each stays within 24 km of it. Without the rule, each jumps away at the seam, and ends
+tens of thousands of kilometres from it.* [Open full screen](../../viewer/index.html?state=z7Vffb5swEP5XLO9lkyiFJEDI2x72MKnSpr1NVTQ5cCRejI1sQxZl-d93JjStlFWrkqYlWhUpmON-fvYdHxva0Eno0YbDytDJ7YbqWrrFLfX9a7e-NsBKc73idqFq6xe1EP5PoyT16KFsOvVopaFADxtaS27pZLj1qAZTC9sKGamYtjwTQJglQy8IArIsSQWaGMiUzMn7OUjQTBANglnecLv-4GemcdYNN3wmgE6srsGjxmrG5wuMUjBhUGCZRGvrVDGbvZROJKbo0UwJpe9ujF07TzRnZgE5xTRB5mZvpPSM208N6HULUKvdVlAphw99lzD8jRCGzoHXueVyjn6n6M-AgMxylwniiXY_fqG6u65bpOZa1dVdOgue5yC_uKjOv7N_AlZ2ASTTyrioRNcCegnVgCXjPMbajRL8lZCSqsXHIw6yUpVYe12SJVS2l5Dl8ShL2ItBFgaHmHlEAtOEkZnK129teTxyl9Gk4YwV_TpxF9eybBDC2QDc7t7SuL4aJuE4HYaDgR-FcRqPx5EXJ0EUJWE09NMkDZLUu0qjcZAORuPIj4fDQTBKvTBIw1ESJHHqjyNUDwYYdMaypQsscyzdAV0pi4hx7PRCqBVpHxG7Um5TOFaM8PESPksLumECjVBSKIG6eyDbOsE5POF1jx3MiwI0yAy6I3QGduJRoebf9-dnoVZfmV3cAGaVd1t_FgLTHao3BvOE4dgHrC6NwvQBs8vkMP9jZz4PiekDcpfNYvrRtS9DY3bPz0w_MHg-IfdEgvwmz72Bx7h8ZA45V87TAffZ0CVvEboXow57GsF6pHMR-1MJGp67upTOS5e1AWsxijmg5ltH3k6o4V9N1Ndijh-sf6vohDfc69V3zNa9WKHTLQ4shtOsQVGAHwNsDbpVnOOfG3YZE0zv1nbFje3E-NmxW2FqVtWtDd65mXXDJZj9w7tlvbtwiXNYfNRarcxDybcuwe12-wc){ target=_blank }
 
 | Path | With the rule: furthest from general relativity | Without: furthest | Without: its kink at the seam |
 | --- | --- | --- | --- |

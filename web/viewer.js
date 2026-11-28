@@ -409,7 +409,7 @@ function buildPaths(result, entry) {
     const found = pairs(names), position = found.filter(p => !/^(v|u|w|a|vel|velocity|acc|accel|f|force)\d*$/i.test(p[0]));
     selection = (position.length ? position : found.slice(0, 1)).map(p => [p[1], p[2]]);
   }
-  const time = columns.t || columns.time || null;
+  const tName = timeColumnOf(result, 't'), time = tName ? columns[tName] : null;
   result.selection = selection;
   //one path per value of a column (the desktop's group): each path the rows with that value, the rest left empty
   result.group = entry.group && names.includes(entry.group) ? entry.group : null;
@@ -438,6 +438,9 @@ function buildPaths(result, entry) {
 function timeColumnOf(result, option) {
   const names = result.data.names, lower = new Map(names.map(n => [n.toLowerCase(), n]));
   for (const c of TIME_OPTIONS[option]) if (lower.has(c)) return lower.get(c);
+  //a name with its unit after it, such as 'time (s)'
+  const bare = new Map(names.map(n => [n.toLowerCase().replace(/\s*\([^)]*\)\s*$/, ''), n]));
+  for (const c of TIME_OPTIONS[option]) if (bare.has(c)) return bare.get(c);
   return null;
 }
 
@@ -3144,8 +3147,8 @@ function makeDerived(spec) {
   const data = {names: Object.keys(cols), columns: cols, rows: made.t.length, text: name => Array.from(cols[name], x => isFinite(x) ? String(x) : '')};
   const log = {bodies: [], orbitEnds: [], text: 'Made in the viewer from ' + spec.a + (spec.b ? ' and ' + spec.b : '') + ': ' + made.label +
                ' against t (' + DERIVED_KINDS[spec.kind].toLowerCase() + ').'};
-  //made from one result: drawn in its colour, so each line matches the path it comes from
-  const from = spec.kind !== 'difference' && state.results.find(r => r.file === spec.a), first = from && from.paths && from.paths[0];
+  //drawn in the colour of the result it is made from (the first, for a difference), so each line matches its path
+  const from = state.results.find(r => r.file === spec.a), first = from && from.paths && from.paths[0];
   const result = {name: made.name, file: 'added: ' + [spec.kind, spec.a, spec.b || '', spec.column].join(' | '), data, log, visible: true,
                   color: first ? first.color || from.color : SERIES[state.results.length % SERIES.length], source: null, ends: false, orbitEvery: 1, dots: !!made.dots,
                   tangent: {on: false, t: null, color: null, style: 'dashed'}, derived: {kind: spec.kind, a: spec.a, b: spec.b || null, column: spec.column}};

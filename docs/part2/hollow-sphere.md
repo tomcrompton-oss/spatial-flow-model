@@ -114,11 +114,12 @@ space, and nothing about the shell changes with time, so both keep the same time
 far wall in A that makes its speed through the space outside $2u_R/(1 + u_R^2/c^2)$, the same as an escaping clock
 thrown up from the surface.)
 
-<iframe src="../../viewer/index.html?player&run=../runs/hollowSphere/hollowSphere_boundary.full.json" width="100%" height="480" loading="lazy" title="Falling through a hollow sphere: changing reference frame"></iframe>
+<iframe src="../../viewer/index.html?player&state=z7ZZNj5swEIb_SjQ99EKIDQRIbrv9kCqt1Kp7jKLIgAluHZzaQJpG-e8ds8muol36cciKNiskZMbjmdfPIM3soIEpdaARfGNgOtuBrku7mIHrjux6VCgp1eZ2XXDNTz4WZqVUVbh5LaX7xagSHPj1_nzuwFrzHBPsgH-rmbwya55WMM2ZNNwBU6jNewxwYrhWmeDmxHSbFhumf5i0EDI72fnEquKGL3l5NO8d0NzUsmqTokleHYQtPOKFQ0qHXrTwvCGuSeSmprF-jTAikRymla5t5EozsSwehFasxByVdcV73VthWuJlHUiVVPr4YaqtjQQZMwXPAAWhuof7KJ2I6l3D9batROvdal0rs_g-GA0w6gxeeSyKsxARGyVFBs4htiiXGHyOQQ2XiFJYOVi99jBYSRb6Uqt6fdRTiCzj5Ueb1lbanrVYrjuxUNJfLNwPJkF8RixvurGE_cVCE5ZH7IxY3nZjmfT4b8kYJeRMWDaI5aYDS4Tr_mJJYvucEcvnFyynWPZ3LRfXQ4-Mx0HoejQOQ98LCPGdJ0xD4hJCxj6lNJxQLwoca4hohK_Y9-hkgjkTln61eW3zg9tWHM8Gd-3vtRnwshFalStLEWWKFf9QVlw3TKI7WvK2ed8zPJzHvT_qmg5kIs-x75cpP9T-r6aJxOpmets9Tzzh0ZeJ4ijtMR3fu-iZohtMML7oqaIbzDi-6LmiC0y_e8UzTBb_JphnmC1ewPwH08VvO-jj-QI1MQTUYC2IA5Jtubac9_uf" width="100%" height="480" loading="lazy" title="Falling through a hollow sphere: carried with the space, and changing reference frame"></iframe>
 
-*The same four options, the faller changing reference frame wherever space meets itself. All four now pass straight
-through and climb away on the far side.*
-[Open full screen](../../viewer/index.html?run=../runs/hollowSphere/hollowSphere_boundary.full.json){ target=_blank }
+*The same four options, both ways, on the same axes and one clock. On the left, the faller is carried with the space,
+and each stops at a wall or at the centre, as above. On the right, the faller changes reference frame wherever space
+meets itself, and all four now pass straight through and climb away on the far side.*
+[Open full screen](../../viewer/index.html?state=z7ZZNj5swEIb_SjQ99EKIDQRIbrv9kCqt1Kp7jKLIgAluHZzaQJpG-e8ds8muol36cciKNiskZMbjmdfPIM3soIEpdaARfGNgOtuBrku7mIHrjux6VCgp1eZ2XXDNTz4WZqVUVbh5LaX7xagSHPj1_nzuwFrzHBPsgH-rmbwya55WMM2ZNNwBU6jNewxwYrhWmeDmxHSbFhumf5i0EDI72fnEquKGL3l5NO8d0NzUsmqTokleHYQtPOKFQ0qHXrTwvCGuSeSmprF-jTAikRymla5t5EozsSwehFasxByVdcV73VthWuJlHUiVVPr4YaqtjQQZMwXPAAWhuof7KJ2I6l3D9batROvdal0rs_g-GA0w6gxeeSyKsxARGyVFBs4htiiXGHyOQQ2XiFJYOVi99jBYSRb6Uqt6fdRTiCzj5Ueb1lbanrVYrjuxUNJfLNwPJkF8RixvurGE_cVCE5ZH7IxY3nZjmfT4b8kYJeRMWDaI5aYDS4Tr_mJJYvucEcvnFyynWPZ3LRfXQ4-Mx0HoejQOQ98LCPGdJ0xD4hJCxj6lNJxQLwoca4hohK_Y9-hkgjkTln61eW3zg9tWHM8Gd-3vtRnwshFalStLEWWKFf9QVlw3TKI7WvK2ed8zPJzHvT_qmg5kIs-x75cpP9T-r6aJxOpmets9Tzzh0ZeJ4ijtMR3fu-iZohtMML7oqaIbzDi-6LmiC0y_e8UzTBb_JphnmC1ewPwH08VvO-jj-QI1MQTUYC2IA5Jtubac9_uf){ target=_blank }
 
 | Option | In to the shell (s) | Across the inside: its clock (s) | Across the inside: the flow's time (s) | Out to the same distance (s) | The whole trip: its clock (s) |
 | --- | --- | --- | --- | --- | --- |
