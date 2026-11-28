@@ -69,13 +69,16 @@ against the spin falls into the hole.
 Three orbits, starting at the same place and speed: going round with the spin (blue), against it (red), and round a
 hole with no spin (grey). The markers are each orbit's closest and furthest points.
 
-<iframe src="../../viewer/index.html?player&run=../runs/kerrPaths/kerrPaths_orbits.full.json" width="100%" height="520" loading="lazy" title="Orbits round a spinning black hole"></iframe>
+<iframe src="../../viewer/index.html?player&state=z7VVNj9MwEP0r0XB1s7bz4SS3PXBAArGCY1VVbuK0pl47sp2Uqpv_jpJ-EMQuLIJFleDkmbE9b_zGfj5ABwVB0Emxc1DMD2BbPRhzCMObwb7ZCmvvuN9MrKWxK-ldWLdKhZ-c0YDgB5OLBYLGitpBcQC3MbuPJVfcQlFz5QQ6hhqpofC2PfnvuN0K66ahO2Hl1L9tzNHtEVjhWuVHgBF-uZN-M-RcUkzTGSEzypY0mmE6o1lYum5Y2UknV0pccnrL5XrjL3V5rtdC-zGp_hqFQrdKISiNMvbsOL8fMkHF3UZU0CMQunKXTWNRrzth9yPd4-qx2sYMbMMryllWpYDAGSUrQPCKrHjNOCDwlmsnvRyY7BE4oUQ5ekOXGuOWnwGN435kem1N25zL2siqEvr92BEo5sP-Iz98zaV2_nGKovwaKRJRnMfZlCJRcYLxS1GkzePsJOQa2UloQmIxZaeMSrpif5qd_igWUMxnlJEoymic04iElCVZgiijlGQxJpimIUkwQ7M0zUicsoSQOA0xzQhK05xEOU5TSqOQYRYtEKx4uR2AdQUF-I0IrOyEDUwd8MA1Umup18HGqOGEXt6LN9oL23EFBQCC2ihldhcqxwOKIdMzxQBBJetaWKFLcboE_6YSnuv4L4VPS-E1cHTFWngN9Px9MaQswUmIY0pIHCV5EiOCE0zSkLIoiVKSETRjeciyOCcxZRTjhCWIsDRkGOOUZTnFmEbZy0khrypRFcFRk4KH4DmNDR6C4CFohJW3ej0CfquTB9hKfdFZBwj4r4juatL89l5DAVMoJ7yXeu2--2n7QZ2fBn7Oe34p7J-8k9-AXfQLBLz0shNQYASK78df4QBrKA7DTT59JYPtd9L5U1jw-6NVGu1NO-7pEdTK7N5KLdxl8my2x0Hqmit1a63ZuWnkw6nAvu-_AA" width="100%" height="520" loading="lazy" title="Orbits round a spinning black hole"></iframe>
 
-*The hole turns the way it spins (not at its real speed). Grey arrows: the river, flowing straight in. Green arcs: the
+*Left: the orbits. The hole turns the way it spins (not at its real speed). Grey arrows: the river, flowing straight in. Green arcs: the
 twist, how fast the river's twist turns something falling straight in through it, the way it is turned. Zoom in on the
 hole to see its horizon (dotted circle) and ergosphere (dashed). In full screen, tick "colour map" to see the twist
-itself.*
-[Open full screen](../../viewer/index.html?run=../runs/kerrPaths/kerrPaths_orbits.full.json){ target=_blank }
+itself. Right: the direction of each orbit's closest point against time, in the orbit's own colour. Its slope is
+how far the closest point moves on each orbit: about 37° with the spin and 52° with no spin. Against the spin it falls
+by about 74° an orbit, because that orbit goes round the other way. An orbit whose closest point fell on the line
+between one orbit and the next has no point of its own.*
+[Open full screen](../../viewer/index.html?state=z7VVNj9MwEP0r0XB1s7bz4SS3PXBAArGCY1VVbuK0pl47sp2Uqpv_jpJ-EMQuLIJFleDkmbE9b_zGfj5ABwVB0Emxc1DMD2BbPRhzCMObwb7ZCmvvuN9MrKWxK-ldWLdKhZ-c0YDgB5OLBYLGitpBcQC3MbuPJVfcQlFz5QQ6hhqpofC2PfnvuN0K66ahO2Hl1L9tzNHtEVjhWuVHgBF-uZN-M-RcUkzTGSEzypY0mmE6o1lYum5Y2UknV0pccnrL5XrjL3V5rtdC-zGp_hqFQrdKISiNMvbsOL8fMkHF3UZU0CMQunKXTWNRrzth9yPd4-qx2sYMbMMryllWpYDAGSUrQPCKrHjNOCDwlmsnvRyY7BE4oUQ5ekOXGuOWnwGN435kem1N25zL2siqEvr92BEo5sP-Iz98zaV2_nGKovwaKRJRnMfZlCJRcYLxS1GkzePsJOQa2UloQmIxZaeMSrpif5qd_igWUMxnlJEoymic04iElCVZgiijlGQxJpimIUkwQ7M0zUicsoSQOA0xzQhK05xEOU5TSqOQYRYtEKx4uR2AdQUF-I0IrOyEDUwd8MA1Umup18HGqOGEXt6LN9oL23EFBQCC2ihldhcqxwOKIdMzxQBBJetaWKFLcboE_6YSnuv4L4VPS-E1cHTFWngN9Px9MaQswUmIY0pIHCV5EiOCE0zSkLIoiVKSETRjeciyOCcxZRTjhCWIsDRkGOOUZTnFmEbZy0khrypRFcFRk4KH4DmNDR6C4CFohJW3ej0CfquTB9hKfdFZBwj4r4juatL89l5DAVMoJ7yXeu2--2n7QZ2fBn7Oe34p7J-8k9-AXfQLBLz0shNQYASK78df4QBrKA7DTT59JYPtd9L5U1jw-6NVGu1NO-7pEdTK7N5KLdxl8my2x0Hqmit1a63ZuWnkw6nAvu-_AA){ target=_blank }
 
 Going round with the spin, the orbit's closest point moves on by less than round a hole with no spin; against it, by
 more. The spinning hole drags the orbit round with it.

@@ -1580,31 +1580,34 @@ function drawInfall(pane, c, dt) {
     const black = env.bodies.filter(b => b.black), white = env.bodies.filter(b => !b.black);
     const corners = [[v[0], v[2]], [v[0], v[3]], [v[1], v[2]], [v[1], v[3]]];
     //a ring falling in: round the black bodies' centre of mass, from outside the view; one going out: from round a white body
-    const ring = (cx, cy, R) => {
-      const n = Math.max(48, Math.min(720, Math.round(2 * Math.PI * R / perPixel / 5)));
-      return Array.from({length: n}, (_, i) => [cx + R * Math.cos(2 * Math.PI * i / n), cy + R * Math.sin(2 * Math.PI * i / n)]);
+    //each ring keeps its source, so it can fade in as it starts and out as it reaches the hole
+    const ring = (src, R, age = 0) => {
+      const {cx, cy} = src, n = Math.max(48, Math.min(720, Math.round(2 * Math.PI * R / perPixel / 5)));
+      return Object.assign(Array.from({length: n}, (_, i) => [cx + R * Math.cos(2 * Math.PI * i / n), cy + R * Math.sin(2 * Math.PI * i / n)]),
+                           {src, age});
     };
     const sources = [];
     if (black.length) {
       const m = black.reduce((sum, q) => sum + q.mass, 0);
       const cx = black.reduce((sum, q) => sum + q.mass * q.x, 0) / m, cy = black.reduce((sum, q) => sum + q.mass * q.y, 0) / m;
-      sources.push({cx, cy, R: Math.max(...corners.map(([x, y]) => Math.hypot(x - cx, y - cy))) * 1.02, inward: true});
+      sources.push({cx, cy, R: Math.max(...corners.map(([x, y]) => Math.hypot(x - cx, y - cy))) * 1.02, inward: true,
+                    end: Math.max(...black.map(q => 0.5 * bodyCircles(q)[0][0]))});
     }
     for (const q of white) sources.push({cx: q.x, cy: q.y, R: Math.max(1.5 * bodyCircles(q)[0][0], 6 * perPixel), inward: false});
     //at the start, rings already on their way in, so the view isn't empty while the first ones arrive
     if (!state_.rings.length && !state_.started) {
       state_.started = true;
       for (const src of sources.filter(q => q.inward))
-        for (let R = src.R; R > 4 * perPixel; R -= spacingPx * perPixel) state_.rings.push(ring(src.cx, src.cy, R));
+        for (let R = src.R; R > 4 * perPixel; R -= spacingPx * perPixel) state_.rings.push(ring(src, R, RING_FADE));
     }
     state_.wait -= dt;
     if (state_.wait <= 0) {
-      for (const src of sources) state_.rings.push(ring(src.cx, src.cy, src.R));
+      for (const src of sources) state_.rings.push(ring(src, src.R));
       //the next when this one has moved a ring's spacing: at the speed of the flow where it starts
       const src = sources[0], u = src && flowAt(src.cx + src.R, src.cy, t), speedPx = u ? Math.hypot(u[0], u[1]) * k / perPixel : 0;
       state_.wait = speedPx > 0 ? Math.min(6, spacingPx / speedPx) : 2;
     }
-    c.strokeStyle = look.colour; c.lineWidth = look.width; c.globalAlpha = 0.8;
+    c.strokeStyle = look.colour; c.lineWidth = look.width;
     const reach = Math.max(...corners.map(([x, y]) => Math.hypot(x - (v[0] + v[1]) / 2, y - (v[2] + v[3]) / 2))) * 1.6;
     state_.rings = state_.rings.filter(points => {
       let alive = 0;
@@ -1616,6 +1619,17 @@ function drawInfall(pane, c, dt) {
         points[i] = moved; alive++;
       }
       if (alive < 3) return false;
+      //faded in over its first RING_FADE seconds, and out over its last RING_FADE_PX pixels before the hole
+      points.age += dt;
+      let fade = Math.min(1, points.age / RING_FADE);
+      if (points.src && points.src.inward) {
+        let sum = 0, count = 0;
+        for (const p of points) if (p) { sum += Math.hypot(p[0] - points.src.cx, p[1] - points.src.cy); count++; }
+        const leftPx = (sum / count - points.src.end) / perPixel;
+        if (leftPx <= 0) return false;
+        fade = Math.min(fade, leftPx / RING_FADE_PX);
+      }
+      c.globalAlpha = 0.8 * Math.max(0, fade);
       //the loop, broken where a point is gone or two neighbours have pulled far apart
       c.beginPath();
       let pen = false, last = null;
@@ -1633,6 +1647,8 @@ function drawInfall(pane, c, dt) {
     c.globalAlpha = 1;
   } else { state_.rings.length = 0; state_.started = false; }
 }
+
+const RING_FADE = 0.8, RING_FADE_PX = 40;   //falling-space rings: seconds to fade in, pixels to fade out before the hole
 
 function overlayArrow(c, x0, y0, x1, y1) {
   c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke();
@@ -3128,8 +3144,10 @@ function makeDerived(spec) {
   const data = {names: Object.keys(cols), columns: cols, rows: made.t.length, text: name => Array.from(cols[name], x => isFinite(x) ? String(x) : '')};
   const log = {bodies: [], orbitEnds: [], text: 'Made in the viewer from ' + spec.a + (spec.b ? ' and ' + spec.b : '') + ': ' + made.label +
                ' against t (' + DERIVED_KINDS[spec.kind].toLowerCase() + ').'};
+  //made from one result: drawn in its colour, so each line matches the path it comes from
+  const from = spec.kind !== 'difference' && state.results.find(r => r.file === spec.a), first = from && from.paths && from.paths[0];
   const result = {name: made.name, file: 'added: ' + [spec.kind, spec.a, spec.b || '', spec.column].join(' | '), data, log, visible: true,
-                  color: SERIES[state.results.length % SERIES.length], source: null, ends: false, orbitEvery: 1, dots: !!made.dots,
+                  color: first ? first.color || from.color : SERIES[state.results.length % SERIES.length], source: null, ends: false, orbitEvery: 1, dots: !!made.dots,
                   tangent: {on: false, t: null, color: null, style: 'dashed'}, derived: {kind: spec.kind, a: spec.a, b: spec.b || null, column: spec.column}};
   result.paths = buildPaths(result, {selection: [['t', made.label]]});
   result.env = environmentFor(log, new Map());

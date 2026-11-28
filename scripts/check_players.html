@@ -28,7 +28,8 @@
 'use strict';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/* the iframe's page loaded and its run drawn: results open, and the plot the same twice running */
+/* the iframe's page loaded and its runs drawn: results open, and the plots the same twice running. returns each view's
+   plot canvas (a split player has two) */
 async function settled(frame, timeout = 60000) {
   const start = performance.now();
   let last = null, same = 0;
@@ -38,12 +39,12 @@ async function settled(frame, timeout = 60000) {
     let ready = false;
     try { ready = w.eval("typeof state !== 'undefined' && state && state.results && state.results.length > 0"); } catch (e) { /* not yet */ }
     if (!ready) continue;
-    const canvas = w.document.getElementById('plot');
-    if (!canvas || !canvas.width) continue;
-    const now = canvas.toDataURL();
+    const canvases = [...w.document.querySelectorAll('canvas.plot')];
+    if (!canvases.length || canvases.some(c => !c.width)) continue;
+    const now = canvases.map(c => c.toDataURL()).join();
     same = now === last ? same + 1 : 0;
     last = now;
-    if (same >= 2) return canvas;
+    if (same >= 2) return canvases;
   }
   return null;
 }
@@ -59,7 +60,19 @@ function load(frame, src) {
   });
 }
 
-function compare(a, b) {
+/* every view's plot, pixel by pixel */
+function compare(as, bs) {
+  if (as.length !== bs.length) return {differ: -1, total: 0};
+  let differ = 0, total = 0;
+  for (let k = 0; k < as.length; k++) {
+    const one = compareOne(as[k], bs[k]);
+    if (one.differ === -1) return one;
+    differ += one.differ; total += one.total;
+  }
+  return {differ, total};
+}
+
+function compareOne(a, b) {
   if (a.width !== b.width || a.height !== b.height) return {differ: -1, total: 0};
   const pa = a.getContext('2d').getImageData(0, 0, a.width, a.height).data, pb = b.getContext('2d').getImageData(0, 0, b.width, b.height).data;
   let differ = 0;
@@ -84,7 +97,7 @@ function compare(a, b) {
     if (!a || !b) row.error = (!a ? 'base' : 'new') + ' never settled';
     else {
       Object.assign(row, compare(a, b));
-      if (row.differ) row.images = [a.toDataURL(), b.toDataURL()];
+      if (row.differ) row.images = [a[0].toDataURL(), b[0].toDataURL()].concat(a.length > 1 ? [a[1].toDataURL(), b[1].toDataURL()] : []);
     }
     out.push(row);
   }
@@ -99,7 +112,7 @@ function compare(a, b) {
   for (const r of out.filter(r => r.images)) {
     const pair = document.createElement('div');
     pair.className = 'pair';
-    pair.innerHTML = '<div>' + r.run + '<br>base</div><img src="' + r.images[0] + '"><img src="' + r.images[1] + '"><div>new</div>';
+    pair.innerHTML = '<div>' + r.run.slice(0, 80) + '<br>base</div>' + r.images.map(src => '<img src="' + src + '">').join('') + '<div>new</div>';
     summary.append(pair);
   }
   const result = document.getElementById('result');

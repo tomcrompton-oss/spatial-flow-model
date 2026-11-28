@@ -135,11 +135,13 @@ procedure is Newton's gravity whatever $\mathbf w$ is, so here is a case where t
 the Earth between 7,000 km and 20,000 km from its centre. At the far end the satellite moves sideways at 3,215 m/s,
 in space falling straight in at 6,313 m/s — so relative to its space it moves at 7,085 m/s, mostly outwards.
 
-<iframe src="../../../viewer/index.html?player&run=../runs/newtonianFlow/newtonian_orbit.full.json" width="100%" height="560" loading="lazy" title="An orbit of the Earth"></iframe>
+<iframe src="../../../viewer/index.html?player&state=zzVPBitswEP2VMr3KXktWHNu3HlpYKBTaYwhBsce2WkUKkmw3G_zvRXKSZaGFHnroSaMZzXszb0ZXmKCmBCaJs4N6dwU76mDsIE2fgv2kcfZGS6E_KTO_3g7GHqVPu1Gp9LszGgj8ObbfEzhb7BzUV3CDmQMW1J1QDkl0fGuGWdgX1wxStW8iz7oTSn2w1oQKvR1xIWDRjcpHuMh16JSZDyxjRUJpwvID5QllCaNp46bwapJOHhWuAASct0L2g38weaF71D4C6lcv1HpUikBjlLH3i_OXgAStcAO2sBBA3bpHUizo44T2EqWNr2OlZxOUhfdMbMu2AALOKNkCuaFK3SuE_ULAocLGy1DIbhfSDj-BxPMSpeytGc_3agbZtqi_BNIAH_JXSdZx_EYU_j-KgseizDmQO8C_VmVZlxzqXUI3VcGzTZZWOaO0zCpGWFkVnHGe8oLzPLoSmm_ZJi-ytCi3PKdVVZHVlfM0K1mesz2Bo2h-BGLdQg1-wHdhEYGAlyd81h7tJBTUAAQ6o-LS3_qKzWDI-osFJtDKrkOLusG1nT0B0Xg5IdQZASUuaKOcPdTXoFUjlLCr7Wfp_M2N4rRajdHejDFnIRDIP0uN7hG8m-N6yDef8BpHP1qoIUlOY2iDQIvaSR_GmxZhbi8YJz3L1g_ByQi4M4aO6QPwq9R9JFqWXw" width="100%" height="560" loading="lazy" title="An orbit of the Earth"></iframe>
 
 *Three times round, by the procedure (blue, its second-order form, steps of 0.5 s) and under Newtonian gravity
-(orange, dashed). The closest approach stays at 7,000 km to within 5 m over the three orbits.*
-[Open full screen](../../../viewer/index.html?run=../runs/newtonianFlow/newtonian_orbit.full.json){ target=_blank }
+(orange, dashed). The closest approach stays at 7,000 km to within 5 m over the three orbits. The grey points are
+space itself, falling in towards the Earth at a speed chosen for the picture, faster closer in; the satellite moves
+through it.*
+[Open full screen](../../../viewer/index.html?state=zzVPBitswEP2VMr3KXktWHNu3HlpYKBTaYwhBsce2WkUKkmw3G_zvRXKSZaGFHnroSaMZzXszb0ZXmKCmBCaJs4N6dwU76mDsIE2fgv2kcfZGS6E_KTO_3g7GHqVPu1Gp9LszGgj8ObbfEzhb7BzUV3CDmQMW1J1QDkl0fGuGWdgX1wxStW8iz7oTSn2w1oQKvR1xIWDRjcpHuMh16JSZDyxjRUJpwvID5QllCaNp46bwapJOHhWuAASct0L2g38weaF71D4C6lcv1HpUikBjlLH3i_OXgAStcAO2sBBA3bpHUizo44T2EqWNr2OlZxOUhfdMbMu2AALOKNkCuaFK3SuE_ULAocLGy1DIbhfSDj-BxPMSpeytGc_3agbZtqi_BNIAH_JXSdZx_EYU_j-KgseizDmQO8C_VmVZlxzqXUI3VcGzTZZWOaO0zCpGWFkVnHGe8oLzPLoSmm_ZJi-ytCi3PKdVVZHVlfM0K1mesz2Bo2h-BGLdQg1-wHdhEYGAlyd81h7tJBTUAAQ6o-LS3_qKzWDI-osFJtDKrkOLusG1nT0B0Xg5IdQZASUuaKOcPdTXoFUjlLCr7Wfp_M2N4rRajdHejDFnIRDIP0uN7hG8m-N6yDef8BpHP1qoIUlOY2iDQIvaSR_GmxZhbi8YJz3L1g_ByQi4M4aO6QPwq9R9JFqWXw){ target=_blank }
 
 The procedure as the steps above have it is first order, and its error shows in an orbit: with steps of 0.1 s the
 closest approach creeps out by 4 km an orbit, and with steps of 0.05 s by 2 km — half as much at half the step, so it

@@ -54,12 +54,12 @@ at 7 Schwarzschild radii: close to the hole it is the approximation that fails, 
 
 **Test — passed**
 
-<iframe src="../../../viewer/index.html?player&run=../runs/part1/part1_bending.full.json" width="100%" height="520" loading="lazy" title="Light bending round a black hole"></iframe>
+<iframe src="../../../viewer/index.html?player&state=z1ZdNi9swEIb_SpleZVfyd3zroYWFQqHXEIJijR21WilIst00-L8X2dmUHrb0Ylhf7NFYM6N55znINxigZgQGiaODen8D2-tg7CGOPwT7w4Vbz5bn8YRaSN3Fba9U_N0ZDQRe-3I4ELhYbB3UN3BnM35WZoS65cohmR1PuuVKfbTWhNre9jgRsOh65eegkDM7tsqMx4QmRcRYxNIjyyNKI5rFjRvCrkE6eVK4JCDgvOWyO_tHJc91h9qHrUb_8UKte6UINEYZ-7Jw_hoygeDujAImAqiFewQZe5L-04D2Oos2755PejFBM3if8LISBRBwRkkB5J5V6k4hHCYCDhU2XoaD7Pch7PgzSGjc8ToL1lnTX15Oc5ZCoP4aiob0IX6RROPojd6cKPcE66hSbAoUPBVVmq0MSrExUB6irAoKo5sihZ14W_KVSWF0Y6g8VFkVleRVVPK3KAoKzihdGZXkH6i8bVVWRSXdFioVzxtRrYxKujVUHqqshMq0XLSh3kc5KzJWxDta5ZTSiuRZkdE0prTMWVhHWVmUaRHTXVlUu7TKS8LKpEjzmO1Ykae0yssDgRNvfoSaWkAN_ozvAoRAwMtnfNIe7cAV1AAEWqPm-_e9pbkPDFH_ccsmIGTbokXd4NLJgQBvvBwQakpA8SvaWckO6luQqeGK28X2o3T-7kb-vFiN0d70c8xEIBT_IjW6x8cXs19e8q8_hds89d5CDVH03Ic2CAjUTvow2bgII_uF85BHKfw5OBMC7oKhY_ZI-E3qbi40Tb8B" width="100%" height="520" loading="lazy" title="Light bending round a black hole"></iframe>
 
 *Light passing a black hole of one solar mass at 4, 6, 10, 20 and 30 Schwarzschild radii, in the flow model (solid)
-and under Newtonian gravity starting at $c$ (dashed); the arrows are the flow of space. Close to the hole the flow
+and under Newtonian gravity starting at $c$ (dashed); the moving grey points are space itself, falling into the hole at a speed chosen for the picture, faster closer in. Close to the hole the flow
 model bends light several times as much — 57° against 14° at 4 Schwarzschild radii — and further out the ratio falls
-towards the factor of two in the table (2.8 at 30 Schwarzschild radii, from 150 out on either side).* [Open full screen](../../../viewer/index.html?run=../runs/part1/part1_bending.full.json){ target=_blank }
+towards the factor of two in the table (2.8 at 30 Schwarzschild radii, from 150 out on either side).* [Open full screen](../../../viewer/index.html?state=z1ZdNi9swEIb_SpleZVfyd3zroYWFQqHXEIJijR21WilIst00-L8X2dmUHrb0Ylhf7NFYM6N55znINxigZgQGiaODen8D2-tg7CGOPwT7w4Vbz5bn8YRaSN3Fba9U_N0ZDQRe-3I4ELhYbB3UN3BnM35WZoS65cohmR1PuuVKfbTWhNre9jgRsOh65eegkDM7tsqMx4QmRcRYxNIjyyNKI5rFjRvCrkE6eVK4JCDgvOWyO_tHJc91h9qHrUb_8UKte6UINEYZ-7Jw_hoygeDujAImAqiFewQZe5L-04D2Oos2755PejFBM3if8LISBRBwRkkB5J5V6k4hHCYCDhU2XoaD7Pch7PgzSGjc8ToL1lnTX15Oc5ZCoP4aiob0IX6RROPojd6cKPcE66hSbAoUPBVVmq0MSrExUB6irAoKo5sihZ14W_KVSWF0Y6g8VFkVleRVVPK3KAoKzihdGZXkH6i8bVVWRSXdFioVzxtRrYxKujVUHqqshMq0XLSh3kc5KzJWxDta5ZTSiuRZkdE0prTMWVhHWVmUaRHTXVlUu7TKS8LKpEjzmO1Ykae0yssDgRNvfoSaWkAN_ozvAoRAwMtnfNIe7cAV1AAEWqPm-_e9pbkPDFH_ccsmIGTbokXd4NLJgQBvvBwQakpA8SvaWckO6luQqeGK28X2o3T-7kb-vFiN0d70c8xEIBT_IjW6x8cXs19e8q8_hds89d5CDVH03Ic2CAjUTvow2bgII_uF85BHKfw5OBMC7oKhY_ZI-E3qbi40Tb8B){ target=_blank }
 
 *The code: studies/four_tests.py (bending: all four calculators for the Sun, the flow model for the hole), against
 exact general relativity in engine/exact.py.*

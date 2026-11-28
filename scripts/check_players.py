@@ -88,6 +88,7 @@ def main():
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
         (folder / 'docs').symlink_to(ROOT / 'docs')
+        (folder / 'runs').symlink_to(ROOT / 'docs' / 'runs')   #a state= player's runs, ../runs/... from the viewer
         (folder / 'web').symlink_to(ROOT / 'web')
         (folder / 'check.html').symlink_to(ROOT / 'scripts' / 'check_players.html')
         base_copy(args.base, folder / 'base')
