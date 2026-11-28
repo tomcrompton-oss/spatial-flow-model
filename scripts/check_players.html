@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Player check</title>
+<style>
+  body { margin: 0; font: 13px/1.4 -apple-system, Helvetica, Arial, sans-serif; background: #f4f3ef; color: #1f1f1d; }
+  #frames { display: flex; gap: 8px; padding: 8px; }
+  #frames iframe { width: 640px; height: 420px; border: 1px solid #b9b8b0; background: #fff; }
+  #summary { padding: 8px; }
+  table { border-collapse: collapse; }
+  td, th { padding: 2px 8px; border-bottom: 1px solid #e2e1dc; text-align: left; }
+  .bad { color: #b42318; font-weight: 600; }
+  .pair { display: flex; gap: 8px; margin: 8px 0 16px; }
+  .pair img { width: 320px; border: 1px solid #b9b8b0; }
+</style>
+</head>
+<body>
+<!--
+  Compares each embedded player drawn by the viewer in web/ with the same player drawn by a base copy of the viewer
+  (scripts/check_players.py serves both, and the list of players, from one folder). Each pair is loaded side by side,
+  left to settle, and the plot canvases compared pixel by pixel. The result is written as JSON into #result.
+-->
+<div id="frames"><iframe id="base" title="base"></iframe><iframe id="new" title="new"></iframe></div>
+<div id="summary">Checking…</div>
+<pre id="result" hidden></pre>
+<script>
+'use strict';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* the iframe's page loaded and its run drawn: results open, and the plot the same twice running */
+async function settled(frame, timeout = 60000) {
+  const start = performance.now();
+  let last = null, same = 0;
+  while (performance.now() - start < timeout) {
+    await sleep(250);
+    const w = frame.contentWindow;
+    let ready = false;
+    try { ready = w.eval("typeof state !== 'undefined' && state && state.results && state.results.length > 0"); } catch (e) { /* not yet */ }
+    if (!ready) continue;
+    const canvas = w.document.getElementById('plot');
+    if (!canvas || !canvas.width) continue;
+    const now = canvas.toDataURL();
+    same = now === last ? same + 1 : 0;
+    last = now;
+    if (same >= 2) return canvas;
+  }
+  return null;
+}
+
+function load(frame, src) {
+  return new Promise(resolve => {
+    frame.onload = () => {
+      frame.contentWindow.__errors = [];
+      frame.contentWindow.addEventListener('error', e => frame.contentWindow.__errors.push(e.message));
+      resolve();
+    };
+    frame.src = src;
+  });
+}
+
+function compare(a, b) {
+  if (a.width !== b.width || a.height !== b.height) return {differ: -1, total: 0};
+  const pa = a.getContext('2d').getImageData(0, 0, a.width, a.height).data, pb = b.getContext('2d').getImageData(0, 0, b.width, b.height).data;
+  let differ = 0;
+  for (let i = 0; i < pa.length; i += 4)
+    if (Math.abs(pa[i] - pb[i]) > 16 || Math.abs(pa[i + 1] - pb[i + 1]) > 16 || Math.abs(pa[i + 2] - pb[i + 2]) > 16) differ++;
+  return {differ, total: pa.length / 4};
+}
+
+(async () => {
+  const runs = await (await fetch('runs.json')).json(), out = [], summary = document.getElementById('summary');
+  const only = new URLSearchParams(location.search).get('only');
+  for (const run of runs.filter(r => !only || r.includes(only))) {
+    summary.textContent = 'Checking ' + run + ' (' + (out.length + 1) + ' of ' + runs.length + ')';
+    const base = document.getElementById('base'), next = document.getElementById('new');
+    //each pair loaded and left to settle; once more if either doesn't (a slow load in a long check)
+    let a = null, b = null;
+    for (let attempt = 0; attempt < 2 && (!a || !b); attempt++) {
+      await Promise.all([load(base, '/base/index.html?player&' + run), load(next, '/web/index.html?player&' + run)]);
+      [a, b] = await Promise.all([settled(base), settled(next)]);
+    }
+    const row = {run, errors: [...(base.contentWindow.__errors || []).map(e => 'base: ' + e), ...(next.contentWindow.__errors || []).map(e => 'new: ' + e)]};
+    if (!a || !b) row.error = (!a ? 'base' : 'new') + ' never settled';
+    else {
+      Object.assign(row, compare(a, b));
+      if (row.differ) row.images = [a.toDataURL(), b.toDataURL()];
+    }
+    out.push(row);
+  }
+  //the report: a table, and each differing pair's pictures
+  const bad = out.filter(r => r.differ || r.error || r.errors.length);
+  summary.innerHTML = '<p>' + out.length + ' players checked, ' + bad.length + ' differ or failed.</p>';
+  const table = document.createElement('table');
+  table.innerHTML = '<tr><th>Player</th><th>Pixels that differ</th><th>Notes</th></tr>' + out.map(r =>
+    '<tr><td>' + r.run + '</td><td class="' + (r.differ || r.error ? 'bad' : '') + '">' + (r.error ? '' : r.differ === -1 ? 'sizes differ' : r.differ + ' of ' + r.total) +
+    '</td><td>' + [r.error, ...r.errors].filter(Boolean).join('; ') + '</td></tr>').join('');
+  summary.append(table);
+  for (const r of out.filter(r => r.images)) {
+    const pair = document.createElement('div');
+    pair.className = 'pair';
+    pair.innerHTML = '<div>' + r.run + '<br>base</div><img src="' + r.images[0] + '"><img src="' + r.images[1] + '"><div>new</div>';
+    summary.append(pair);
+  }
+  const result = document.getElementById('result');
+  result.textContent = JSON.stringify(out.map(({images, ...r}) => r));
+  result.dataset.done = 'yes';
+})();
+</script>
+</body>
+</html>

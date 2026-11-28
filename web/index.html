@@ -17,13 +17,51 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--page); color: var(--ink); font: 13px/1.4 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; }
-  #app { display: grid; grid-template-columns: 1fr 300px; grid-template-rows: auto 1fr auto; height: 100vh; }
-  header { grid-column: 1 / 3; display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
+  #app { --panel: 320px; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--panel); grid-template-rows: auto 1fr auto; height: 100vh; }
+  header { grid-column: 1 / 4; display: flex; gap: 12px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--grid); flex-wrap: wrap; }
   header h1 { font-size: 15px; margin: 0 8px 0 0; }
   #plotWrap { position: relative; min-height: 0; }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; }
-  #spinLayer { position: absolute; inset: 0; pointer-events: none; }
-  aside { border-left: 1px solid var(--grid); padding: 10px 12px; overflow: auto; }
+  /* the views: one, or two side by side (Split view), each a pane with its plot and an overlay for what moves */
+  #panes { display: flex; gap: 6px; height: 100%; }
+  .pane { position: relative; flex: 1 1 0; min-width: 0; height: 100%; }
+  .pane .overlay { position: absolute; inset: 0; pointer-events: none; }
+  .paneTag { display: none; position: absolute; left: 6px; top: 2px; font-size: 11px; color: var(--ink2); padding: 0 6px;
+             border-radius: 4px; cursor: default; }
+  #panes.split .pane { outline: 1px solid var(--grid); }
+  #panes.split .pane.active { outline: 2px solid var(--accent); outline-offset: -2px; }
+  #panes.split .paneTag { display: block; }
+  #panes.split .pane.active .paneTag { background: var(--accent); color: #fff; }
+  #panes.split .pane:not(.active) { opacity: .92; }
+  body.player #panes.split .paneTag { display: none; }
+  body.player #panes.split .pane.active { outline: 1px solid var(--grid); outline-offset: 0; }
+  body.player #panes.split .pane:not(.active) { opacity: 1; }
+  .pane .loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: 6px;
+                   background: var(--surface); border: 1px solid var(--grid); color: var(--ink2); font-size: 12px; }
+  .pane .loading::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%;
+                           border: 2px solid var(--axis); border-top-color: var(--accent); vertical-align: -1px; animation: spin 0.9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .pane .loading::before { animation: none; } }
+  #plotWrap { grid-column: 1; grid-row: 2; }
+  /* the panel's edge: drag it to make the panel wider or narrower */
+  #splitter { grid-column: 2; grid-row: 2 / 4; cursor: col-resize; background: var(--page); border-left: 1px solid var(--grid); touch-action: none; }
+  #splitter:hover, #splitter.dragging { background: color-mix(in srgb, var(--accent) 25%, var(--page)); }
+  aside { grid-column: 3; grid-row: 2 / 4; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  #tabs { display: flex; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--grid); flex: none; }
+  #tabs button { border: 1px solid transparent; border-bottom: none; border-radius: 5px 5px 0 0; background: transparent; color: var(--ink2); padding: 5px 12px; margin-bottom: -1px; }
+  #tabs button[aria-selected="true"] { background: var(--page); color: var(--ink); border-color: var(--grid); font-weight: 600; }
+  #tabs button:hover { color: var(--ink); }
+  aside .panels { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  aside section { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; }
+  aside section[hidden] { display: none !important; }
+  /* the Results tab: the list and the selected result each scroll on their own, the split between them dragged */
+  aside section[data-panel="results"] { display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+  aside section[data-panel="results"] > .buttons { flex: none; }
+  #results { flex: none; height: var(--tree, 220px); min-height: 40px; overflow: auto; }
+  #treeSplit { flex: none; height: 9px; margin: 2px -12px; cursor: row-resize; touch-action: none; position: relative; }
+  #treeSplit::after { content: ''; position: absolute; left: 12px; right: 12px; top: 4px; height: 1px; background: var(--grid); }
+  #treeSplit:hover::after, #treeSplit.dragging::after { height: 3px; top: 3px; background: color-mix(in srgb, var(--accent) 45%, var(--grid)); }
+  #details { flex: 1; min-height: 60px; overflow: auto; padding-bottom: 10px; }
   aside h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink2); margin: 14px 0 6px; }
   aside h2:first-child { margin-top: 0; }
   #replay { grid-column: 1 / 2; display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--grid); }
@@ -45,12 +83,100 @@
   .result span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #message { color: var(--ink2); }
   #drop { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: color-mix(in srgb, var(--accent) 12%, transparent); border: 2px dashed var(--accent); font-size: 16px; }
-  #empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink2); text-align: center; padding: 16px; }
+  .pane .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink2); text-align: center; padding: 16px; }
   .note { color: var(--muted); font-size: 12px; }
+  aside .buttons { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+  aside .buttons button { padding: 2px 7px; }
+  label.row { display: flex; gap: 6px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+  label.row input { font: inherit; width: 7em; padding: 2px 4px; border: 1px solid var(--axis); border-radius: 4px; background: var(--surface); color: var(--ink); }
+  .axisName { margin: 0 0 4px; }
+  #addDialog { border: 1px solid var(--axis); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 14px 18px; width: min(420px, 92vw); }
+  #addDialog::backdrop { background: rgba(0, 0, 0, .25); }
+  #addDialog h2 { margin: 0 0 4px; font-size: 15px; }
+  #addDialog label.row span { min-width: 3.5em; }
+  #addDialog select { max-width: 100%; }
+  #addValues { margin: 8px 0; padding: 6px 8px; border: 1px solid var(--grid); border-radius: 6px; }
+  #addDialog .buttons { display: flex; gap: 8px; justify-content: flex-end; }
+  #addDialog button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #measureOut { white-space: pre-wrap; font: 12px/1.45 -apple-system, Helvetica, Arial, sans-serif; margin: 4px 0; }
+  #measure[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #follow { max-width: 100%; }
+  .zoomRow input[type=range] { flex: 1; min-width: 80px; width: auto; }
+  .zoomRow output { min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums; }
+  .joystickRow { display: flex; gap: 14px; align-items: center; margin: 6px 0; }
+  .buttons.stacked { display: flex; flex-direction: column; gap: 6px; }
+  #joystick { display: grid; grid-template-columns: 26px 92px 26px; grid-template-rows: 26px 92px 26px; gap: 2px; flex: none; }
+  #joystick .nudge { padding: 0; font-size: 11px; line-height: 1; border-radius: 6px; touch-action: none; }
+  #joystick .up { grid-area: 1 / 2; } #joystick .left { grid-area: 2 / 1; } #joystick .right { grid-area: 2 / 3; } #joystick .down { grid-area: 3 / 2; }
+  #stickPad { grid-area: 2 / 2; position: relative; border-radius: 50%; border: 1px solid var(--axis); background: var(--surface); touch-action: none; cursor: grab; }
+  #stickPad::before, #stickPad::after { content: ""; position: absolute; background: var(--grid); }
+  #stickPad::before { left: 50%; top: 10%; bottom: 10%; width: 1px; } #stickPad::after { top: 50%; left: 10%; right: 10%; height: 1px; }
+  #stickKnob { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; background: var(--ink2); opacity: .85; z-index: 1; pointer-events: none; transition: transform .12s ease-out; }
+  #stickPad.held { cursor: grabbing; } #stickPad.held #stickKnob { transition: none; }
+  body:not(.time) .timeOnly, body.time .xyOnly { display: none; }
+  #status { margin-left: auto; color: var(--ink2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result .count { margin-left: auto; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; flex: none; }
+  .result .fold { width: 12px; flex: none; color: var(--ink2); cursor: pointer; user-select: none; }
+  .orbit { padding-left: 26px; font-size: 12px; }
+  .envHead { font-size: 11px; color: var(--ink2); margin: 6px 0 2px; }
+  #details:empty::before { content: 'Select a result in the list to see how it is drawn, its details and its paths.'; color: var(--muted); font-size: 12px; }
+  #details h3 { font-size: 13px; margin: 0 0 4px; }
+  #details .pathRow { display: flex; gap: 6px; align-items: center; margin: 3px 0; }
+  #details input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--axis); border-radius: 3px; background: none; }
+  #details table { border-collapse: collapse; font-size: 12px; margin: 6px 0; width: 100%; }
+  #details td { padding: 1px 4px; vertical-align: top; }
+  #details td:first-child { color: var(--muted); white-space: nowrap; }
+  #details pre { font-size: 11px; max-height: 240px; overflow: auto; background: var(--surface); border: 1px solid var(--grid); padding: 6px; margin: 4px 0; }
+  #details .file { color: var(--muted); font-size: 11px; word-break: break-all; }
+  #paths .pair { display: block; }
+  canvas:focus { outline: none; }
+  /* the results tree: environment, result, orbits, each folding */
+  .tree .node { display: flex; gap: 5px; align-items: center; padding: 2px 4px; border-radius: 4px; cursor: pointer; min-width: 0; }
+  .tree .node span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tree .node.selected { background: var(--grid); }
+  .tree .env { font-size: 12px; color: var(--ink2); margin-top: 4px; }
+  .tree .env .mark { color: var(--accent); flex: none; }
+  .tree .res { padding-left: 20px; }
+  .tree .orb { padding-left: 46px; font-size: 12px; }
+  /* fold triangles drawn as shapes, the same size in every browser (a font's triangle is tiny in Safari) */
+  .fold { width: 20px; height: 20px; flex: none; color: var(--ink2); user-select: none; border-radius: 4px; position: relative; }
+  .fold.open, .fold.shut { cursor: pointer; }
+  .fold.open:hover, .fold.shut:hover { background: var(--grid); color: var(--ink); }
+  .fold.shut::before, .fold.open::before, #details summary::before {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 0; height: 0; border-style: solid; }
+  .fold.shut::before, #details details:not([open]) > summary::before {
+    border-width: 6px 0 6px 9px; border-color: transparent transparent transparent currentColor; transform: translate(-35%, -50%); }
+  .fold.open::before, #details details[open] > summary::before {
+    border-width: 9px 6px 0 6px; border-color: currentColor transparent transparent transparent; transform: translate(-50%, -35%); }
+  #details summary { cursor: pointer; font-size: 13px; padding: 3px 0 3px 22px; position: relative; list-style: none; color: var(--ink); }
+  #details summary::-webkit-details-marker { display: none; }
+  #details summary::before { left: 9px; color: var(--ink2); }
+  /* the selected result's own tabs */
+  .subtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grid); margin: 8px 0 6px; }
+  .subtabs button { border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0; background: transparent; color: var(--ink2); padding: 3px 9px; margin-bottom: -1px; font-size: 12px; }
+  .subtabs button[aria-selected="true"] { background: var(--page); color: var(--ink); border-color: var(--grid); font-weight: 600; }
+  #details .modes { display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 2px 2px; font-size: 12px; }
+  #details .modes label { display: flex; gap: 3px; align-items: center; }
+  #details .tangent { margin: 2px 0 6px 22px; }
+  #details .tangent input[type=range] { width: 100%; }
+  #details .pathBlock { border-top: 1px solid var(--grid); padding-top: 4px; margin-top: 4px; }
+  #details #orbitEvery { width: 4em; }
+  #apsisEvery { width: 4em; }
+  /* a background layer: its checkbox with a fold for its settings, which open under it */
+  .layerRow { display: flex; align-items: center; gap: 2px; margin-left: -4px; }
+  .layerRow label.check { flex: 1; margin: 2px 0; }
+  .layerSettings { margin: 2px 0 8px 22px; padding: 6px 8px; background: var(--surface); border: 1px solid var(--grid); border-radius: 6px; font-size: 12px; }
+  .layerSettings .colours { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .layerSettings .colours label { display: flex; gap: 4px; align-items: center; }
+  .layerSettings input[type=color] { width: 26px; height: 20px; padding: 0; border: 1px solid var(--axis); border-radius: 3px; background: none; }
+  .layerSettings .slider { display: grid; grid-template-columns: 5.2em 1fr 3.4em; gap: 6px; align-items: center; margin: 2px 0; }
+  .layerSettings .slider input { width: 100%; }
+  .layerSettings .slider span:last-child { text-align: right; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .layerSettings button { margin-top: 4px; padding: 1px 8px; font-size: 12px; }
   /* the player (?player in the address): the plot and a music-player bar only, for pages that embed a run */
   /* the play controls: one line under the plot, in the full viewer and the player alike */
   #replay { display: none; }
-  #player { grid-column: 1 / 2; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-top: 1px solid var(--grid); }
+  #player { grid-column: 1; grid-row: 3; display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-top: 1px solid var(--grid); }
   #player { flex-wrap: wrap; row-gap: 6px; }
   #player .progress { flex: 1 1 260px; min-width: 0; }   /* on one line while there is room, else below the buttons */
   body.player header, body.player aside, body.player #replayLabel { display: none; }
@@ -59,6 +185,9 @@
   body.player #pTime { display: block; flex: none; color: var(--ink2); font-size: 12px; font-variant-numeric: tabular-nums;
                        white-space: nowrap; text-align: right; }
   body.player #app { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: 100vh; }
+  body.player #splitter { display: none; }
+  body.player #plotWrap { grid-row: 1; }
+  body.player #player { grid-row: 2; }
   body.player canvas { touch-action: auto; }
   body.player #player { padding: 8px 12px; }
   @media (max-width: 560px) {
@@ -87,10 +216,12 @@
   #pTrack .line { position: absolute; left: 7px; right: 7px; top: 9px; height: 2px; border-radius: 1px; background: var(--axis); }
   #pTrack .marker { position: absolute; top: 3px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
                     border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--axis); }
-  @media (max-width: 1000px) { #app { grid-template-columns: 1fr 220px; } }   /* embedded in a page: keep the panel beside the plot */
+  @media (max-width: 1000px) { #app { --panel: 240px; } }   /* embedded in a page: keep the panel beside the plot */
   @media (max-width: 560px) {
     #app { grid-template-columns: 1fr; grid-template-rows: auto 60vh auto auto; height: auto; }
-    header, #replay, #player { grid-column: 1; }
+    header, #replay, #player, #plotWrap, aside { grid-column: 1; }
+    #plotWrap { grid-row: 2; } #player { grid-row: 3; } aside { grid-row: 4; }
+    #splitter { display: none; }
     #player { flex-wrap: wrap; }
     aside { border-left: 0; border-top: 1px solid var(--grid); }
   }
@@ -100,40 +231,136 @@
 <div id="app">
   <header>
     <h1>Flow Viewer</h1>
-    <button id="openFolder" title="Choose a run folder (logs/&lt;study&gt;/&lt;run&gt;)">Open run folder…</button>
+    <button id="openFolder" data-tip="Open a run folder (logs/&lt;study&gt;/&lt;run&gt;) in place of what is open; or drop one on the plot">Open run folder…</button>
+    <button id="addFolder" data-tip="Add a run folder's results to what is open, to compare them (or shift-drop one on the plot)">Add run folder…</button>
+    <button id="reload" data-tip="Read everything open again from its files, keeping each result's settings">Reload</button>
+    <button id="splitView">Split view</button>
+    <button id="copyLink" data-tip="Copy a link to the views as they are now: their runs, settings, framing and each result's options (runs opened from a web address only)">Copy link</button>
+    <button id="copyEmbed" data-tip="Copy an iframe that embeds these views as a player in one of the site's pages, as they are now (for runs in the site's runs folder)">Copy player embed</button>
     <input id="folderInput" type="file" webkitdirectory multiple hidden>
+    <input id="addInput" type="file" webkitdirectory multiple hidden>
     <span id="message"></span>
+    <span id="status"></span>
   </header>
   <div id="plotWrap">
-    <canvas id="plot"></canvas>
-    <canvas id="spinLayer"></canvas>
-    <div id="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
+    <div id="panes"></div>
+    <template id="paneTemplate">
+      <div class="pane">
+        <canvas class="plot" tabindex="0"></canvas>
+        <canvas class="overlay"></canvas>
+        <div class="empty">Open a run folder, drop one here, or add ?run=path/to/view.full.json to the address.</div>
+        <div class="paneTag" data-tip="Click a view to select it: the panel shows its settings"></div>
+        <div class="loading" hidden></div>
+      </div>
+    </template>
     <div id="drop">Drop a run folder</div>
   </div>
+  <div id="splitter" data-tip="Drag to make the panel wider or narrower; double-click for its usual width"></div>
   <aside>
-    <h2>Results</h2>
-    <div id="results"></div>
-    <h2>Background</h2>
-    <select id="background"></select>
-    <p id="bgDescription" class="note"></p>
-    <label class="check"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
-    <label class="check"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
-    <label class="check"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
-    <label class="check"><input type="checkbox" id="showTwist"> twist arcs (how fast space turns things, round a spinning hole)</label>
-    <label class="check"><input type="checkbox" id="showSeam"> lines (the seam, where the bodies' regions of flow meet)</label>
-    <label class="check"><input type="checkbox" id="showBodies"> bodies</label>
-    <label class="check"><input type="checkbox" id="showSchwarzschild"> horizons</label>
-    <label class="check"><input type="checkbox" id="showSpin"> spinning bodies (turning the way they spin, not at their real speed)</label>
-    <p class="note">Arrows, colour maps and seams come from a run's background frames; options greyed out have no data for the background shown.</p>
-    <h2>View</h2>
-    <select id="unit"></select>
-    <label class="check"><input type="checkbox" id="equalAspect"> equal aspect</label>
-    <label class="check"><input type="checkbox" id="showGrid"> grid</label>
-    <label class="check" title="The current orbit in full colour, each earlier one fainter"><input type="checkbox" id="graduateOrbits"> shade earlier orbits</label>
-    <label class="check"><input type="checkbox" id="showPathLegend"> path legend</label>
-    <label class="check"><input type="checkbox" id="showFieldKey"> background key</label>
-    <button id="fit">Fit to paths</button>
-    <p class="note">Drag to pan, scroll to zoom, double-click to fit.</p>
+    <nav id="tabs" role="tablist">
+      <button role="tab" data-tab="results" data-tip="The results: which are shown, how each is drawn, its markers, summary and log">Results</button>
+      <button role="tab" data-tab="view" data-tip="How the plot is framed: what is plotted, units, axes, zoom and legends">View</button>
+      <button role="tab" data-tab="background" data-tip="What is drawn behind the paths: the background, the flow, bodies and horizons">Background</button>
+    </nav>
+    <div class="panels">
+    <section data-panel="results">
+      <div class="buttons">
+        <button id="showAll" data-tip="Show every result">All</button>
+        <button id="showNone" data-tip="Hide every result">None</button>
+        <button id="showOnly" data-tip="Show only the selected result (or double-click a result)">Only selected</button>
+        <button id="closeResult" data-tip="Take the selected result out of the viewer (Reload brings it back)">Close</button>
+        <button id="addResult" data-tip="Add results worked out from those open, each a value against t: a difference between two results, each orbit's periapsis, apoapsis, period and so on, or values along a path">Add…</button>
+      </div>
+      <div id="results" class="tree"></div>
+      <div id="treeSplit" data-tip="Drag to give the list or the selected result more room; double-click for the usual split"></div>
+      <div id="details"></div>
+      <div id="markersHolder" hidden><div id="markersBlock">
+      <h2>Markers</h2>
+      <label class="check" data-tip="An open circle where each path starts, a filled one where it ends"><input type="checkbox" id="showMarkers"> start / end markers</label>
+      <label class="check" data-tip="Dots along each path at every interval of a time column, labelled where there is room"><input type="checkbox" id="showTimeMarks"> time markers</label>
+      <label class="row" data-tip="The time column the markers follow; in distance / time mode the one on the time axis (the markers then use the other)"><span id="timeColumnLabel">Markers use</span> <select id="timeColumn"></select></label>
+      <label class="row" data-tip="A marker every this much of the time column; leave it empty for a round interval giving about ten">every <input id="timeInterval" size="8" placeholder="auto"> <button id="timeAuto" data-tip="Back to a round interval giving about ten markers">Auto</button></label>
+      <label class="check" data-tip="An open square at the closest point of each whole orbit, where a run's log says where its orbits end"><input type="checkbox" id="showPeri"> periapsis</label>
+      <label class="check" data-tip="An open diamond at the farthest point of each whole orbit"><input type="checkbox" id="showApo"> apoapsis</label>
+      <label class="row" data-tip="Mark the periapsis and apoapsis of every Nth orbit only (the first, then every N on): 1 marks them all">on every <input id="apsisEvery" type="number" min="1" step="1" value="1"> orbits</label>
+      </div></div>
+    </section>
+    <section data-panel="view">
+      <h2>Plot</h2>
+      <label class="row" data-tip="X / Y path: each path in the plane. Distance / time: each path's distance from the origin against a time column"><span>Plot</span> <select id="mode"><option value="xy">X / Y path</option><option value="time">Distance / time</option></select></label>
+      <label class="row" data-tip="The unit distances are shown in"><span>Units</span> <select id="unit"></select></label>
+      <label class="check xyOnly" data-tip="A metre as long across as up, so circles look round"><input type="checkbox" id="equalAspect"> equal aspect</label>
+      <label class="check timeOnly" data-tip="Time as ct, in the distance unit, on a 1:1 scale: light with no gravity goes at 45°"><input type="checkbox" id="ctTime"> time as ct (light at 45°)</label>
+      <label class="check" data-tip="Grid lines at the axes' ticks"><input type="checkbox" id="showGrid"> grid</label>
+      <h2>X axis</h2>
+      <p class="note axisName" id="xAxisName" data-tip="What the x axis shows, and its unit"></p>
+      <label class="check" data-tip="A logarithmic x axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logX"> logarithmic</label>
+      <label class="check timeOnly" data-tip="Distance runs right to left, 0 on the right"><input type="checkbox" id="reverseX"> reversed (0 on the right)</label>
+      <label class="row" data-tip="The x axis's range, in its unit: type it in and press Return, or Apply below">from <input id="rangeX0" size="9"> to <input id="rangeX1" size="9"></label>
+      <h2>Y axis</h2>
+      <p class="note axisName" id="yAxisName" data-tip="What the y axis shows, and its unit"></p>
+      <label class="check" data-tip="A logarithmic y axis: powers of ten equally spaced (values of 0 and below are left out)"><input type="checkbox" id="logY"> logarithmic</label>
+      <label class="row" data-tip="The y axis's range, in its unit: type it in and press Return, or Apply below">from <input id="rangeY0" size="9"> to <input id="rangeY1" size="9"></label>
+      <h2>Range</h2>
+      <label class="row zoomRow" data-tip="How far in the plot is zoomed, against the fitted view (×1). Drag to zoom about the middle of the plot"><span>Zoom</span> <input type="range" id="zoomSlider" min="-1" max="4" step="0.01" value="0"> <output id="zoomValue">×1</output></label>
+      <div class="joystickRow">
+        <div id="joystick" data-tip="Moves the view. Drag the stick for fast moves: the further from the middle, the faster. Click a button at the edge for a small, precise step; hold it to keep going">
+          <button class="nudge up" data-dir="0,1" data-tip="Move the view up a little (hold to keep going)" aria-label="Move up">▲</button>
+          <button class="nudge left" data-dir="-1,0" data-tip="Move the view left a little (hold to keep going)" aria-label="Move left">◀</button>
+          <div id="stickPad" data-tip="Drag the stick to move the view: the further from the middle, the faster"><div id="stickKnob"></div></div>
+          <button class="nudge right" data-dir="1,0" data-tip="Move the view right a little (hold to keep going)" aria-label="Move right">▶</button>
+          <button class="nudge down" data-dir="0,-1" data-tip="Move the view down a little (hold to keep going)" aria-label="Move down">▼</button>
+        </div>
+        <div class="buttons stacked">
+          <button id="fit" data-tip="Fit the plot to the shown paths (0, or double-click the plot)">Fit</button>
+          <button id="rangeApply" data-tip="Show the x and y ranges typed in above">Apply ranges</button>
+        </div>
+      </div>
+      <label class="row" data-tip="Keep the view centred on a body, or on where a path is at the replay's time (its end when stopped). Zooming keeps it in the middle; moving the view by hand stops it"><span>Centre on</span> <select id="follow"></select></label>
+      <p class="note">Drag to pan, scroll to zoom, shift-drag to zoom to a box, double-click to fit; arrow keys pan, + and − zoom.</p>
+      <h2>Measure</h2>
+      <div class="buttons">
+        <button id="measure" aria-pressed="false" data-tip="Measuring: click the plot to put point A, then B, and see the distance between them. A click near a path puts the point on its nearest row. A third click starts again; Esc clears">Measure</button>
+        <button id="measureClear" data-tip="Take the measured points away">Clear</button>
+      </div>
+      <label class="row" data-tip="Put a point on the selected result's row nearest this time (seconds of t)">row at t = <input id="measureT" size="9"> s <button id="measurePin">Put point</button></label>
+      <pre id="measureOut" class="note"></pre>
+      <h2>Legends</h2>
+      <label class="check" data-tip="The paths' names and colours, top right"><input type="checkbox" id="showPathLegend"> path legend</label>
+      <label class="check" data-tip="What the background's arrows, lines and colours mean, bottom left"><input type="checkbox" id="showFieldKey"> background key</label>
+      <label class="check" data-tip="The time markers' interval, above the plot"><input type="checkbox" id="showMarkNote"> marker interval</label>
+      <label class="check" data-tip="The time beside each time marker"><input type="checkbox" id="showMarkLabels"> marker times</label>
+      <label class="check" data-tip="Each body's mass (and spin) under it"><input type="checkbox" id="showBodyLabels"> body labels</label>
+      <div class="buttons"><button id="legendsAll" data-tip="Show every legend and label">All</button><button id="legendsNone" data-tip="Hide every legend and label">None</button></div>
+      <h2>Export</h2>
+      <div class="buttons">
+        <button id="exportPng" data-tip="Save the selected view as a picture (PNG), as it is now">Image (PNG)</button>
+        <button id="exportSvg" data-tip="Save the selected view as a picture that can be scaled and edited (SVG), as it is now">Image (SVG)</button>
+        <button id="exportCsv" data-tip="Save the shown rows of the shown results as one csv, with a column naming each row's result (hidden orbits left out; while replaying, up to the replay's time)">Shown rows (CSV)</button>
+      </div>
+    </section>
+    <section data-panel="background">
+      <label class="row" data-tip="The background drawn behind the paths: one from the run's backgrounds file, or the bodies of a result's environment"><span>Background</span> <select id="background"></select></label>
+      <p id="bgDescription" class="note"></p>
+      <h2>The flow</h2>
+      <label class="check" data-tip="Arrows of the flow of space, u, scaled from what is on screen"><input type="checkbox" id="showFlow"> u arrows (flow of space)</label>
+      <label class="check" data-tip="Arrows of the acceleration of space, g: how fast the flow speeds up"><input type="checkbox" id="showGravity"> g arrows (acceleration of space)</label>
+      <label class="check" data-tip="A field drawn as colour, red where it is positive and blue where negative (a wave's strain, say)"><input type="checkbox" id="showScalar"> colour map (a field, if the run has one)</label>
+      <label class="check" data-tip="Arcs showing how fast space turns things round a spinning hole, and which way"><input type="checkbox" id="showTwist"> twist arcs (round a spinning hole)</label>
+      <label class="check" data-tip="Lines the background carries, such as the seam where the bodies' regions of flow meet"><input type="checkbox" id="showSeam"> lines (the seam)</label>
+      <label class="check" data-tip="Lines where space flows at the same speed, labelled in km/s: from the background's u, else the bodies' escape speed"><input type="checkbox" id="showContours"> lines of equal |u|</label>
+      <label class="check" data-tip="The paths space itself takes, out of each body against the flow. In distance / time, the flow line repeated up the time axis"><input type="checkbox" id="showFlowLines"> flow lines (the paths of space)</label>
+      <label class="check" data-tip="Distance / time only: light's speed outwards and inwards at each point, u ± c, as a cone"><input type="checkbox" id="showCones"> light cones (distance / time)</label>
+      <label class="check" data-tip="Space falling in, drawn moving: points carried by the flow u, each an arrow along u. The speed is a picture's: faster where space falls faster"><input type="checkbox" id="showInfallArrows"> falling space (arrows)</label>
+      <label class="check" data-tip="Space falling in, drawn moving: rings of space carried by the flow u into the black bodies (out of white ones). The speed is a picture's: faster where space falls faster"><input type="checkbox" id="showInfallRings"> falling space (rings)</label>
+      <h2>Bodies</h2>
+      <label class="check" data-tip="Each body: black for a black hole, white otherwise"><input type="checkbox" id="showBodies"> bodies</label>
+      <label class="check" data-tip="Each body's horizon, 2GM/c² (Kerr's r+ for a spinning hole), and a spinning hole's ergosphere and ring singularity"><input type="checkbox" id="showSchwarzschild"> horizons</label>
+      <label class="check" data-tip="One hole's circular photon orbits and innermost stable circular orbits, with its spin and against it"><input type="checkbox" id="showSpecialOrbits"> photon orbits and ISCO (one hole)</label>
+      <label class="check" data-tip="Spinning bodies turning the way they spin (not at their real speed)"><input type="checkbox" id="showSpin"> spinning bodies</label>
+      <p class="note">Options greyed out have no data for the background shown: hover on one to see why.</p>
+    </section>
+    </div>
   </aside>
   <div id="replay">
     <button id="play">Play</button>
@@ -161,6 +388,26 @@
       <span id="pTime"></span>
     </div>
   </div>
+  <dialog id="addDialog" aria-labelledby="addTitle">
+    <form method="dialog">
+      <h2 id="addTitle">Add results</h2>
+      <p class="note">Each is worked out from a result that is open, and drawn as a line against t (in the x / y view).</p>
+      <label class="row" data-tip="What kind of result to add"><span>Kind</span>
+        <select id="addKind">
+          <option value="difference">Difference between two results</option>
+          <option value="orbits">Each orbit: periapsis, apoapsis, period…</option>
+          <option value="path">Along the path: distance, speed, angle…</option>
+        </select></label>
+      <label class="row" data-tip="The result the values come from"><span>From</span> <select id="addFrom"></select></label>
+      <label class="row" id="addOtherRow" data-tip="The result taken away from the first"><span>Minus</span> <select id="addOther"></select></label>
+      <div id="addValues"></div>
+      <p id="addNote" class="note"></p>
+      <div class="buttons">
+        <button id="addOk" class="primary" data-tip="Add a result for each value ticked">Add</button>
+        <button id="addCancel" type="button">Cancel</button>
+      </div>
+    </form>
+  </dialog>
   <div id="tip" role="tooltip"></div>
 </div>
 <script src="viewer.js"></script>
