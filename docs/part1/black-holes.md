@@ -144,12 +144,13 @@ None of this needs a special theory of the horizon. It is light at $c$ through s
 The same fall in space, rather than in spacetime. At $3$, $1.5$, $1$ and $0.6\,r_s$ the traveller sends a flash of
 light in twelve directions, each followed for $0.4\,r_s/c$ (15.8 s):
 
-<iframe src="../../viewer/index.html?player&run=../runs/blackHoles/blackHoles_flashes.full.json" width="100%" height="480" loading="lazy" title="Flashes of light falling into a black hole"></iframe>
+<iframe src="../../viewer/index.html?player&state=z7ds7b9swEADgvxKwq6SS1MOPrUOBBgjQomsQGLJEWWwY0RApu27g_96jnBjxOW22AIFvsSiaPB4_adANfGQbNhcR22i1dWx--8j6oQuNW5Ykn0P789KU1f03a9TL5qIxpWuVS5rBmOSXsx2L2H__vruL2LpXDQR_ZK612x-lb2_USnU1mzelcSoau687uDE_dbeCkb4f1D5ivXKD8ePMMXAYsZBcFrEQsZwspIxlHuezpHKbMGijnV4adZgPYX1f6lXrj-v4soN1fRgKmR172byDdCNWWWP75xvndyESq8OGagbZQMbuOMn2S-2_blS_Gx3H0WOiaxsY2SdZTqZ1ATrOGl2z6Ckq7A_C3kE4p4yqvA6JgDpMW_yG0eG6G9FWvR3Wz9m0uq5V9z0sGsKH-aMIX3D-UUTUspim2TuICBJBIpJEkEhKIkgkIxEkkpMIEimwSBFzftEiExJBIlMSQSIzEjkVEZxEkIggkZci4pW65uJF6B3BIpJEkEhKIkgkIxEkkpMIEqG6BotQXYNFqK7BIlTXIBGqa85E6Jv1RERSXXMuQu8IFqG6BotQXYNFqK7BIlTXYBGqa7AI1TVYhOoaLEJ1DRKhuuZMhL5ZT0TSD1TXTMu8qqfvICJIBIlIEkEiKYkgkYxEkEhOIkikIBEkMiERJPJaXSMuWmRGIqcir9Y1ly0iSGQU2R_ORkE7TidTLgqeZmkiZcY5z6Nc8FSKIivSNMllFsWiKHKe8omAQRMhp3wWnXfBosuyug8Lh8NPzLfqqjF2e6U7b6_CXWsheRDTD-q686rflAbGQU9jDQw82o1bUyHG2-eiIlbrplG96ip12BvkUYLMBvh5xEy5U_1Iu4KfAFeVpuwPbb_Vzj91q_Lh0Kos5DuMc8Y3x25vdKfc8c_n5nC46PFk15e-t9txmfAaDBCfxfHDEHYBGarOaR8edVKEh_hHjU99q2vfhk4JnWsVNiyOAZ-Oir0R7x9B9vu_" width="100%" height="480" loading="lazy" title="Flashes of light falling into a black hole"></iframe>
 
-*The traveller (blue) falls along the axis. Each flash would spread in a circle in still space. Here the whole circle
-is carried inward by the flow (arrows) and stretched by it. At the horizon (circle) no ray gains any ground: the one
-sent straight out holds still. Inside it (purple), every ray ends closer to the centre than it began.*
-[Open full screen](../../viewer/index.html?run=../runs/blackHoles/blackHoles_flashes.full.json){ target=_blank }
+*The traveller (blue) falls along the axis. The grey rings are space itself, falling in faster and faster as it
+nears the hole, at a speed chosen for the picture. Each flash would spread in a circle in still space. Here the whole
+circle is carried inward by the flow (arrows) and stretched by it, as the rings are. At the horizon (circle) no ray
+gains any ground: the one sent straight out holds still. Inside it (purple), every ray ends closer to the centre than
+it began.* [Open full screen](../../viewer/index.html?state=z7ds7b9swEADgvxKwq6SS1MOPrUOBBgjQomsQGLJEWWwY0RApu27g_96jnBjxOW22AIFvsSiaPB4_adANfGQbNhcR22i1dWx--8j6oQuNW5Ykn0P789KU1f03a9TL5qIxpWuVS5rBmOSXsx2L2H__vruL2LpXDQR_ZK612x-lb2_USnU1mzelcSoau687uDE_dbeCkb4f1D5ivXKD8ePMMXAYsZBcFrEQsZwspIxlHuezpHKbMGijnV4adZgPYX1f6lXrj-v4soN1fRgKmR172byDdCNWWWP75xvndyESq8OGagbZQMbuOMn2S-2_blS_Gx3H0WOiaxsY2SdZTqZ1ATrOGl2z6Ckq7A_C3kE4p4yqvA6JgDpMW_yG0eG6G9FWvR3Wz9m0uq5V9z0sGsKH-aMIX3D-UUTUspim2TuICBJBIpJEkEhKIkgkIxEkkpMIEimwSBFzftEiExJBIlMSQSIzEjkVEZxEkIggkZci4pW65uJF6B3BIpJEkEhKIkgkIxEkkpMIEqG6BotQXYNFqK7BIlTXIBGqa85E6Jv1RERSXXMuQu8IFqG6BotQXYNFqK7BIlTXYBGqa7AI1TVYhOoaLEJ1DRKhuuZMhL5ZT0TSD1TXTMu8qqfvICJIBIlIEkEiKYkgkYxEkEhOIkikIBEkMiERJPJaXSMuWmRGIqcir9Y1ly0iSGQU2R_ORkE7TidTLgqeZmkiZcY5z6Nc8FSKIivSNMllFsWiKHKe8omAQRMhp3wWnXfBosuyug8Lh8NPzLfqqjF2e6U7b6_CXWsheRDTD-q686rflAbGQU9jDQw82o1bUyHG2-eiIlbrplG96ip12BvkUYLMBvh5xEy5U_1Iu4KfAFeVpuwPbb_Vzj91q_Lh0Kos5DuMc8Y3x25vdKfc8c_n5nC46PFk15e-t9txmfAaDBCfxfHDEHYBGarOaR8edVKEh_hHjU99q2vfhk4JnWsVNiyOAZ-Oir0R7x9B9vu_){ target=_blank }
 
 | Flash from ($r_s$) | Space flowing in at | Rays ending further out than they started |
 | --- | --- | --- |
